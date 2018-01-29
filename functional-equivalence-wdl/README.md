@@ -1,7 +1,7 @@
-# functional-equivalence-wdl-workflow
+# functional-equivalence-wdl
 
 ### Purpose :
-A [WDL](#https://github.com/openwdl/wdl) workflow based on the [CCDG pipeline standards](#https://github.com/CCDG/Pipeline-Standardization/blob/master/PipelineStandard.md) for processing high-throughput sequencing data.
+A [WDL](https://github.com/openwdl/wdl) workflow based on the [CCDG pipeline standards](https://github.com/CCDG/Pipeline-Standardization/blob/master/PipelineStandard.md) for processing high-throughput sequencing data.
 
 ### Requirements/expectations 
 - Human whole-genome pair-end sequencing data in unmapped BAM (uBAM) format
@@ -19,12 +19,13 @@ A [WDL](#https://github.com/openwdl/wdl) workflow based on the [CCDG pipeline st
 ### Software version requirements :
 - GATK 4.beta.3 or later
 - Picard 2.x
-- BWA Mem
-- Samtools (see gotc docker)
+- BWA MEM
+- Samtools (see [gotc docker](https://hub.docker.com/r/broadinstitute/genomes-in-the-cloud/))
 - Python 2.7
 
 Cromwell version support 
- - Successfully tested on v28
- - Does not work on versions < v23 due to output syntax
+ - Successfully tested on v30.1
+ - Tutorial to [run WDL workflows on Google Cloud](http://cromwell.readthedocs.io/en/develop/tutorials/PipelinesApi101/)
+ - NOTE: Does not work on versions < v23 due to output syntax
 
 Runtime parameters are optimized for Broad's Google Cloud Platform implementation.
