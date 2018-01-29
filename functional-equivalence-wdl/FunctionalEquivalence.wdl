@@ -1,8 +1,7 @@
 ## Copyright Broad Institute, 2017
 ##
-## This WDL pipeline implements data pre-processing and initial variant calling (GVCF
-## generation) according to the GATK Best Practices (June 2016) for germline SNP and
-## Indel discovery in human whole-genome sequencing (WGS) data.
+## This WDL pipeline implements CCDG Pipeline standards to process
+## high-throughput sequencing data for downstream processing.
 ##
 ## Requirements/expectations :
 ## - Human whole-genome pair-end sequencing data in unmapped BAM (uBAM) format
@@ -12,7 +11,6 @@
 ## - - files must pass validation by ValidateSamFile
 ## - - reads are provided in query-sorted order
 ## - - all reads must have an RG tag
-## - GVCF output names must end in ".g.vcf.gz"
 ## - Reference genome must be Hg38 with ALT contigs
 ##
 ## Runtime parameters are optimized for Broad's Google Cloud Platform implementation.
@@ -66,11 +64,11 @@ workflow PairedEndSingleSampleWorkflow {
   # Some tasks need wiggle room, and we also need to add a small amount of disk to prevent getting a
   # Cromwell error from asking for 0 disk when the input is less than 1GB
   Int additional_disk = select_first([increase_disk_size, 20])
-  # Germline single sample GVCFs shouldn't get bigger even when the input bam is bigger (after a certain size)
-  Int GVCF_disk_size = select_first([increase_disk_size, 30])
+
   # Sometimes the output is larger than the input, or a task can spill to disk. In these cases we need to account for the
   # input (1) and the output (1.5) or the input(1), the output(1), and spillage (.5).
   Float bwa_disk_multiplier = 2.5
+  
   # SortSam spills to disk a lot more because we are only store 300000 records in RAM now because its faster for our data
   # so it needs more disk space.  Also it spills to disk in an uncompressed format so we need to account for that with a
   # larger multiplier
@@ -79,21 +77,11 @@ workflow PairedEndSingleSampleWorkflow {
   # Mark Duplicates takes in as input readgroup bams and outputs a slightly smaller aggregated bam. Giving .25 as wiggleroom
   Float md_disk_multiplier = 2.25
 
-  # ValidateSamFile runs out of memory in mate validation on crazy edge case data, so we want to skip the mate validation
-  # in those cases.  These values set the thresholds for what is considered outside the normal realm of "reasonable" data.
-  Float max_duplication_in_reasonable_sample = 0.30
-  Float max_chimerism_in_reasonable_sample = 0.15
-
   String bwa_commandline="bwa mem -K 100000000 -p -v 3 -t 16 -Y $bash_ref_fasta"
 
   String recalibrated_bam_basename = base_file_name + ".aligned.duplicates_marked.recalibrated"
 
   Int compression_level = 2
-
-  String DOCKER_SAMTOOLS = "quay.io/ucsc_cgl/samtools:1.3--256539928ea162949d8a65ca5c79a72ef557ce7c"
-  String DOCKER_BWAKIT = "quay.io/ucsc_cgl/bwakit:0.7.15--ed1aeaaebf4d88ba51042da83f02ef8373a822b9"
-  String DOCKER_GATK = "broadinstitute/gatk4:4.0.0.0"
-  String DOCKER_PICARD = "quay.io/ucsc_cgl/picardtools:2.9.0--4d726c4a1386d4252a0fc72d49b1d3f5b50b1e23"
 
   # Get the version of BWA to include in the PG record in the header of the BAM produced
   # by MergeBamAlignment.
