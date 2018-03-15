@@ -1,0 +1,54 @@
+#!/usr/bin/env cwl-runner
+cwlVersion: v1.0
+class: CommandLineTool
+id: baserecalibrator
+requirements:
+  - class: ShellCommandRequirement
+  - class: ScatterFeatureRequirement
+  - class: DockerRequirement
+    dockerPull: <docker>
+  - class: ResourceRequirement
+    ramMin: 6000
+# Generate Base Quality Score Recalibration (BQSR) model, save recalibration_report_filename in csv format
+baseCommand: [gatk4/gatk-launch, BaseRecalibrator]
+argument:
+  - position: 0
+    shellQuote: false
+    valueFrom: >-
+      --javaOptions "GCTimeLimit=50
+      -XX:GCHeapFreeLimit=10
+      -XX:+PrintFlagsFinal
+      -XX:+PrintGCTimeStamps
+      -XX:+PrintGCDateStamps
+      -XX:+PrintGCDetails
+      -Xloggc:gc_log.log
+      -Xms4000m"
+      -R $(inputs.ref_fasta)
+      -I $(inputs.input_bam)
+      --useOriginalQualities
+      -O $(inputs.recalibration_report_filename)
+      -knownSites $(inputs.dbSNP_vcf)
+
+inputs:
+  - ref_fasta: File
+      secondaryFiles: [^.dict, .fai]
+  - input_bam: File
+      secondaryFiles: [^.bai]
+  - recalibration_report_filename: string
+  - sequence_group_interval:
+      type: array
+      items: string
+      inputBinding:
+        prefix: -L
+  - dbSNP_vcf: File
+  - known_indels_sites_VCFs:
+      type: array
+      items: File
+      inputBinding:
+        prefix: -knownSites
+      secondaryFiles: [.tbi]
+
+outputs:
+  - recalibration_report: File
+      outputBinding:
+        glob: '*.recal_data.csv'

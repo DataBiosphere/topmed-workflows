@@ -1,0 +1,27 @@
+cwlVersion: v1.0
+class: CommandLineTool
+id: gatk_gatherbqsrreports
+requirements:
+  - class: ShellCommandRequirement
+  - class: InlineJavascriptRequirement
+  - class: DockerRequirement
+    dockerPull: <docker>
+  - class: ResourceRequirement
+    ramMin: 3500
+baseCommand: [gatk/gatk-launch, GatherBQSRReports]
+arguments:
+  - position: 0
+    shellQuote: false
+    valueFrom: >-
+      --javaOptions "-Xms3000m"
+      -O $(inputs.output_report_filename)
+inputs:
+  input_bqsr_reports: array
+    items: File
+    inputBinding:
+      prefix: "-I"
+
+outputs:
+  output_report: File
+    outputBinding:
+      glob: "*.csv"

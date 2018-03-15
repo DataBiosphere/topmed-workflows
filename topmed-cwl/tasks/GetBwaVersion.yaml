@@ -1,0 +1,34 @@
+cwlVersion: v1.0
+
+# Get version of BWA
+class: CommandLineTool
+
+requirements:
+  - class: ShellCommandRequirement
+  - class: DockerRequirement
+    dockerPull: <docker>
+
+inputs:
+  []
+
+stdout: version
+outputs:
+    version:
+        type: stdout
+
+baseCommand: ['/usr/gitc/bwa', '2>&1']
+arguments:
+  - valueFrom: "grep"
+    position: 2
+    prefix: "|"
+  - valueFrom: "'^Version'"
+    position: 3
+    prefix: "-e"
+  - valueFrom: "sed"
+    position: 4
+    prefix: "|"
+  - valueFrom: "'s/Version: //'"
+    position: 5
+
+outputBinding:
+      glob: uuid

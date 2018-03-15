@@ -1,0 +1,47 @@
+#!/usr/bin/env cwl-runner
+cwlVersion: v1.0
+class: CommandLineTool
+id: markduplicates
+requirements:
+  - class: ShellCommandRequirement
+  - class: ScatterFeatureRequirement
+  - class: DockerRequirement
+    dockerPull: <docker>
+
+# Mark duplicate reads to avoid counting non-independent observations
+baseCommand: [java, -Xms4000m, -jar, /picard.jar, MarkDuplicates]
+argument:
+  - position: 1
+    shellQuote: false
+    valueFrom: >-
+      OUTPUT=$(inputs.output_bam)
+      METRICS_FILE=$(inputs.metrics_filename)
+      VALIDATION_STRINGENCY=SILENT
+      OPTICAL_DUPLICATE_PIXEL_DISTANCE=2500
+      ASSUME_SORT_ORDER="queryname"
+      CLEAR_DT="false"
+      ADD_PG_TAG_TO_READS=false
+      READ_NAME_REGEX=$(inputs.read_name_regex)
+
+inputs:
+  input_bams
+    type:
+      type: array
+      items: File
+      format: "edam:format_2572"
+      inputBinding:
+        prefix: INPUT=
+        seperate: false
+  output_bam: string
+  metrics_filename: string
+  read_name_regex: string?
+
+outputs:
+  $(inputs.output_bam)
+    type: File
+    outputBinding:
+      glob: "*.bam"
+  $(inputs.metrics_filename):
+    type:File
+    outputBinding:
+      glob:"*.txt"

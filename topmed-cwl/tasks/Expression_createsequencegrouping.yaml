@@ -1,0 +1,43 @@
+cwlVersion: v1.0
+class: ExpressionTool
+id: expression_createsequencegrouping
+requirements:
+  - class: InlineJavascriptRequirement
+  - class: ScatterFeatureRequirement
+
+inputs:
+  sequence_grouping_tsv:
+    type: array
+    items: File
+    inputBinding:
+      loadContents: true
+  sequence_grouping_with_unmapped_tsv:
+    type: array
+    items: File
+    inputBinding:
+      loadContents: true
+
+outputs:
+  sequence_grouping_array:
+    type: array
+    items:
+      type: array
+      items: string
+  sequence_grouping_with_unmapped_array:
+    type: array
+    items: string
+
+expression:
+  "${
+      var grouparray = [];
+      var unmapped_array = [];
+      for (var i in inputs.sequence_grouping_tsv) {
+        var sequence_contents = inputs.sequence_grouping_tsv[i].contents;
+        grouparray.push(sequence_contents)
+      }
+      for (var i in inputs.sequence_grouping_with_unmapped_tsv) {
+        var sequence_contents = inputs.sequence_grouping_with_unmapped_tsv[i].contents;
+        unmapped_array.push(sequence_contents)
+      }
+      return {'sequence_grouping_array': grouparray, 'sequence_grouping_with_unmapped_array': unmapped_array};
+  }"
