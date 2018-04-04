@@ -16,6 +16,7 @@
   "PairedEndSingleSampleWorkflow.ref_sa": "gs://broad-references/hg38/v0/Homo_sapiens_assembly38.fasta.64.sa",
   "PairedEndSingleSampleWorkflow.ref_amb": "gs://broad-references/hg38/v0/Homo_sapiens_assembly38.fasta.64.amb",
   "PairedEndSingleSampleWorkflow.preemptible_tries": 3,
+  "PairedEndSingleSampleWorkflow.docker_image": "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.2-1510681135",
   "PairedEndSingleSampleWorkflow.unmapped_bam_suffix": ".unmapped.bam",
   "PairedEndSingleSampleWorkflow.known_indels_sites_indices": [
     "gs://broad-references/hg38/v0/Mills_and_1000G_gold_standard.indels.hg38.vcf.gz.tbi", 
