@@ -101,10 +101,18 @@ workflow PairedEndSingleSampleWorkflow {
     String sub_strip_unmapped = unmapped_bam_suffix + "$"
     String sub_sub = sub(sub(unmapped_bam, sub_strip_path, ""), sub_strip_unmapped, "")
 
+    #call convert_cram_to_bam {
+    #  input: 
+    #    input_cram=unmapped_bam,
+    #    bamName=sub_sub
+    #}
+
     # Map reads to reference
     call SamToFastqAndBwaMemAndMba {
       input:
         input_bam = unmapped_bam,
+        #input_bam = convert_cram_to_bam.output_bam,
+
         bwa_commandline = bwa_commandline,
         output_bam_basename = sub_sub + ".aligned.unsorted",
         ref_fasta = ref_fasta,
@@ -275,6 +283,8 @@ task GetBwaVersion {
   }
   runtime {
     memory: "1 GB"
+    zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"
+    docker: "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.2-1510681135"
   }
   output {
     String version = read_string(stdout())
@@ -361,7 +371,9 @@ task SamToFastqAndBwaMemAndMba {
     memory: "14 GB"
     cpu: "16"
     disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
-  }
+    zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"
+    docker: "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.2-1510681135"
+ }
   output {
     File output_bam = "${output_bam_basename}.bam"
     File bwa_stderr_log = "${output_bam_basename}.bwa.stderr.log"
@@ -392,7 +404,9 @@ task SortSam {
     cpu: "1"
     memory: "5000 MB"
     preemptible: preemptible_tries
-  }
+    zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"
+    docker: "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.2-1510681135"
+ }
   output {
     File output_bam = "${output_bam_basename}.bam"
     File output_bam_index = "${output_bam_basename}.bai"
@@ -434,7 +448,9 @@ task MarkDuplicates {
     preemptible: preemptible_tries
     memory: "7 GB"
     disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
-  }
+    zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"
+    docker: "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.2-1510681135"
+ }
   output {
     File output_bam = "${output_bam_basename}.bam"
     File duplicate_metrics = "${metrics_filename}"
@@ -528,7 +544,9 @@ task BaseRecalibrator {
     preemptible: preemptible_tries
     memory: "6 GB"
     disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
-  }
+    zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"
+    docker: "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.2-1510681135"
+ }
   output {
     File recalibration_report = "${recalibration_report_filename}"
   }
@@ -566,7 +584,9 @@ task ApplyBQSR {
     preemptible: preemptible_tries
     memory: "3500 MB"
     disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
-  }
+    zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"
+    docker: "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.2-1510681135"
+ }
   output {
     File recalibrated_bam = "${output_bam_basename}.bam"
     File recalibrated_bam_checksum = "${output_bam_basename}.bam.md5"
@@ -590,7 +610,9 @@ task GatherBqsrReports {
     preemptible: preemptible_tries
     memory: "3500 MB"
     disks: "local-disk " + disk_size + " HDD"
-  }
+    zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"
+    docker: "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.2-1510681135"
+ }
   output {
     File output_bqsr_report = "${output_report_filename}"
   }
@@ -616,7 +638,9 @@ task GatherBamFiles {
     preemptible: preemptible_tries
     memory: "3 GB"
     disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
-  }
+    zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"
+    docker: "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.2-1510681135"
+ }
   output {
     File output_bam = "${output_bam_basename}.bam"
     File output_bam_index = "${output_bam_basename}.bai"
@@ -663,6 +687,8 @@ task ScatterIntervalList {
   }
   runtime {
     memory: "2 GB"
+    zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"
+    docker: "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.2-1510681135"
   }
 }
 
@@ -696,6 +722,8 @@ task ConvertToCram {
     memory: "3 GB"
     cpu: "1"
     disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
+    zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"
+    docker: "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.2-1510681135"
   }
   output {
     File output_cram = "${output_basename}.cram"
@@ -720,3 +748,22 @@ task SumFloats {
     preemptible: preemptible_tries
   }
 }
+
+task convert_cram_to_bam {
+  File input_cram
+  String bamName
+
+  command {
+    samtools view -b -o ${bamName}.bam ${input_cram}
+  }
+
+  output {
+    File output_bam = "${bamName}.bam"
+  }
+
+  runtime {
+    docker: 'quay.io/cancercollaboratory/dockstore-tool-samtools-view:1.0'
+  }
+}
+
+
