@@ -42,7 +42,7 @@ arguments:
       PRIMARY_ALIGNMENT_STRATEGY=MostDistant
       PROGRAM_RECORD_ID='bwamem'
       PROGRAM_GROUP_NAME='bwamem'
-      PROGRAM_GROUP_VERSION='0.7.15-r1140'
+      PROGRAM_GROUP_VERSION=$inputs.bwa_version
       PROGRAM_GROUP_COMMAND_LINE='bwa mem -K 100000000 -p -v 3 -t 16 -Y $(inputs.indexed_reference_fasta.basename)'
       ALIGNER_PROPER_PAIR_FLAGS=true
       UNMAP_CONTAMINANT_READS=true
@@ -50,14 +50,15 @@ arguments:
       ADD_PG_TAG_TO_READS=false
 inputs:
   input_bam:
-    type: File
+    type: File[]
   indexed_reference_fasta:
     type: File
     secondaryFiles: [.64.amb, .64.ann, .64.bwt, .64.pac, .64.sa, .64.alt,
     ^.dict, .amb, .ann, .bwt, .pac, .sa]
+  bwa_version: string
 outputs:
   output:
-    type: File
+    type: File []
     outputBinding:
       glob: '*.bam'
 

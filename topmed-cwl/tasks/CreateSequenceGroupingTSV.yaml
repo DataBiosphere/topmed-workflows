@@ -1,0 +1,18 @@
+class: CommandLineTool
+cwlVersion: v1.0
+id: bwa_mem
+requirements:
+  - class: DockerRequirement
+    dockerPull: <docker>
+  - class: ShellCommandRequirement
+  - class: InlineJavascriptRequirement
+baseCommand: [python]
+inputs:
+  id: ref_dict
+  type: File
+  inputBinding:
+    position: 1
+outputs:[]
+
+
+

@@ -32,7 +32,7 @@ inputs:
     type:string
 
 outputs:
-  $(inputs.output_bam)
+  output_sorted_bam
     type:File
     secondaryFiles:[^.bai, ^.bam.md5]
     outputBinding:

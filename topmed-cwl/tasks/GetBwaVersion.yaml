@@ -30,5 +30,3 @@ arguments:
   - valueFrom: "'s/Version: //'"
     position: 5
 
-outputBinding:
-      glob: uuid

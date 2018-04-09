@@ -37,11 +37,11 @@ inputs:
   read_name_regex: string?
 
 outputs:
-  $(inputs.output_bam)
+  output_markduplicates_bam:
     type: File
     outputBinding:
       glob: "*.bam"
-  $(inputs.metrics_filename):
+  output_markduplicates_metrics:
     type:File
     outputBinding:
       glob:"*.txt"

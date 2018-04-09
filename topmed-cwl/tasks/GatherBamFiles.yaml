@@ -13,7 +13,7 @@ arguments:
   - position: 0
     shellQuote: false
     valueFrom: >-
-      -Dsamjdk.compression_level=$(inputs.compression_level)
+      -Dsamjdk.compression_level=2
       OUTPUT = $(input.output_bam)
       CREATE_INDEX = true
       CREATE_MD5_FILE = true
@@ -23,7 +23,6 @@ inputs:
     inputBinding:
       prefix: INPUT=
   output_Bam: string
-  compression_level: int
 outputs:
   output_bam:
     type: File
