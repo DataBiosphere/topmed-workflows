@@ -1,5 +1,5 @@
 import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/topmed-firecloud-demo/functional-equivalence-wdl/FunctionalEquivalence.wdl" as TopMed_aligner
-import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/topmed-firecloud-demo/functional-equivalence-checker/topmed-alignment-checker.wdl" as checker
+import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/feature/alignment-checker/functional-equivalence-checker/topmed-alignment-checker.wdl" as checker
 
 workflow checkerWorkflow {
   #File referenceFasta
