@@ -28,7 +28,7 @@ task checkerTask {
   }
 
   runtime {
-    docker: docker_image,
+    docker: docker_image
     disk_size = total_size
   }
 }
