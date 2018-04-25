@@ -1,0 +1,37 @@
+{
+  "checkerWorkflow.expectedNumofReads": 20000,
+  "checkerWorkflow.docker_image": "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.2-1510681135", 
+
+ "checkerWorkflow.flowcell_unmapped_bams": [ 
+  "gs://broad-public-datasets/NA12878_downsampled_for_testing/unmapped/H06JUADXX130110.1.ATCACGAT.20k_reads.bam"
+ ],
+ "checkerWorkflow.known_indels_sites_VCFs": [
+  "gs://broad-references/hg38/v0/Mills_and_1000G_gold_standard.indels.hg38.vcf.gz", 
+  "gs://broad-references/hg38/v0/Homo_sapiens_assembly38.known_indels.vcf.gz"
+ ],
+  "checkerWorkflow.wgs_evaluation_interval_list": "gs://broad-references/hg38/v0/wgs_evaluation_regions.hg38.interval_list",
+  "checkerWorkflow.wgs_coverage_interval_list": "gs://broad-references/hg38/v0/wgs_coverage_regions.hg38.interval_list",
+  "checkerWorkflow.agg_preemptible_tries": 3,
+  "checkerWorkflow.ref_alt": "gs://broad-references/hg38/v0/Homo_sapiens_assembly38.fasta.64.alt",
+  "checkerWorkflow.ref_fasta": "gs://broad-references/hg38/v0/Homo_sapiens_assembly38.fasta",
+  "checkerWorkflow.ref_sa": "gs://broad-references/hg38/v0/Homo_sapiens_assembly38.fasta.64.sa",
+  "checkerWorkflow.ref_amb": "gs://broad-references/hg38/v0/Homo_sapiens_assembly38.fasta.64.amb",
+  "checkerWorkflow.preemptible_tries": 3,
+  "checkerWorkflow.unmapped_bam_suffix": ".unmapped.bam",
+  "checkerWorkflow.known_indels_sites_indices": [
+    "gs://broad-references/hg38/v0/Mills_and_1000G_gold_standard.indels.hg38.vcf.gz.tbi", 
+    "gs://broad-references/hg38/v0/Homo_sapiens_assembly38.known_indels.vcf.gz.tbi"
+],
+  "checkerWorkflow.wgs_calling_interval_list": "gs://broad-references/hg38/v0/ wgs_calling_regions.hg38.interval_list",
+  "checkerWorkflow.ref_bwt": "gs://broad-references/hg38/v0/Homo_sapiens_assembly38.fasta.64.bwt",
+  "checkerWorkflow.break_bands_at_multiples_of": 1000000,
+  "checkerWorkflow.ref_ann": "gs://broad-references/hg38/v0/Homo_sapiens_assembly38.fasta.64.ann",
+  "checkerWorkflow.dbSNP_vcf_index": "gs://broad-references/hg38/v0/Homo_sapiens_assembly38.dbsnp138.vcf.idx",
+  "checkerWorkflow.sample_name": "NA12878_plumbing",
+  "checkerWorkflow.dbSNP_vcf": "gs://broad-references/hg38/v0/Homo_sapiens_assembly38.dbsnp138.vcf",
+  "checkerWorkflow.base_file_name": "NA12878_plumbing",
+  "checkerWorkflow.ref_dict": "gs://broad-references/hg38/v0/Homo_sapiens_assembly38.dict",
+  "checkerWorkflow.haplotype_scatter_count": 10,
+  "checkerWorkflow.ref_fasta_index": "gs://broad-references/hg38/v0/Homo_sapiens_assembly38.fasta.fai",
+  "checkerWorkflow.ref_pac": "gs://broad-references/hg38/v0/Homo_sapiens_assembly38.fasta.64.pac"
+}
