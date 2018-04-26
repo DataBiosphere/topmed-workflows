@@ -38,7 +38,7 @@ workflow checkerWorkflow {
   Int agg_preemptible_tries
 
   # Get the size of the standard reference files
-  Int ref_size = size(ref_fasta, "GB") + size(ref_fasta_index, "GB")
+  Float ref_size = size(ref_fasta, "GB") + size(ref_fasta_index, "GB")
 
  call TopMed_aligner.PairedEndSingleSampleWorkflow as aligner { 
    input: 
