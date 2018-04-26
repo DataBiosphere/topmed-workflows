@@ -75,5 +75,5 @@ workflow checkerWorkflow {
   }
 
 
- call checker.checkerTask { input: inputCRAMFile=aligner.output_cram, expectedNumofReads=expectedNumofReads, docker_image=docker_image, disk_size=disk_size }
+ call checker.checkerTask { input: inputCRAMFile=aligner.output_cram, expectedNumofReads=expectedNumofReads, docker_image=docker_image}
 }
