@@ -3,7 +3,7 @@ task checkerTask {
   File referenceFasta
   Int expectedNumofReads
   File docker_image
-  Int total_size
+  Float disk_size
 
   command {
     printf "The CRAM file is ${inputCRAMFile}"
@@ -29,6 +29,6 @@ task checkerTask {
 
   runtime {
     docker: docker_image
-    disks: "local-disk " + total_size + " HDD"
+    disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
   }
 }

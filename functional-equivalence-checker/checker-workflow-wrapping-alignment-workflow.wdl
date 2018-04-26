@@ -77,7 +77,7 @@ workflow checkerWorkflow {
 
   }
 
- Int total_size = ref_size + size(aligner.output_cram, "GB")
+ Float disk__size = ref_size + size(aligner.output_cram, "GB")
 
- call checker.checkerTask { input: inputCRAMFile=aligner.output_cram, referenceFasta=ref_fasta , expectedNumofReads=expectedNumofReads, docker_image=docker_image, total_size=total_size }
+ call checker.checkerTask { input: inputCRAMFile=aligner.output_cram, referenceFasta=ref_fasta , expectedNumofReads=expectedNumofReads, docker_image=docker_image, disk_size=disk_size }
 }
