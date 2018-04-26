@@ -2,7 +2,7 @@ task checkerTask {
   File inputCRAMFile
   File referenceFasta
   Int expectedNumofReads
-  File docker_image
+  String docker_image
   Float disk_size
 
   command {

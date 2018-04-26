@@ -4,7 +4,7 @@ import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/feature
 workflow checkerWorkflow {
   #File referenceFasta
   Int expectedNumofReads
-  File docker_image
+  String docker_image
 
   File wgs_evaluation_interval_list
   File wgs_coverage_interval_list
