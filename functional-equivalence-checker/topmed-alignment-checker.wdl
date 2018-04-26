@@ -1,9 +1,10 @@
 task checkerTask {
   File inputCRAMFile
-  File referenceFasta
   Int expectedNumofReads
   String docker_image
   Float disk_size
+
+  Float disk_size = size(inputCRAMFile, "GB")
 
   command {
     printf "The CRAM file is ${inputCRAMFile}"

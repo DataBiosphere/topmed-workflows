@@ -37,9 +37,6 @@ workflow checkerWorkflow {
   Int preemptible_tries
   Int agg_preemptible_tries
 
-  # Get the size of the standard reference files
-  Float ref_size = size(ref_fasta, "GB") + size(ref_fasta_index, "GB")
-
  call TopMed_aligner.PairedEndSingleSampleWorkflow as aligner { 
    input: 
      #docker_image = docker_image,
@@ -77,7 +74,6 @@ workflow checkerWorkflow {
 
   }
 
- Float disk_size = ref_size + size(aligner.output_cram, "GB")
 
- call checker.checkerTask { input: inputCRAMFile=aligner.output_cram, referenceFasta=ref_fasta , expectedNumofReads=expectedNumofReads, docker_image=docker_image, disk_size=disk_size }
+ call checker.checkerTask { input: inputCRAMFile=aligner.output_cram, expectedNumofReads=expectedNumofReads, docker_image=docker_image, disk_size=disk_size }
 }
