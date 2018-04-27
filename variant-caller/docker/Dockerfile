@@ -27,13 +27,7 @@ RUN mkdir topmed_freeze3_calling
 RUN mv topmed_freeze3_calling-$COMMIT/* topmed_freeze3_calling/
 RUN rm -rf topmed_freeze3_calling-$COMMIT
 
-# Clone a specific tag of the variant caller repo so we can build the tools
-# and host them inside the image
-#RUN git clone https://github.com/BD2KGenomics/topmed_freeze3_calling.git --branch feature/dockerize-workflow
-
 WORKDIR topmed_freeze3_calling
-
-#RUN rm -rf .git
 
 # Build the tools included in the image
 RUN make SHELL=/bin/bash
