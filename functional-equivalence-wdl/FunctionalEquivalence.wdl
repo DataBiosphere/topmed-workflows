@@ -57,6 +57,7 @@ workflow PairedEndSingleSampleWorkflow {
 
   Int preemptible_tries
   Int agg_preemptible_tries
+  String docker_image
 
   # Optional input to increase all disk sizes in case of outlier sample with strange size behavior
   Int? increase_disk_size
@@ -85,7 +86,10 @@ workflow PairedEndSingleSampleWorkflow {
 
   # Get the version of BWA to include in the PG record in the header of the BAM produced
   # by MergeBamAlignment.
-  call GetBwaVersion
+  call GetBwaVersion {
+    input:
+      docker_image = docker_image
+  }
 
   # Get the size of the standard reference files as well as the additional reference files needed for BWA
   Float ref_size = size(ref_fasta, "GB") + size(ref_fasta_index, "GB") + size(ref_dict, "GB")
@@ -121,7 +125,8 @@ workflow PairedEndSingleSampleWorkflow {
         # so account for the output size by multiplying the input size by 2.75.
         disk_size = unmapped_bam_size + bwa_ref_size + (bwa_disk_multiplier * unmapped_bam_size) + additional_disk,
         compression_level = compression_level,
-        preemptible_tries = preemptible_tries
+        preemptible_tries = preemptible_tries,
+        docker_image = docker_image
     }
 
     Float mapped_bam_size = size(SamToFastqAndBwaMemAndMba.output_bam, "GB")
@@ -146,7 +151,8 @@ workflow PairedEndSingleSampleWorkflow {
       # and the merged output.
       disk_size = (md_disk_multiplier * SumFloats.total_size) + additional_disk,
       compression_level = compression_level,
-      preemptible_tries = agg_preemptible_tries
+      preemptible_tries = agg_preemptible_tries,
+      docker_image = docker_image
   }
 
   Float agg_bam_size = size(MarkDuplicates.output_bam, "GB")
@@ -159,14 +165,16 @@ workflow PairedEndSingleSampleWorkflow {
       # This task spills to disk so we need space for the input bam, the output bam, and any spillage.
       disk_size = (sort_sam_disk_multiplier * agg_bam_size) + additional_disk,
       compression_level = compression_level,
-      preemptible_tries = agg_preemptible_tries
+      preemptible_tries = agg_preemptible_tries,
+      docker_image = docker_image
   }
 
   # Create list of sequences for scatter-gather parallelization
   call CreateSequenceGroupingTSV {
     input:
       ref_dict = ref_dict,
-      preemptible_tries = preemptible_tries
+      preemptible_tries = preemptible_tries,
+      docker_image = docker_image
   }
 
   # We need disk to localize the sharded input and output due to the scatter for BQSR.
@@ -193,7 +201,8 @@ workflow PairedEndSingleSampleWorkflow {
         ref_fasta_index = ref_fasta_index,
         # We need disk to localize the sharded bam due to the scatter.
         disk_size = (agg_bam_size / bqsr_divisor) + ref_size + dbsnp_size + additional_disk,
-        preemptible_tries = agg_preemptible_tries
+        preemptible_tries = agg_preemptible_tries,
+        docker_image = docker_image
     }
   }
 
@@ -204,7 +213,8 @@ workflow PairedEndSingleSampleWorkflow {
       input_bqsr_reports = BaseRecalibrator.recalibration_report,
       output_report_filename = base_file_name + ".recal_data.csv",
       disk_size = additional_disk,
-      preemptible_tries = preemptible_tries
+      preemptible_tries = preemptible_tries,
+      docker_image = docker_image
   }
 
   scatter (subgroup in CreateSequenceGroupingTSV.sequence_grouping_with_unmapped) {
@@ -221,7 +231,8 @@ workflow PairedEndSingleSampleWorkflow {
         # We need disk to localize the sharded bam and the sharded output due to the scatter.
         disk_size = ((agg_bam_size * 3) / bqsr_divisor) + ref_size + additional_disk,
         compression_level = compression_level,
-        preemptible_tries = agg_preemptible_tries
+        preemptible_tries = agg_preemptible_tries,
+        docker_image = docker_image
     }
   }
 
@@ -233,7 +244,8 @@ workflow PairedEndSingleSampleWorkflow {
       # Multiply the input bam size by two to account for the input and output
       disk_size = (2 * agg_bam_size) + additional_disk,
       compression_level = compression_level,
-      preemptible_tries = agg_preemptible_tries
+      preemptible_tries = agg_preemptible_tries,
+      docker_image = docker_image
   }
 
   #BQSR bins the qualities which makes a significantly smaller bam
@@ -247,7 +259,8 @@ workflow PairedEndSingleSampleWorkflow {
       ref_fasta_index = ref_fasta_index,
       output_basename = base_file_name,
       disk_size = (2 * binned_qual_bam_size) + ref_size + additional_disk,
-      preemptible_tries = agg_preemptible_tries
+      preemptible_tries = agg_preemptible_tries,
+      docker_image = docker_image
   }
 
   # Outputs that will be retained when execution is complete
@@ -266,6 +279,7 @@ workflow PairedEndSingleSampleWorkflow {
 
 # Get version of BWA
 task GetBwaVersion {
+  String docker_image
   command {
     # not setting set -o pipefail here because /bwa has a rc=1 and we dont want to allow rc=1 to succeed because
     # the sed may also fail with that error and that is something we actually want to fail on.
@@ -274,6 +288,7 @@ task GetBwaVersion {
     sed 's/Version: //'
   }
   runtime {
+    docker: docker_image
     memory: "1 GB"
   }
   output {
@@ -303,6 +318,7 @@ task SamToFastqAndBwaMemAndMba {
   Float disk_size
   Int compression_level
   Int preemptible_tries
+  String docker_image
 
   command <<<
     set -o pipefail
@@ -357,6 +373,7 @@ task SamToFastqAndBwaMemAndMba {
     fi
   >>>
   runtime {
+    docker: docker_image
     preemptible: preemptible_tries
     memory: "14 GB"
     cpu: "16"
@@ -375,6 +392,7 @@ task SortSam {
   Int preemptible_tries
   Int compression_level
   Float disk_size
+  String docker_image
 
   command {
     java -Dsamjdk.compression_level=${compression_level} -Xms4000m -jar /usr/gitc/picard.jar \
@@ -388,6 +406,7 @@ task SortSam {
 
   }
   runtime {
+    docker: docker_image
     disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
     cpu: "1"
     memory: "5000 MB"
@@ -408,6 +427,7 @@ task MarkDuplicates {
   Float disk_size
   Int compression_level
   Int preemptible_tries
+  String docker_image
 
   # The program default for READ_NAME_REGEX is appropriate in nearly every case.
   # Sometimes we wish to supply "null" in order to turn off optical duplicate detection
@@ -431,6 +451,7 @@ task MarkDuplicates {
       ADD_PG_TAG_TO_READS=false
   }
   runtime {
+    docker: docker_image
     preemptible: preemptible_tries
     memory: "7 GB"
     disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
@@ -445,6 +466,7 @@ task MarkDuplicates {
 task CreateSequenceGroupingTSV {
   File ref_dict
   Int preemptible_tries
+  String docker_image
 
   # Use python to create the Sequencing Groupings used for BQSR and PrintReads Scatter.
   # It outputs to stdout where it is parsed into a wdl Array[Array[String]]
@@ -486,6 +508,7 @@ task CreateSequenceGroupingTSV {
     CODE
   >>>
   runtime {
+    docker: docker_image
     preemptible: preemptible_tries
     docker: "python:2.7"
     memory: "2 GB"
@@ -510,6 +533,7 @@ task BaseRecalibrator {
   File ref_fasta_index
   Float disk_size
   Int preemptible_tries
+  String docker_image
 
   command {
     /usr/gitc/gatk4/gatk-launch --javaOptions "-XX:GCTimeLimit=50 -XX:GCHeapFreeLimit=10 -XX:+PrintFlagsFinal \
@@ -525,6 +549,7 @@ task BaseRecalibrator {
       -L ${sep=" -L " sequence_group_interval}
   }
   runtime {
+    docker: docker_image
     preemptible: preemptible_tries
     memory: "6 GB"
     disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
@@ -546,6 +571,7 @@ task ApplyBQSR {
   Float disk_size
   Int compression_level
   Int preemptible_tries
+  String docker_image
 
   command {
     /usr/gitc/gatk4/gatk-launch --javaOptions "-XX:+PrintFlagsFinal -XX:+PrintGCTimeStamps -XX:+PrintGCDateStamps \
@@ -563,6 +589,7 @@ task ApplyBQSR {
       -L ${sep=" -L " sequence_group_interval}
   }
   runtime {
+    docker: docker_image
     preemptible: preemptible_tries
     memory: "3500 MB"
     disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
@@ -579,6 +606,7 @@ task GatherBqsrReports {
   String output_report_filename
   Int disk_size
   Int preemptible_tries
+  String docker_image
 
   command {
     /usr/gitc/gatk4/gatk-launch --javaOptions "-Xms3000m" \
@@ -587,6 +615,7 @@ task GatherBqsrReports {
       -O ${output_report_filename}
     }
   runtime {
+    docker: docker_image
     preemptible: preemptible_tries
     memory: "3500 MB"
     disks: "local-disk " + disk_size + " HDD"
@@ -603,6 +632,7 @@ task GatherBamFiles {
   Float disk_size
   Int compression_level
   Int preemptible_tries
+  String docker_image
 
   command {
     java -Dsamjdk.compression_level=${compression_level} -Xms2000m -jar /usr/gitc/picard.jar \
@@ -613,6 +643,7 @@ task GatherBamFiles {
       CREATE_MD5_FILE=true
     }
   runtime {
+    docker: docker_image
     preemptible: preemptible_tries
     memory: "3 GB"
     disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
@@ -632,6 +663,7 @@ task ScatterIntervalList {
   File interval_list
   Int scatter_count
   Int break_bands_at_multiples_of
+  String docker_image
 
   command <<<
     set -e
@@ -662,6 +694,7 @@ task ScatterIntervalList {
     Int interval_count = read_int(stdout())
   }
   runtime {
+    docker: docker_image
     memory: "2 GB"
   }
 }
@@ -675,6 +708,7 @@ task ConvertToCram {
   String output_basename
   Float disk_size
   Int preemptible_tries
+  String docker_image
 
   command <<<
     set -e
@@ -692,6 +726,7 @@ task ConvertToCram {
     samtools index ${output_basename}.cram
   >>>
   runtime {
+    docker: docker_image
     preemptible: preemptible_tries
     memory: "3 GB"
     cpu: "1"
