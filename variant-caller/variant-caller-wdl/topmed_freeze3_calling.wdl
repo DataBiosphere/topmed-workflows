@@ -313,9 +313,9 @@ workflow TopMedVariantCaller {
           tsv_crams_rows.append([base_name_wo_extension, cram_file, '0.000'])
 
       # Remove the old PED file; we will not use a PED file?
-      open('/root/topmed_freeze3_calling/data/TopMed_open_access_files.ped', 'w+').close()
+      open('/root/topmed_freeze3_calling/data/trio_data.ped', 'w+').close()
 
-      with open('/root/topmed_freeze3_calling/data/TopMed_open_access_files.index', 'w+') as tsv_index_file:
+      with open('/root/topmed_freeze3_calling/data/trio_data.index', 'w+') as tsv_index_file:
           writer = csv.writer(tsv_index_file, delimiter = '\t')
           for cram_info in tsv_crams_rows:
               writer.writerow(cram_info)
@@ -400,6 +400,22 @@ workflow TopMedVariantCaller {
       pushd /root/topmed_freeze3_calling
 
       WORKING_DIR='./' 
+
+      # Put the correct location of the index file into the global config file
+      sed -i '/.*our $refDir.*/ c\our $refDir = "$FindBin::Bin\/..\/data\/local.org\/ref\/gotcloud.ref\/hg38";' "$WORKING_DIR"/scripts/gcconfig.pm
+      sed -i '/.*our $ref = "$refDir.*/ c\our $ref = "$refDir\/hs38DH.fa";' "$WORKING_DIR"/scripts/gcconfig.pm
+      sed -i '/.*our $dbsnp.*/ c\our $dbsnp = "$refDir\/dbsnp_142.b38.vcf.gz";' "$WORKING_DIR"/scripts/gcconfig.pm
+      sed -i '/.*our $hapmapvcf.*/ c\our $hapmapvcf = "$refDir\/hapmap_3.3.b38.sites.vcf.gz";' "$WORKING_DIR"/scripts/gcconfig.pm
+      sed -i '/.*our $omnivcf.*/ c\our $omnivcf = "$refDir\/1000G_omni2.5.b38.sites.PASS.vcf.gz";' "$WORKING_DIR"/scripts/gcconfig.pm
+
+
+      # Put the correct location of the output directory into the global config file
+      #sed -i '/.*our $out =.*/ c\our $out = "/root/topmed_freeze3_calling/out";' "$WORKING_DIR"/scripts/gcconfig.pm
+      # Put the correct location of references into the config file
+      sed -i '/.*our $md5 =.*/ c\our $md5 = "\/data\/local.org\/ref\/gotcloud.ref\/md5\/%2s\/%s\/%s";' "$WORKING_DIR"/scripts/config.pm
+      sed -i '/.*our $ref =.*/ c\our $ref = "\/data\/local.org\/ref\/gotcloud.ref\/hg38\/hs38DH.fa";' "$WORKING_DIR"/scripts/config.pm
+
+
       echo "Running step1 - detect and merge variants"
       echo "Running step1 - detect and merge variants - removing old output dir if it exists"
       if [ -d "$WORKING_DIR"/out ]; then rm -Rf "$WORKING_DIR"/out; fi
