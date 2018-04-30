@@ -1,10 +1,10 @@
 import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/topmed-firecloud-demo/functional-equivalence-wdl/FunctionalEquivalence.wdl" as TopMed_aligner
-import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/develop/functional-equivalence-checker/topmed-alignment-checker.wdl" as checker
+import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.4.0/functional-equivalence-checker/topmed-alignment-checker.wdl" as checker
 
 workflow checkerWorkflow {
   #File referenceFasta
   Int expectedNumofReads
-  File docker_image
+  String docker_image
 
   File wgs_evaluation_interval_list
   File wgs_coverage_interval_list
@@ -36,9 +36,6 @@ workflow checkerWorkflow {
 
   Int preemptible_tries
   Int agg_preemptible_tries
-
-  # Get the size of the standard reference files
-  Float ref_size = size(ref_fasta, "GB") + size(ref_fasta_index, "GB")
 
  call TopMed_aligner.PairedEndSingleSampleWorkflow as aligner { 
    input: 
@@ -77,7 +74,6 @@ workflow checkerWorkflow {
 
   }
 
- Float total_size = ref_size + size(aligner.output_cram, "GB")
 
- call checker.checkerTask { input: inputCRAMFile=aligner.output_cram, referenceFasta=ref_fasta , expectedNumofReads=expectedNumofReads, docker_image=docker_image, total_size=total_size }
+ call checker.checkerTask { input: inputCRAMFile=aligner.output_cram, expectedNumofReads=expectedNumofReads, docker_image=docker_image}
 }
