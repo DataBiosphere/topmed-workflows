@@ -1,8 +1,7 @@
-import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.6.0/aligner/functional-equivalence-wdl/FunctionalEquivalence.wdl" as TopMed_aligner
-import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.6.0/aligner/functional-equivalence-checker/topmed-alignment-checker.wdl" as checker
+import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.7.0/aligner/functional-equivalence-wdl/FunctionalEquivalence.wdl" as TopMed_aligner
+import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.7.0/aligner/functional-equivalence-checker/topmed-alignment-checker.wdl" as checker
 
 workflow checkerWorkflow {
-  #File referenceFasta
   Int expectedNumofReads
   String docker_image
 
@@ -39,7 +38,7 @@ workflow checkerWorkflow {
 
  call TopMed_aligner.PairedEndSingleSampleWorkflow as aligner { 
    input: 
-     #docker_image = docker_image,
+     docker_image = docker_image,
 
      wgs_evaluation_interval_list = wgs_evaluation_interval_list,
      wgs_coverage_interval_list = wgs_coverage_interval_list,
