@@ -4,16 +4,18 @@ cwlVersion: v1.0
 
 class: CommandLineTool
 
+id: sortsam
+
 requirements:
   - class: ShellCommandRequirement
   - class: ResourceRequirement
     ramMin: 5000
   - class: DockerRequirement
-    dockerPull: <docker>
+    dockerPull: us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.2-1510681135
 
 # Sort BAM file by coordinate order and fix tag values for NM and UQ
-baseCommand: [java, -Dsamjdk.compression_level=2, -jar, /picard.jar]
-argument:
+baseCommand: [java, -Dsamjdk.compression_level=2, -Xms4000m, -jar, /usr/gitc/picard.jar]
+arguments:
   - position: 0
     shellQuote: false
     valueFrom: >-
@@ -23,17 +25,17 @@ argument:
       SORT_ORDER="coordinate"
       CREATE_INDEX=true
       CREATE_MD5_FILE=true
-      Max_RECOREDS_IN_RAM=300000
+      MAX_RECORDS_IN_RAM=300000 
 
 inputs:
   input_bam:
-    type:File
+    type: File
   output_bam:
-    type:string
+    type: string
 
 outputs:
-  output_sorted_bam
-    type:File
-    secondaryFiles:[^.bai, ^.bam.md5]
+  output_sorted_bam:
+    type: File[]
+    secondaryFiles: [^.bai, ^.bam.md5]
     outputBinding:
-      glob:["*.bam", "*.bai",*.md5]
+      glob: ["*.bam", "*.bai", "*.md5"]

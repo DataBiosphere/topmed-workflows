@@ -6,16 +6,16 @@ requirements:
   - class: ShellCommandRequirement
   - class: ScatterFeatureRequirement
   - class: DockerRequirement
-    dockerPull: <docker>
+    dockerPull: us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.2-1510681135
   - class: ResourceRequirement
     ramMin: 6000
 # Generate Base Quality Score Recalibration (BQSR) model, save recalibration_report_filename in csv format
-baseCommand: [gatk4/gatk-launch, BaseRecalibrator]
-argument:
+baseCommand: [/usr/gitc/gatk4/gatk-launch, BaseRecalibrator]
+arguments:
   - position: 0
     shellQuote: false
     valueFrom: >-
-      --javaOptions "GCTimeLimit=50
+      --javaOptions "-XX:GCTimeLimit=50
       -XX:GCHeapFreeLimit=10
       -XX:+PrintFlagsFinal
       -XX:+PrintGCTimeStamps
@@ -23,31 +23,35 @@ argument:
       -XX:+PrintGCDetails
       -Xloggc:gc_log.log
       -Xms4000m"
-      -R $(inputs.ref_fasta)
-      -I $(inputs.input_bam)
+      -R $(inputs.ref_fasta.path)
+      -I $(inputs.input_bam.path)
       --useOriginalQualities
       -O $(inputs.input_bam.nameroot).recal_data.csv
-      -knownSites $(inputs.dbSNP_vcf)
 
 inputs:
-  - ref_fasta: File
-      secondaryFiles: [^.dict, .fai]
-  - input_bam: File
-      secondaryFiles: [^.bai]
-  - sequence_group_interval:
-      type: array
-      items: string
-      inputBinding:
-        prefix: -L
-  - dbSNP_vcf: File
-  - known_indels_sites_VCFs:
-      type: array
-      items: File
+  ref_fasta:
+    type: File
+    secondaryFiles: [ ^.dict, .fai ]
+  input_bam:
+    type: File
+    secondaryFiles: [^.bai]
+  sequence_group_interval:
+    type: string[]
+    inputBinding:
+      prefix: -L
+  dbSNP_vcf: 
+    type: File
+    inputBinding:
+      prefix: -knownSites
+    secondaryFiles: [^.gz.tbi]
+  known_indels_sites_VCFs:
+      type: File
       inputBinding:
         prefix: -knownSites
-      secondaryFiles: [.tbi]
+      secondaryFiles: [^.gz.tbi]
 
 outputs:
-  - recalibration_report: File
-      outputBinding:
-        glob: '*.recal_data.csv'
+  recalibration_report:
+    type: File
+    outputBinding:
+      glob: '*.recal_data.csv'

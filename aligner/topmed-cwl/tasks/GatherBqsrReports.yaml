@@ -5,10 +5,10 @@ requirements:
   - class: ShellCommandRequirement
   - class: InlineJavascriptRequirement
   - class: DockerRequirement
-    dockerPull: <docker>
+    dockerPull: us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.2-1510681135
   - class: ResourceRequirement
     ramMin: 3500
-baseCommand: [gatk/gatk-launch, GatherBQSRReports]
+baseCommand: [/usr/gitc/gatk4/gatk-launch, GatherBQSRReports]
 arguments:
   - position: 0
     shellQuote: false
@@ -16,12 +16,14 @@ arguments:
       --javaOptions "-Xms3000m"
       -O $(inputs.output_report_filename)
 inputs:
-  input_bqsr_reports: array
-    items: File
+  input_bqsr_reports:
+    type: File[]
     inputBinding:
       prefix: "-I"
+  output_report_filename: string
 
 outputs:
-  output_report: File
+  output_report:
+    type: File
     outputBinding:
       glob: "*.csv"

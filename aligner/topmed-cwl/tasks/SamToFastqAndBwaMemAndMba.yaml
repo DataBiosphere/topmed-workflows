@@ -3,13 +3,13 @@ cwlVersion: v1.0
 id: bwa_mem
 requirements:
   - class: DockerRequirement
-    dockerPull: <docker>
+    dockerPull: us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.2-1510681135
   - class: ShellCommandRequirement
   - class: InlineJavascriptRequirement
   - class: ResourceRequirement
     ramMin: 14000
     coresMin: 16
-baseCommand: [java, -Xms5000m, -jar, /picard.jar]
+baseCommand: [java, -Xms5000m, -jar, /usr/gitc/picard.jar]
 arguments:
   - position: 0
     shellQuote: false
@@ -19,8 +19,8 @@ arguments:
       FASTQ=/dev/stdout
       INTERLEAVE=true
       NON_PF=true
-      | bwa mem -K 100000000 -p -v 3 -t 16 -Y $(inputs.indexed_reference_fasta.path) -
-      | java -Dsamjdk.compression_level=2 -Xms4000m -jar /picard.jar
+      | /usr/gitc/bwa mem -K 100000000 -p -v 3 -t 16 -Y $(inputs.indexed_reference_fasta.path) - 0.7.15-r1140
+      | java -Dsamjdk.compression_level=2 -Xms4000m -jar /usr/gitc/picard.jar
       MergeBamAlignment
       VALIDATION_STRINGENCY=SILENT
       EXPECTED_ORIENTATIONS=FR
@@ -50,15 +50,15 @@ arguments:
       ADD_PG_TAG_TO_READS=false
 inputs:
   input_bam:
-    type: File[]
+    type: File
   indexed_reference_fasta:
     type: File
     secondaryFiles: [.64.amb, .64.ann, .64.bwt, .64.pac, .64.sa, .64.alt,
-    ^.dict, .amb, .ann, .bwt, .pac, .sa]
+    ^.dict]
   bwa_version: string
 outputs:
   output:
-    type: File []
+    type: File[]
     outputBinding:
       glob: '*.bam'
 

@@ -1,18 +1,24 @@
+#!/usr/bin/env cwl-runner
 class: CommandLineTool
 cwlVersion: v1.0
-id: bwa_mem
+id: createinterval
 requirements:
   - class: DockerRequirement
-    dockerPull: <docker>
+    dockerPull: us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.2-1510681135
   - class: ShellCommandRequirement
   - class: InlineJavascriptRequirement
 baseCommand: [python]
 inputs:
-  id: ref_dict
-  type: File
-  inputBinding:
-    position: 1
-outputs:[]
-
-
-
+  script:
+    type: File
+    inputBinding:
+      position: 0
+  ref_dict:
+    type: File
+    inputBinding:
+      position: 1
+outputs:
+  groups:
+    type: File[]
+    outputBinding:
+      glob: "*.txt"
