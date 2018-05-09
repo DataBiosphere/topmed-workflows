@@ -1,0 +1,12 @@
+{
+  "TopMedAligner.input_cram_file": "/home/ubuntu/broad/output/NA12878_plumbing.cram",
+  "TopMedAligner.input_crai_file": "/home/ubuntu/broad/output/NA12878_plumbing.crai",
+
+  "TopMedAligner.ref_fasta":  "/home/ubuntu/topmed_freeze3_calling/data/local.org/ref/gotcloud.ref/hg38/hs38DH.fa",
+  "TopMedAligner.ref_fasta_index":  "/home/ubuntu/topmed_freeze3_calling/data/local.org/ref/gotcloud.ref/hg38/hs38DH.fa.fai",
+
+  "TopMedAligner.dbSNP_vcf": "/home/ubuntu/topmed_freeze3_calling/data/local.org/ref/gotcloud.ref/hg38/dbsnp_142.b38.vcf.gz",
+  "TopMedAligner.dbSNP_vcf_index": "/home/ubuntu/topmed_freeze3_calling/data/local.org/ref/gotcloud.ref/hg38/ddbsnp_142.b38.vcf.gz.tbi",
+
+  "TopMedAligner.docker_image": "statgen/alignment"
+}
