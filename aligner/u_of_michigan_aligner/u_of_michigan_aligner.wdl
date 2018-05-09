@@ -31,7 +31,7 @@ workflow TopMedAligner {
      input:
       input_crai = input_crai_file,
       input_cram = input_cram_file,
-      disk_size = sumCRAMSizes.total_size + ref_size,
+      disk_size = ref_size,
       docker_image = docker_image,
       ref_fasta = ref_fasta,
       ref_fasta_index = ref_fasta_index
@@ -66,9 +66,6 @@ workflow TopMedAligner {
  
 
   task PreAlign {
-     # The CRAM index files are listed as an input because they are required
-     # by various tools, e.g. Samtools. They should be in the same location
-     # as the CRAM files when specified in the input JSON
      File input_crai
      File input_cram
 
