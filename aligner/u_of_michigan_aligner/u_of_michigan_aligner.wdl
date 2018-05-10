@@ -32,24 +32,34 @@ workflow TopMedAligner {
 
   # Get the size of the standard reference files as well as the additional reference files needed for BWA
   Float ref_size = size(ref_fasta, "GB") + size(ref_fasta_index, "GB")
+  Float ref_extra_size = size(ref_alt, "GB") + size(ref_bwt, "GB") + size(ref_pac, "GB") + size(ref_ann, "GB") + size(ref_amb, "GB") + size(ref_sa, "GB")
   Float dbsnp_size = size(dbSNP_vcf, "GB") + size(dbSNP_vcf_index, "GB")
+  Float cram_size = size(input_cram_file, "GB") + size(input_crai_file, "GB")
 
   call PreAlign {
      input:
       input_crai = input_crai_file,
       input_cram = input_cram_file,
-      disk_size = ref_size,
+      disk_size = ref_size + cram_size,
       docker_image = docker_image,
       ref_fasta = ref_fasta,
       ref_fasta_index = ref_fasta_index
   }
+
+  call sumFileSizes {
+    input:
+      input_files = PreAlign.output_fastq_gz_files,
+      disk_size = ref_size,
+      docker_image = docker_image
+  }
+ 
 
   call Align {
      input:
       input_list_file = PreAlign.output_list_file,
       input_fastq_gz_files = PreAlign.output_fastq_gz_files,
 
-      disk_size = ref_size,
+      disk_size = ref_size + ref_extra_size + sumFileSizes.files_size,
       docker_image = docker_image,
 
       ref_alt = ref_alt,
@@ -62,11 +72,18 @@ workflow TopMedAligner {
       ref_fasta_index = ref_fasta_index
   }
 
+  call sumFileSizes as sumCRAMSizes {
+    input:
+      input_files = Align.output_cram_files,
+      disk_size = ref_size,
+      docker_image = docker_image
+  }
+
   call PostAlign {
      input:
       input_cram_files = Align.output_cram_files,
 
-      disk_size = ref_size + dbsnp_size,
+      disk_size = ref_size + dbsnp_size + sumCRAMSizes.files_size,
       docker_image = docker_image,
 
       ref_fasta = ref_fasta,
@@ -128,6 +145,43 @@ workflow TopMedAligner {
       disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
       zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"
       docker: docker_image
+    }
+  }
+
+  task sumFileSizes {
+    Array[File] input_files
+    Float disk_size
+    String docker_image
+  
+    command {
+      python3 <<CODE
+      import os
+      import functools
+
+      files_string = "${ sep=',' input_files }"
+      files_list = files_string.split(',')
+      if len(files_list) > 1:
+          files_size = functools.reduce((lambda x, y: os.stat(x).st_size + os.stat(y).st_size), files_list)
+      else:
+          files_size = os.stat(files_list[0]).st_size
+
+      # Shift right by 30 bits to get Gigabyte size of files
+      files_size = (files_size >> 30)
+
+      # Bump the size up 1 GB in case the total size is less than 1 GB
+      print(files_size + 1)
+
+      CODE
+    }
+    runtime {
+      memory: "10 GB"
+      cpu: "16"
+      disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
+      zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"
+      docker: docker_image
+    }
+    output {
+      Float files_size = read_float(stdout())
     }
   }
 

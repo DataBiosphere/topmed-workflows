@@ -1,6 +1,6 @@
 {
-  "TopMedAligner.input_cram_file": "/home/ubuntu/broad/output/NA12878_plumbing.cram",
-  "TopMedAligner.input_crai_file": "/home/ubuntu/broad/output/NA12878_plumbing.cram.crai",
+  "TopMedAligner.input_cram_file": "/home/ubuntu/TopMed/topmed_open_access/NWD759405.recab.cram",
+  "TopMedAligner.input_crai_file": "/home/ubuntu/TopMed/topmed_open_access/NWD759405.recab.cram.crai",
 
   "TopMedAligner.ref_alt":  "/home/ubuntu/topmed_freeze3_calling/data/local.org/ref/gotcloud.ref/hg38/hs38DH.fa.alt",
   "TopMedAligner.ref_bwt":  "/home/ubuntu/topmed_freeze3_calling/data/local.org/ref/gotcloud.ref/hg38/hs38DH.fa.bwt",
