@@ -62,7 +62,7 @@ workflow TopMedAligner {
       ref_fasta_index = ref_fasta_index
   }
 
-   call PostAlign {
+  call PostAlign {
      input:
       input_cram_files = Align.output_cram_files,
 
@@ -81,10 +81,6 @@ workflow TopMedAligner {
   }
 }
 
-
-
- 
-
   task PreAlign {
      File input_crai
      File input_cram
@@ -95,14 +91,19 @@ workflow TopMedAligner {
      File ref_fasta
      File ref_fasta_index
 
+     # Assign a basename to the intermediate files
      String pre_output_base = "pre_output_base"
 
      command {
 
+      # Set the exit code of a pipeline to that of the rightmost command
+      # to exit with a non-zero status, or zero if all commands of the pipeline exit 
       set -o pipefail
+      # cause a bash script to exit immediately when a command fails
       set -e
-
-      #echo each line of the script to stdout so we can see what is happening
+      # cause the bash shell to treat unset variables as an error and exit immediately
+      set -u
+      # echo each line of the script to stdout so we can see what is happening
       set -o xtrace
       #to turn off echo do 'set +o xtrace'
 
@@ -157,10 +158,14 @@ workflow TopMedAligner {
      String dollar = "$"
      command <<<
 
+      # Set the exit code of a pipeline to that of the rightmost command
+      # to exit with a non-zero status, or zero if all commands of the pipeline exit 
       set -o pipefail
+      # cause a bash script to exit immediately when a command fails
       set -e
-
-      #echo each line of the script to stdout so we can see what is happening
+      # cause the bash shell to treat unset variables as an error and exit immediately
+      set -u
+      # echo each line of the script to stdout so we can see what is happening
       set -o xtrace
       #to turn off echo do 'set +o xtrace'
 
@@ -176,10 +181,8 @@ workflow TopMedAligner {
         input_filename=$(basename ${dollar}{input_path})
         output_filename=$(basename ${dollar}{input_filename} ".fastq.gz").cram
 
- 
         # Prepend the path to the input file with the Cromwell input directory
         input_path=${dollar}{input_file_location}"/"${dollar}{input_filename}
-
      
         paired_flag=""
         if [[ ${dollar}{input_filename} =~ interleaved\.fastq\.gz$ ]]
@@ -188,10 +191,7 @@ workflow TopMedAligner {
         fi
       
         bwa mem -t 32 -K 100000000 -Y ${dollar}{paired_flag} -R ${dollar}{line_rg} ${ref_fasta} ${dollar}{input_path} | samblaster -a --addMateTags | samtools view -@ 32 -T ${ref_fasta} -C -o ${dollar}{output_filename} -
-
- 
       done <<< "$(tail -n +2 ${input_list_file})"
-
 
     >>>
      output {
@@ -227,11 +227,14 @@ task PostAlign {
      String dollar = "$"
 
      command <<<
-
+      # Set the exit code of a pipeline to that of the rightmost command
+      # to exit with a non-zero status, or zero if all commands of the pipeline exit 
       set -o pipefail
+      # cause a bash script to exit immediately when a command fails
       set -e
-
-      #echo each line of the script to stdout so we can see what is happening
+      # cause the bash shell to treat unset variables as an error and exit immediately
+      set -u
+      # echo each line of the script to stdout so we can see what is happening
       set -o xtrace
       #to turn off echo do 'set +o xtrace'
 
@@ -240,7 +243,6 @@ task PostAlign {
       # Get the Cromwell directory that is the input file location
       input_file_location=$(dirname ${input_cram_files[0]})
 
-    
       rc=0
       for input_file in ${dollar}{input_file_location}"/"*.cram 
       do 
