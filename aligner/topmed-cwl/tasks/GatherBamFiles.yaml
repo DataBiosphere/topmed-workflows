@@ -15,14 +15,17 @@ arguments:
     valueFrom: >-
       GatherBamFiles
       OUTPUT=$(inputs.output_bam_name)
-      CREATE_INDEX=true
+      CREATE_INDEX=false
       CREATE_MD5_FILE=true
 
 inputs:
-  input_bam: 
-    type: File[]
-    inputBinding:
-      prefix: INPUT=
+  input_bam:
+    type:
+      type: array
+      items: File
+      inputBinding:
+        prefix: INPUT=
+        separate: false
   output_bam_name: string
 
 outputs:
@@ -30,4 +33,4 @@ outputs:
     type: File
     outputBinding:
       glob: "*.bam"
-    secondaryFiles: [^.bai,^.md5]
+    secondaryFiles: [^.bam.md5]

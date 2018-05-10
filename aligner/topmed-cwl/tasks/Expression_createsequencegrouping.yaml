@@ -4,7 +4,7 @@ id: expression_createsequencegrouping
 requirements:
   - class: InlineJavascriptRequirement
 inputs:
-  sequence_grouping_tsv:
+  sequence_grouping_with_unmapped_tsv:
     type:
       type: array
       items: File
@@ -13,7 +13,7 @@ inputs:
         valueFrom: $(null)
 
 outputs:
-  grouping_array:
+  sequence_grouping_array:
     type:
       type: array
       items:
@@ -23,14 +23,14 @@ outputs:
 expression: |
   ${
       var outer_array = [];
-      for (var i=0; i< inputs.sequence_grouping_tsv.length; i++) {
+      for (var i=0; i< inputs.sequence_grouping_with_unmapped_tsv.length; i++) {
         var inner_array = [];
-        var arrayofstring = inputs.sequence_grouping_tsv[i].contents.split("\t");
+        var arrayofstring = inputs.sequence_grouping_with_unmapped_tsv[i].contents.split("\t");
         for (var j=0; j < arrayofstring.length; j++) {
           var sequence_contents = arrayofstring[j];
           inner_array.push(sequence_contents);
       }
         outer_array.push(inner_array);
      }
-      return {"grouping_array": outer_array};
+      return {"sequence_grouping_array": outer_array};
   }

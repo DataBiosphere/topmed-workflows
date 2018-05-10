@@ -40,9 +40,12 @@ inputs:
   - id: recalibration_report
     type: File
   - id: sequence_group_interval
-    type: string[]
-    inputBinding:
-      prefix: '-L'
+    type: 
+      type: array
+      items: string
+      inputBinding:
+        prefix: '-L'
+        separate: true
   - id: ref_fasta
     type: File
     secondaryFiles: [.fai, ^.dict]
@@ -55,5 +58,5 @@ outputs:
     outputBinding:
       glob: '*bam'
     secondaryFiles: 
-      - .bai
-      - .md5
+      - ^.bai
+      - ^.bam.md5

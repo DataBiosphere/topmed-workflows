@@ -17,9 +17,12 @@ arguments:
       -O $(inputs.output_report_filename)
 inputs:
   input_bqsr_reports:
-    type: File[]
-    inputBinding:
-      prefix: "-I"
+    type:
+      type: array
+      items: File
+      inputBinding:
+        prefix: "-I"
+        separate: true
   output_report_filename: string
 
 outputs:

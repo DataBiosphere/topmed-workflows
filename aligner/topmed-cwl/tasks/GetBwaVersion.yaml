@@ -6,6 +6,7 @@ class: CommandLineTool
 id: getBwaversion
 requirements:
   - class: ShellCommandRequirement
+  - class: InlineJavascriptRequirement
   - class: DockerRequirement
     dockerPull: us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.2-1510681135
 
@@ -15,7 +16,11 @@ inputs:
 stdout: version
 outputs:
     version:
-        type: stdout
+        type: string
+        outputBinding:
+          glob: version
+          loadContents: true
+          outputEval: $(self[0].contents.trim())
 
 baseCommand: ['/usr/gitc/bwa']
 arguments:
