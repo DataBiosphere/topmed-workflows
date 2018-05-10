@@ -15,17 +15,24 @@ workflow TopMedAligner {
   File input_crai_file
   File input_cram_file
 
-  String docker_image
+  String docker_image 
+
+  File ref_alt
+  File ref_bwt
+  File ref_pac
+  File ref_ann
+  File ref_amb
+  File ref_sa
 
   File ref_fasta
   File ref_fasta_index
+
   File dbSNP_vcf
   File dbSNP_vcf_index
 
   # Get the size of the standard reference files as well as the additional reference files needed for BWA
   Float ref_size = size(ref_fasta, "GB") + size(ref_fasta_index, "GB")
   Float dbsnp_size = size(dbSNP_vcf, "GB") + size(dbSNP_vcf_index, "GB")
-
 
   call PreAlign {
      input:
@@ -40,19 +47,31 @@ workflow TopMedAligner {
   call Align {
      input:
       input_list_file = PreAlign.output_list_file,
+      input_fastq_gz_files = PreAlign.output_fastq_gz_files,
+
       disk_size = ref_size,
       docker_image = docker_image,
+
+      ref_alt = ref_alt,
+      ref_bwt = ref_bwt,
+      ref_pac = ref_pac,
+      ref_ann = ref_ann,
+      ref_amb = ref_amb,
+      ref_sa = ref_sa,
       ref_fasta = ref_fasta,
       ref_fasta_index = ref_fasta_index
   }
 
    call PostAlign {
      input:
-      num_output_files = Align.num_output_files,
+      input_cram_files = Align.output_cram_files,
+
       disk_size = ref_size + dbsnp_size,
       docker_image = docker_image,
+
       ref_fasta = ref_fasta,
       ref_fasta_index = ref_fasta_index,
+
       dbSNP_vcf = dbSNP_vcf,
       dbSNP_vcf_index = dbSNP_vcf_index
   }
@@ -61,6 +80,7 @@ workflow TopMedAligner {
       File aligner_output = PostAlign.output_cram_file
   }
 }
+
 
 
  
@@ -97,6 +117,9 @@ workflow TopMedAligner {
     }
      output {
       File output_list_file = "${pre_output_base}.list"
+      # Capture all the files mentioned in the pre_output_base.list file
+      # So they will be present for the Align task
+      Array[File] output_fastq_gz_files = glob("${pre_output_base}.*")
     }
    runtime {
       memory: "10 GB"
@@ -110,15 +133,29 @@ workflow TopMedAligner {
 
   task Align {
      File input_list_file
+     Array[File] input_fastq_gz_files
 
      Float disk_size
      String docker_image
 
+     File ref_alt
+     File ref_bwt
+     File ref_pac
+     File ref_ann
+     File ref_amb
+     File ref_sa
+
      File ref_fasta
      File ref_fasta_index
 
-
-     command {
+     # We have to use a trick to make Cromwell
+     # skip substitution when using the bash ${<variable} syntax
+     # This is necessary to get the <var>=$(<command>) sub shell 
+     # syntax to work and assign the value to a variable when 
+     # running in Cromwell
+     # See https://gatkforums.broadinstitute.org/wdl/discussion/comment/44570#Comment_44570 
+     String dollar = "$"
+     command <<<
 
       set -o pipefail
       set -e
@@ -128,31 +165,37 @@ workflow TopMedAligner {
       #to turn off echo do 'set +o xtrace'
 
       echo "Running alignment"
-      num_output_files=0
+
+      # Get the Cromwell directory that is the input file location 
+      input_file_location=$(dirname ${input_fastq_gz_files[0]})
 
       while read line
       do
-        line_rg=$(echo $line | cut -d ' ' -f 4- | sed -e "s/ /\\\t/g")
-        input_path=$(echo $line | cut -f 2 -d ' ')
-        input_filename=$(basename $input_path)
-        output_filename=$(basename $input_filename ".fastq.gz").cram
-      
+        line_rg=$(echo ${dollar}{line} | cut -d ' ' -f 4- | sed -e "s/ /\\\t/g")
+        input_path=$(echo ${dollar}{line} | cut -f 2 -d ' ')
+        input_filename=$(basename ${dollar}{input_path})
+        output_filename=$(basename ${dollar}{input_filename} ".fastq.gz").cram
+
+ 
+        # Prepend the path to the input file with the Cromwell input directory
+        input_path=${dollar}{input_file_location}"/"${dollar}{input_filename}
+
+     
         paired_flag=""
-        if [[ $input_file_name =~ interleaved\.fastq\.gz$ ]]
+        if [[ ${dollar}{input_filename} =~ interleaved\.fastq\.gz$ ]]
         then
           paired_flag="-p"
         fi
       
-        bwa mem -t 32 -K 100000000 -Y $paired_flag -R "$line_rg" ${ref_fasta} $input_path | samblaster -a --addMateTags | samtools view -@ 32 -T ${ref_fasta} -C -o $output_filename -
+        bwa mem -t 32 -K 100000000 -Y ${dollar}{paired_flag} -R ${dollar}{line_rg} ${ref_fasta} ${dollar}{input_path} | samblaster -a --addMateTags | samtools view -@ 32 -T ${ref_fasta} -C -o ${dollar}{output_filename} -
 
-        num_output_files=$((num_output_files+1))
  
       done <<< "$(tail -n +2 ${input_list_file})"
 
 
-    }
+    >>>
      output {
-      Int num_output_files = "$num_output_files"
+      Array[File] output_cram_files = glob("*.cram")
     }
    runtime {
       memory: "10 GB"
@@ -163,8 +206,7 @@ workflow TopMedAligner {
     }
   }
 
-
-  task PostAlign {
+task PostAlign {
      Float disk_size
      String docker_image
 
@@ -172,10 +214,19 @@ workflow TopMedAligner {
      File ref_fasta_index
 
      File dbSNP_vcf
+     File dbSNP_vcf_index
 
-     Int num_output_files
+     Array[File] input_cram_files
 
-     command {
+     # We have to use a trick to make Cromwell
+     # skip substitution when using the bash ${<variable} syntax
+     # This is necessary to get the <var>=$(<command>) sub shell 
+     # syntax to work and assign the value to a variable when 
+     # running in Cromwell
+     # See https://gatkforums.broadinstitute.org/wdl/discussion/comment/44570#Comment_44570 
+     String dollar = "$"
+
+     command <<<
 
       set -o pipefail
       set -e
@@ -184,30 +235,41 @@ workflow TopMedAligner {
       set -o xtrace
       #to turn off echo do 'set +o xtrace'
 
-      echo "Running alignment"
+      echo "Running post alignment"
+
+      # Get the Cromwell directory that is the input file location
+      input_file_location=$(dirname ${input_cram_files[0]})
+
     
-      INPUT_DIR="."
       rc=0
-      for input_file in $INPUT_DIR/*.cram 
+      for input_file in ${dollar}{input_file_location}"/"*.cram 
       do 
-        tmp_prefix=${input_file%.cram}.tmp
-        samtools sort --reference ${ref_fasta} --threads 1 -T $tmp_prefix -o ${input_file%.cram}.sorted.bam $input_file
+        # Put the output file in the local Cromwell working dir
+        input_base_file_name=$(basename ${dollar}{input_file} ".cram")
+        tmp_prefix=${dollar}{input_base_file_name}.tmp
+        samtools sort --reference ${ref_fasta} --threads 1 -T $tmp_prefix -o ${dollar}{input_base_file_name}.sorted.bam ${dollar}{input_file}
+
+#        tmp_prefix=${dollar}{input_file%.cram}.tmp
+#        samtools sort --reference ${ref_fasta} --threads 1 -T $tmp_prefix -o ${dollar}{input_file%.cram}.sorted.bam ${dollar}{input_file}
+
         rc=$?
         [[ $rc != 0 ]] && break
-        rm -f $input_file ${tmp_prefix}*
+#        rm -f ${dollar}{input_file} ${dollar}{tmp_prefix}*
+        # Remove the tmp file; no need to remove the input file from the previous task
+        rm -f ${dollar}{tmp_prefix}*
       done
       
       if [[ $rc == 0 ]]
       then 
-        samtools merge --threads 1 -c $INPUT_DIR/merged.bam $INPUT_DIR/*.sorted.bam \
-          && rm $INPUT_DIR/*.sorted.bam \
-          && bam-non-primary-dedup dedup_LowMem --allReadNames --binCustom --binQualS 0:2,3:3,4:4,5:5,6:6,7:10,13:20,23:30 --log $INPUT_DIR/dedup_lowmem.metrics --recab --in $INPUT_DIR/merged.bam --out -.ubam --refFile ${ref_fasta} --dbsnp ${dbNSP_vcf} \
-          | samtools view -h -C -T ${ref_fasta} -o $INPUT_DIR/output.cram --threads 1
+        samtools merge --threads 1 -c merged.bam *.sorted.bam \
+          && rm ./*.sorted.bam \
+          && bam-non-primary-dedup dedup_LowMem --allReadNames --binCustom --binQualS 0:2,3:3,4:4,5:5,6:6,7:10,13:20,23:30 --log dedup_lowmem.metrics --recab --in merged.bam --out -.ubam --refFile ${ref_fasta} --dbsnp ${dbSNP_vcf} \
+          | samtools view -h -C -T ${ref_fasta} -o output_file.cram --threads 1
         rc=$?
       fi
-    }
+    >>>
      output {
-      File output_cram_file = "$INPUT_DIR/output.cram"
+      File output_cram_file = "output_file.cram"
     }
    runtime {
       memory: "10 GB"
@@ -217,5 +279,4 @@ workflow TopMedAligner {
       docker: docker_image
     }
   }
-
 
