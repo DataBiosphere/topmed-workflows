@@ -1,4 +1,17 @@
 cwlVersion: v1.0
+
+doc: |
+    This workflow processes high-throughput sequencing data for downstream processing
+    Requirements/expectations :
+    - Human whole-genome pair-end sequencing data in unmapped BAM (uBAM) format
+    - One or more read groups, one per uBAM file, all belonging to a single sample (SM)
+    - Input uBAM files must additionally comply with the following requirements:
+      - filenames all have the same suffix (we use ".unmapped.bam")
+      - files must pass validation by ValidateSamFile
+      - reads are provided in query-sorted order
+      - all reads must have an RG tag
+    - Reference genome must be Hg38 with ALT contigs
+
 class: Workflow
 id: alignment_pipeline
 requirements:
@@ -19,10 +32,10 @@ inputs:
   known_indels_sites_VCFs:
     type:
       type: array
-      items: File 
+      items: File
     secondaryFiles:
       - ^.gz.tbi
-  dbSNP_vcf: 
+  dbSNP_vcf:
     type: File
     secondaryFiles: [^.gz.tbi]
   compression_level: int
@@ -60,7 +73,7 @@ steps:
       input_bam: input_bams
       indexed_reference_fasta: indexed_reference_fasta
       bwa_version: GetBwaVersion/version
-    out: 
+    out:
       [output]
 
   MarkDuplicates:
@@ -113,7 +126,7 @@ steps:
     run: ../tasks/GatherBqsrReports.yaml
     in:
       input_bqsr_reports: BaseRecalibrator/recalibration_report
-      output_report_filename: 
+      output_report_filename:
         source: output_basename
         valueFrom: $(self + "BqsrReports.csv")
     out: [output_report]

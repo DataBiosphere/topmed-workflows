@@ -1,0 +1,12 @@
+#!/usr/bin/env cwl-runner
+
+cwlVersion: v1.0
+
+class: CommandLineTool
+
+id: checkcram_reads
+
+requirements:
+  - class: ShellCommandRequirement
+  - class: DockerRequirement
+    dockerPull: us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.2-1510681135
