@@ -30,6 +30,18 @@ workflow TopMedAligner {
   File dbSNP_vcf
   File dbSNP_vcf_index
 
+  # Optional input to increase all disk sizes in case of outlier sample with strange size behavior
+  Int? increase_disk_size
+
+  # Some tasks need wiggle room, and we also need to add a small amount of disk to prevent getting a
+  # Cromwell error from asking for 0 disk when the input is less than 1GB
+  Int additional_disk = select_first([increase_disk_size, 20])
+
+  # Sometimes the output is larger than the input, or a task can spill to disk. In these cases we need to account for the
+  # input (1) and the output (1.5) or the input(1), the output(1), and spillage (.5).
+  Float bwa_disk_multiplier = 2.5
+
+
   # Get the size of the standard reference files as well as the additional reference files needed for BWA
   Float ref_size = size(ref_fasta, "GB") + size(ref_fasta_index, "GB")
   Float ref_extra_size = size(ref_alt, "GB") + size(ref_bwt, "GB") + size(ref_pac, "GB") + size(ref_ann, "GB") + size(ref_amb, "GB") + size(ref_sa, "GB")
@@ -40,7 +52,7 @@ workflow TopMedAligner {
      input:
       input_crai = input_crai_file,
       input_cram = input_cram_file,
-      disk_size = ref_size + cram_size,
+      disk_size = ref_size + cram_size + additional_disk,
       docker_image = docker_image,
       ref_fasta = ref_fasta,
       ref_fasta_index = ref_fasta_index
@@ -49,7 +61,7 @@ workflow TopMedAligner {
   call sumFileSizes {
     input:
       input_files = PreAlign.output_fastq_gz_files,
-      disk_size = ref_size,
+      disk_size = ref_size + additional_disk,
       docker_image = docker_image
   }
  
@@ -59,7 +71,7 @@ workflow TopMedAligner {
       input_list_file = PreAlign.output_list_file,
       input_fastq_gz_files = PreAlign.output_fastq_gz_files,
 
-      disk_size = ref_size + ref_extra_size + sumFileSizes.files_size,
+      disk_size = ref_size + ref_extra_size + sumFileSizes.files_size + additional_disk,
       docker_image = docker_image,
 
       ref_alt = ref_alt,
@@ -75,7 +87,7 @@ workflow TopMedAligner {
   call sumFileSizes as sumCRAMSizes {
     input:
       input_files = Align.output_cram_files,
-      disk_size = ref_size,
+      disk_size = ref_size + additional_disk,
       docker_image = docker_image
   }
 
@@ -83,7 +95,9 @@ workflow TopMedAligner {
      input:
       input_cram_files = Align.output_cram_files,
 
-      disk_size = ref_size + dbsnp_size + sumCRAMSizes.files_size,
+      # The merged bam can be bigger than only the aligned bam,
+      # so account for the output size by multiplying the input size by bwa disk multiplier.
+      disk_size = ref_size + dbsnp_size + sumCRAMSizes.files_size + (bwa_disk_multiplier * sumCRAMSizes.files_size) + additional_disk,
       docker_image = docker_image,
 
       ref_fasta = ref_fasta,
@@ -160,10 +174,8 @@ workflow TopMedAligner {
 
       files_string = "${ sep=',' input_files }"
       files_list = files_string.split(',')
-      if len(files_list) > 1:
-          files_size = functools.reduce((lambda x, y: os.stat(x).st_size + os.stat(y).st_size), files_list)
-      else:
-          files_size = os.stat(files_list[0]).st_size
+      for file in files_list:
+        files_size = os.stat(file).st_size
 
       # Shift right by 30 bits to get Gigabyte size of files
       files_size = (files_size >> 30)
