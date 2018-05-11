@@ -2,6 +2,7 @@ cwlVersion: v1.0
 
 doc: |
     This workflow processes high-throughput sequencing data for downstream processing
+
     Requirements/expectations :
     - Human whole-genome pair-end sequencing data in unmapped BAM (uBAM) format
     - One or more read groups, one per uBAM file, all belonging to a single sample (SM)
