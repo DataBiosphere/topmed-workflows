@@ -5,10 +5,10 @@ requirements:
   - class: ShellCommandRequirement
   - class: InlineJavascriptRequirement
   - class: DockerRequirement
-    dockerPull: <docker>
+    dockerPull: us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.2-1510681135
   - class: ResourceRequirement
     ramMin: 3500
-baseCommand: [gatk/gatk-launch, ApplyBQSR]
+baseCommand: [/usr/gitc/gatk4/gatk-launch, ApplyBQSR]
 arguments:
   - position: 0
     shellQuote: false
@@ -24,32 +24,36 @@ arguments:
       -Xms3000m"
       --createOutputBamMD5
       --addOutputSAMProgramRecord
-      -R $(inputs.ref_fasta)
-      -I $(inputs.input_bam)
+      -R $(inputs.ref_fasta.path)
+      -I $(inputs.input_bam.path)
       --useOriginalQualities
       -O $(inputs.output_bam)
-      -bqsr $(inputs.recalibration_report)
+      -bqsr $(inputs.recalibration_report.path)
       -SQQ 10 -SQQ 20 -SQQ 30
-      -L $(inputs.sequence_group_interval)
 
 inputs:
-  - input_bam: File
-      secondaryFiles: [^.bai]
-  - output_bam: string
-  - recalibration_report: File
-  - sequence_group_interval: array
-      items: string
-      inputBinding:
-        prefix: '-L'
-  - ref_dict: File
-  - ref_fasta: File
-  - ref_fasta_index: File
-  - compression_level: int
+  - id: input_bam 
+    type: File
+    secondaryFiles: [^.bai]
+  - id: output_bam
+    type: string
+  - id: recalibration_report
+    type: File
+  - id: sequence_group_interval
+    type: string[]
+    inputBinding:
+      prefix: '-L'
+  - id: ref_fasta
+    type: File
+    secondaryFiles: [.fai, ^.dict]
+  - id: compression_level
+    type: int
 
 outputs:
-  - recalibrated_bam: File
-      outbinding:
-        glob: '*bam'
-      secondaryFiles: [^.bai, .md5]
-
-
+  - id: recalibrated_bam 
+    type: File
+    outputBinding:
+      glob: '*bam'
+    secondaryFiles: 
+      - .bai
+      - .md5
