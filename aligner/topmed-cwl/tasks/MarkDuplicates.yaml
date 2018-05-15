@@ -6,11 +6,11 @@ requirements:
   - class: ShellCommandRequirement
   - class: ScatterFeatureRequirement
   - class: DockerRequirement
-    dockerPull: <docker>
+    dockerPull: us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.2-1510681135
 
 # Mark duplicate reads to avoid counting non-independent observations
-baseCommand: [java, -Xms4000m, -jar, /picard.jar, MarkDuplicates]
-argument:
+baseCommand: [java, -Xms4000m, -jar, /usr/gitc/picard.jar, MarkDuplicates]
+arguments:
   - position: 1
     shellQuote: false
     valueFrom: >-
@@ -24,14 +24,11 @@ argument:
       READ_NAME_REGEX=$(inputs.read_name_regex)
 
 inputs:
-  input_bams
-    type:
-      type: array
-      items: File
-      format: "edam:format_2572"
-      inputBinding:
-        prefix: INPUT=
-        seperate: false
+  input_bams:
+    type: File[]
+    inputBinding:
+      prefix: INPUT=
+      separate: true
   output_bam: string
   metrics_filename: string
   read_name_regex: string?
@@ -42,6 +39,6 @@ outputs:
     outputBinding:
       glob: "*.bam"
   output_markduplicates_metrics:
-    type:File
+    type: File
     outputBinding:
-      glob:"*.txt"
+      glob: "*.txt"
