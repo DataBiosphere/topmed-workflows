@@ -40,7 +40,17 @@ workflow TopMedAligner {
   # Sometimes the output is larger than the input, or a task can spill to disk. In these cases we need to account for the
   # input (1) and the output (1.5) or the input(1), the output(1), and spillage (.5).
   Float bwa_disk_multiplier = 2.5
+  
+  # Converting CRAM to fastq.gz takes extra disk space to store the fastq.gz files
+  Float CRAM_to_fastqgz_multiplier = 2.5
 
+  # Creating CRAM files from fastq.gz files increases the disk space needed
+  Float fastq_gz_to_CRAM_multiplier = 1.5
+  
+  # SortSam spills to disk a lot more because we are only store 300000 records in RAM now because its faster for our data
+  # so it needs more disk space.  Also it spills to disk in an uncompressed format so we need to account for that with a
+  # larger multiplier
+  Float sort_sam_disk_multiplier = 3.25
 
   # Get the size of the standard reference files as well as the additional reference files needed for BWA
   Float ref_size = size(ref_fasta, "GB") + size(ref_fasta_index, "GB")
@@ -52,26 +62,21 @@ workflow TopMedAligner {
      input:
       input_crai = input_crai_file,
       input_cram = input_cram_file,
-      disk_size = ref_size + cram_size + additional_disk,
+      disk_size = ref_size + (bwa_disk_multiplier * cram_size) + (sort_sam_disk_multiplier * cram_size) + cram_size + additional_disk,
       docker_image = docker_image,
       ref_fasta = ref_fasta,
       ref_fasta_index = ref_fasta_index
   }
 
-  call sumFileSizes {
-    input:
-      input_files = PreAlign.output_fastq_gz_files,
-      disk_size = ref_size + additional_disk,
-      docker_image = docker_image
-  }
- 
+
+  Float fastq_gz_files_size = CRAM_to_fastqgz_multiplier * cram_size
 
   call Align {
      input:
       input_list_file = PreAlign.output_list_file,
       input_fastq_gz_files = PreAlign.output_fastq_gz_files,
 
-      disk_size = ref_size + ref_extra_size + sumFileSizes.files_size + additional_disk,
+      disk_size = ref_size + ref_extra_size + (bwa_disk_multiplier * fastq_gz_files_size) + additional_disk,
       docker_image = docker_image,
 
       ref_alt = ref_alt,
@@ -84,20 +89,15 @@ workflow TopMedAligner {
       ref_fasta_index = ref_fasta_index
   }
 
-  call sumFileSizes as sumCRAMSizes {
-    input:
-      input_files = Align.output_cram_files,
-      disk_size = ref_size + additional_disk,
-      docker_image = docker_image
-  }
+  Float CRAMS_files_size = fastq_gz_to_CRAM_multiplier * cram_size
 
   call PostAlign {
      input:
       input_cram_files = Align.output_cram_files,
 
-      # The merged bam can be bigger than only the aligned bam,
+      # The merged cram can be bigger than the summed sizes of the individual aligned crams,
       # so account for the output size by multiplying the input size by bwa disk multiplier.
-      disk_size = ref_size + dbsnp_size + sumCRAMSizes.files_size + (bwa_disk_multiplier * sumCRAMSizes.files_size) + additional_disk,
+      disk_size = ref_size + dbsnp_size + CRAMS_files_size + (sort_sam_disk_multiplier * CRAMS_files_size) + (bwa_disk_multiplier * CRAMS_files_size) + additional_disk,
       docker_image = docker_image,
 
       ref_fasta = ref_fasta,
@@ -159,41 +159,6 @@ workflow TopMedAligner {
       disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
       zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"
       docker: docker_image
-    }
-  }
-
-  task sumFileSizes {
-    Array[File] input_files
-    Float disk_size
-    String docker_image
-  
-    command {
-      python3 <<CODE
-      import os
-      import functools
-
-      files_string = "${ sep=',' input_files }"
-      files_list = files_string.split(',')
-      for file in files_list:
-        files_size = os.stat(file).st_size
-
-      # Shift right by 30 bits to get Gigabyte size of files
-      files_size = (files_size >> 30)
-
-      # Bump the size up 1 GB in case the total size is less than 1 GB
-      print(files_size + 1)
-
-      CODE
-    }
-    runtime {
-      memory: "10 GB"
-      cpu: "16"
-      disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
-      zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"
-      docker: docker_image
-    }
-    output {
-      Float files_size = read_float(stdout())
     }
   }
 
