@@ -47,7 +47,7 @@ To copy contents of a SDK bucket to your local system (or a VM) use
 gsutil -u [PROJECT_ID] cp gs://[BUCKET_NAME]/[OBJECT_NAME] [OBJECT_DESTINATION]
 ```
 
-### Checker alignment workflow (WDL)
+### Checker workflows
 
 
 A WDL and a JSON file to test checker workflows are in the `test_data` directory. To run the checker workflow for the WDL aligner navigate to respective directory (usually it has _checker_ in its name) and run
