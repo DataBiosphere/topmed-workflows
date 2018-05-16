@@ -50,7 +50,7 @@ gsutil -u [PROJECT_ID] cp gs://[BUCKET_NAME]/[OBJECT_NAME] [OBJECT_DESTINATION]
 ### Checker workflows
 
 
-A WDL and a JSON file to test checker workflows are in the `test_data` directory. To run the checker workflow for the WDL aligner navigate to respective directory (usually it has _checker_ in its name) and run
+A WDL and a JSON file to test checker workflows are in the `test_data` directory. You need to adjust all paths in the JSON file to the paths on your system before running the checker. It has been tested with `cromwell-31.jar`. To run the checker workflow for the WDL aligner navigate to respective directory (usually it has _checker_ in its name) and run
 ```bash
 java -Dconfig.file=<location_to_file> -jar ~/bin/<cromwell_version>.jar run <checker-workflow>.wdl -i  <checker-workflow>.json
 ```
