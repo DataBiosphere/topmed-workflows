@@ -36,19 +36,24 @@ inputs:
     type: File
     secondaryFiles: [^.bai]
   sequence_group_interval:
-    type: string[]
-    inputBinding:
-      prefix: -L
+    type:
+      type: array
+      items: string
+      inputBinding:
+        prefix: -L
+        separate: true
   dbSNP_vcf: 
     type: File
     inputBinding:
       prefix: -knownSites
     secondaryFiles: [^.gz.tbi]
   known_indels_sites_VCFs:
-      type: File
+    type: 
+      type: array
+      items: File
       inputBinding:
         prefix: -knownSites
-      secondaryFiles: [^.gz.tbi]
+    secondaryFiles: [^.gz.tbi]
 
 outputs:
   recalibration_report:

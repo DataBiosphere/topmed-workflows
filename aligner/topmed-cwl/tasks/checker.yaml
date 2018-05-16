@@ -1,0 +1,43 @@
+#!/usr/bin/env cwl-runner
+
+cwlVersion: v1.0
+
+class: CommandLineTool
+
+id: checkcram_reads
+
+requirements:
+  - class: ShellCommandRequirement
+  - class: DockerRequirement
+    dockerPull: us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.2-1510681135
+  - class: InlineJavascriptRequirement
+baseCommand: []
+arguments:
+  - position: 0
+    shellQuote: false
+    valueFrom: |
+      ${
+        var ret = "samtools flagstat " + inputs.cram.path + " > cram_flagstat.txt; " +
+        "total_reads=$(grep -i in[[:space:]]*total cram_flagstat.txt | cut -d \" \" -f1); " +
+        "secondary_reads=$(grep secondary cram_flagstat.txt | cut -d \" \" -f1); " +
+        "supplementary_reads=$(grep supplementary cram_flagstat.txt | cut -d \" \" -f1); " +
+        "cram_reads=$((total_reads - secondary_reads - supplementary_reads)); " +
+        "printf \"The number of reads in the CRAM file is $cram_reads\\n\"; " +
+        "exepected_num_reads=" + inputs.expected_num_reads.toString() + "; " +
+        "printf \"The expected number of reads is $exepected_num_reads\\n\"; " +
+        "if [ \"$cram_reads\" -eq \"$exepected_num_reads\" ]; then " +
+        "printf \"There are an equal number of reads\\n\"; " +
+        "exit 0; " +
+        "else " +
+        "printf \"The number of reads is different\\n\"; " +
+        "exit 1; " +
+        "fi";
+        return ret
+      }
+inputs:
+  cram:
+    type: File
+  expected_num_reads:
+    type: int
+
+outputs: []

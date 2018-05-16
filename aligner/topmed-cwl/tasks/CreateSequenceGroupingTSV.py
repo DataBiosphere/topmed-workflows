@@ -14,27 +14,26 @@ with open(sys.argv[1], "r") as ref_dict_file:
 # We are adding this to the intervals because hg38 has contigs named with embedded colons and a bug in GATK strips off
 # the last element after a :, so we add this as a sacrificial element.
 hg38_protection_tag = ":1+"
-# initialize the tsv string with the first sequence
-tsv_string = sequence_tuple_list[0][0] + hg38_protection_tag
-temp_size = sequence_tuple_list[0][1]
 max_line = 0
+# initialize the tsv string with the first sequence
+tsv_string = sequence_tuple_list[0][0]
+temp_size = sequence_tuple_list[0][1]
 for sequence_tuple in sequence_tuple_list[1:]:
     if temp_size + sequence_tuple[1] <= longest_sequence and max_line <= 1600:
         temp_size += sequence_tuple[1]
-        tsv_string += "\t" + sequence_tuple[0] + hg38_protection_tag
+        if not ":" in sequence_tuple[0]:
+            tsv_string += "\t" + sequence_tuple[0]
+        else:
+            tsv_string += "\t" + sequence_tuple[0] + hg38_protection_tag
         max_line = max_line + 1
     else:
-        tsv_string += "\n" + sequence_tuple[0] + hg38_protection_tag
+        if not ":" in sequence_tuple[0]:
+            tsv_string += "\n" + sequence_tuple[0]
+        else:
+            tsv_string += "\n" + sequence_tuple[0] + hg38_protection_tag
         temp_size = sequence_tuple[1]
         max_line = 0
 # add the unmapped sequences as a separate line to ensure that they are recalibrated as well
-sequence_groups = tsv_string.split("\n")
-print(sequence_groups[0])
-for i in range(0, len(sequence_groups)):
-    with open("sequence_grouping_{0}.txt".format(i), "w") as tsv_file:
-        tsv_file.write(sequence_groups[i])
-        tsv_file.close()
-
 tsv_string += '\n' + "unmapped"
 sequence_groups_unmapped = tsv_string.split("\n")
 for i in range(0, len(sequence_groups_unmapped)):

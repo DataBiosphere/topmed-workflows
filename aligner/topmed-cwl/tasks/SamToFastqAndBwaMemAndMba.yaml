@@ -58,7 +58,7 @@ inputs:
   bwa_version: string
 outputs:
   output:
-    type: File[]
+    type: File
     outputBinding:
       glob: '*.bam'
 

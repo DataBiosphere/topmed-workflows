@@ -35,7 +35,9 @@ inputs:
 
 outputs:
   output_sorted_bam:
-    type: File[]
-    secondaryFiles: [^.bai, ^.bam.md5]
+    type: File
     outputBinding:
-      glob: ["*.bam", "*.bai", "*.md5"]
+      glob: "*.bam"
+    secondaryFiles:
+      - ^.bai
+      - .md5
