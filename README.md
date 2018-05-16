@@ -49,9 +49,11 @@ gsutil -u [PROJECT_ID] cp gs://[BUCKET_NAME]/[OBJECT_NAME] [OBJECT_DESTINATION]
 
 ### Checker alignment workflow (WDL)
 
-To run the checker workflow for the WDL aligner navigate to `topmed-workflows/aligner/function-equivalence-checker` and run
+
+A WDL and a JSON file to test checker workflows are in the `test_data` directory. To run the checker workflow for the WDL aligner navigate to respective directory (usually it has _checker_ in its name) and run
 ```bash
-java -Dconfig.file=<location_to_file> -jar ~/bin/cromwell-31.jar run checker-workflow-wrapping-alignment-workflow.wdl -i  checker-workflow-wrapping-alignment-workflow.json
+java -Dconfig.file=<location_to_file> -jar ~/bin/<cromwell_version>.jar run <checker-workflow>.wdl -i  <checker-workflow>.json
 ```
+
 
 
