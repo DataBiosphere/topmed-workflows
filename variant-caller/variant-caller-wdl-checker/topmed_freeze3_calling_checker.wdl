@@ -16,7 +16,7 @@ import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/feature
 
 import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/feature/checker-vcf/variant-caller/variant-caller-wdl-checker/topmed-variantcaller-checker.wdl" as checker
 
-workflow checkerWorkflow_vcf {
+workflow checkerWorkflow {
 
   Int expectedNumofReads
   String docker_image
