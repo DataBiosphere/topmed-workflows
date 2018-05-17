@@ -14,7 +14,7 @@
 
 import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/feature/checker-vcf/variant-caller/variant-caller-wdl/topmed_freeze3_calling.wdl" as TopMed_variantcaller
 
-import ""https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/feature/checker-vcf/variant-caller/variant-caller-wdl-checker/topmed-variantcaller-checker.wdk" as checker
+import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/feature/checker-vcf/variant-caller/variant-caller-wdl-checker/topmed-variantcaller-checker.wdl" as checker
 
 workflow checkerWorkflow_vcf {
 
