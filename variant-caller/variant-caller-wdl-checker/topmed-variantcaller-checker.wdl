@@ -9,7 +9,7 @@ task checkerTask {
   command <<<
     python <<CODE
     import sys
-      sys.exit(0)
+    sys.exit(0)
     CODE
   >>>
 
