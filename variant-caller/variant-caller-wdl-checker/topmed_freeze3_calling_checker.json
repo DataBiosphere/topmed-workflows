@@ -1,7 +1,7 @@
 {
   "checkerWorkflow.expectedNumofReads": 20000,
-  "checkerWorkflow.input_cram_files": ["/home/ubuntu/20k_cram/NWD176325.recab.cram"],
-  "checkerWorkflow.input_crai_files": ["/home/ubuntu/20k_cram/NWD176325.recab.cram.crai"],
+  "checkerWorkflow.input_cram_files": ["/home/ubuntu/NWD176325_small/NWD176325.0005.recab.cram"],
+  "checkerWorkflow.input_crai_files": ["/home/ubuntu/NWD176325_small/NWD176325.0005.recab.cram.crai"],
 
   "checkerWorkflow.ref_1000G_omni2_5_b38_sites_PASS_vcf_gz":  "/home/ubuntu/hg38/1000G_omni2.5.b38.sites.PASS.vcf.gz",
   "checkerWorkflow.ref_1000G_omni2_5_b38_sites_PASS_vcf_gz_tbi":  "/home/ubuntu/hg38/1000G_omni2.5.b38.sites.PASS.vcf.gz.tbi",
