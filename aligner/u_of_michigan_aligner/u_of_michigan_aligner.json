@@ -14,5 +14,5 @@
   "TopMedAligner.dbSNP_vcf": "/home/ubuntu/TopMed/Homo_sapiens_assembly38.dbsnp138.vcf.gz",
   "TopMedAligner.dbSNP_vcf_index": "/home/ubuntu/TopMed/Homo_sapiens_assembly38.dbsnp138.vcf.gz.tbi",
 
-  "TopMedAligner.docker_image": "statgen/alignment"
+  "TopMedAligner.docker_image": "statgen/alignment:latest"
 }

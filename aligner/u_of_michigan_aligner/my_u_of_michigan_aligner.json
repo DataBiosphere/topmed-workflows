@@ -1,0 +1,18 @@
+{
+  "TopMedAligner.input_cram_file": "/home/boconnor/TopMed/topmed_open_access/NWD176325.025percent.recab.cram",
+  "TopMedAligner.input_crai_file": "/home/boconnor/TopMed/topmed_open_access/NWD176325.025percent.recab.cram.crai",
+
+  "TopMedAligner.ref_alt":  "/home/boconnor/topmed_freeze3_calling/data/local.org/ref/gotcloud.ref/hg38/hs38DH.fa.alt",
+  "TopMedAligner.ref_bwt":  "/home/boconnor/topmed_freeze3_calling/data/local.org/ref/gotcloud.ref/hg38/hs38DH.fa.bwt",
+  "TopMedAligner.ref_pac":  "/home/boconnor/topmed_freeze3_calling/data/local.org/ref/gotcloud.ref/hg38/hs38DH.fa.pac",
+  "TopMedAligner.ref_ann":  "/home/boconnor/topmed_freeze3_calling/data/local.org/ref/gotcloud.ref/hg38/hs38DH.fa.ann",
+  "TopMedAligner.ref_amb":  "/home/boconnor/topmed_freeze3_calling/data/local.org/ref/gotcloud.ref/hg38/hs38DH.fa.amb",
+  "TopMedAligner.ref_sa":  "/home/boconnor/topmed_freeze3_calling/data/local.org/ref/gotcloud.ref/hg38/hs38DH.fa.sa",
+  "TopMedAligner.ref_fasta":  "/home/boconnor/topmed_freeze3_calling/data/local.org/ref/gotcloud.ref/hg38/hs38DH.fa",
+  "TopMedAligner.ref_fasta_index":  "/home/boconnor/topmed_freeze3_calling/data/local.org/ref/gotcloud.ref/hg38/hs38DH.fa.fai",
+
+  "TopMedAligner.dbSNP_vcf": "/home/boconnor/TopMed/Homo_sapiens_assembly38.dbsnp138.vcf.gz",
+  "TopMedAligner.dbSNP_vcf_index": "/home/boconnor/TopMed/Homo_sapiens_assembly38.dbsnp138.vcf.gz.tbi",
+
+  "TopMedAligner.docker_image": "statgen/alignment:latest"
+}
