@@ -1,9 +1,10 @@
-import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/feature/checker-vcf/variant-caller/variant-caller-wdl/topmed_freeze3_calling.wdl" as TopMed_variantcaller
-
+import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.8.0/variant-caller/variant-caller-wdl/topmed_freeze3_calling.wdl" as TopMed_variantcaller
+#import "/home/ubuntu/dataBiosphere/topmed-workflows/variant-caller/variant-caller-wdl-checker/topmed-variantcaller-checker.wdl" as checker
 import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/feature/checker-vcf/variant-caller/variant-caller-wdl-checker/topmed-variantcaller-checker.wdl" as checker
 
 workflow checkerWorkflow {
-  Int expectedNumofReads
+  File inputTruthVCFFile
+
   String docker_image
 
   Array[File] input_crai_files
@@ -74,7 +75,6 @@ workflow checkerWorkflow {
 
   call TopMed_variantcaller.TopMedVariantCaller as variantcaller {
     input:
-    
       input_crai_files = input_crai_files,
       input_cram_files = input_cram_files,
 
@@ -142,6 +142,11 @@ workflow checkerWorkflow {
       ref_hs38DH_winsize100_gc = ref_hs38DH_winsize100_gc
   }
 
-  call checker.checkerTask { input: inputCRAMFile=variantcaller.topmed_variant_caller_output, expectedNumofReads=expectedNumofReads, docker_image=docker_image }
+  call checker.checkerTask { 
+      input: 
+          inputTruthVCFFile = inputTruthVCFFile,
+          inputTestVCFFile = variantcaller.topmed_variant_caller_output, 
+          docker_image = docker_image
+  }
 }
 

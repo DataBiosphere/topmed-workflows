@@ -6,6 +6,7 @@ RUN apt-get update && apt-get install -y \
     git \
     python-pip \
     python \
+    python3.5 \
     wget \
     curl \
     unzip \
