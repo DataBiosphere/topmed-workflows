@@ -51,7 +51,12 @@ task checkerTask {
                 #print("test file 2 line: {}".format(line))
                 if not line.startswith('#'):
                     test_data.append(line.split('\t'))
-    
+
+        # If there are more variants in one file then the VCFs are not concordant
+        if len(test_data) != len(good_data):
+            print("The truth VCF file {} has {} variants and the test VCF file {} has {} variants\n".format(file_name_1, len(good_data), file_name_2, len(test_data)))
+            return 1    
+
         for i in range(len(test_data)):
             if test_data[i] != good_data[i]:
                 for j in range(len(test_data[i])):
