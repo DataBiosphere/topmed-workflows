@@ -1,6 +1,5 @@
-import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.8.0/variant-caller/variant-caller-wdl/topmed_freeze3_calling.wdl" as TopMed_variantcaller
-#import "/home/ubuntu/dataBiosphere/topmed-workflows/variant-caller/variant-caller-wdl-checker/topmed-variantcaller-checker.wdl" as checker
-import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/feature/checker-vcf/variant-caller/variant-caller-wdl-checker/topmed-variantcaller-checker.wdl" as checker
+import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.9.0/variant-caller/variant-caller-wdl/topmed_freeze3_calling.wdl" as TopMed_variantcaller
+import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.9.0/variant-caller/variant-caller-wdl-checker/topmed-variantcaller-checker.wdl" as checker
 
 workflow checkerWorkflow {
   File inputTruthVCFFile
