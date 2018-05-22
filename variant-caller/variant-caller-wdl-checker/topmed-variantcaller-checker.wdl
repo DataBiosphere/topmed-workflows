@@ -86,9 +86,15 @@ task checkerTask {
     
              test_vcf_file_names = test_variant_caller_output.getnames()
              #print("vcf file names are:{}".format(test_vcf_file_names))
-    
+
+             # Check that the truth VCF tar file is not empty; if it is something is wrong
+             truth_vcf_file_names = truth_variant_caller_output.getnames()
+             if not truth_vcf_file_names or len(truth_vcf_file_names) == 0:
+                 print("The truth tar gz file is empty", file=sys.stderr)
+                 sys.exit(1)
+
+ 
              for truth_vcf_file_info in truth_variant_caller_output.getmembers():
-    
                  #truth_vcf_file_name = os.path.basename(truth_vcf_file_info.name)
                  #print("Truth vcf file name is:{}".format(truth_vcf_file_name))           
     
