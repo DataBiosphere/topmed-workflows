@@ -64,7 +64,6 @@
   "checkerWorkflow.ref_hs38DH_fa_sa":  "gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa.sa",
   "checkerWorkflow.ref_hs38DH_winsize100_gc":  "gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.winsize100.gc",
 
-  "checkerWorkflow.reference_files_size": 100,
   "checkerWorkflow.docker_image": "quay.io/ucsc_cgl/topmed_freeze3_calling:1.9.0"
 }
 
