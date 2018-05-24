@@ -1,15 +1,18 @@
-import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.9.0/variant-caller/variant-caller-wdl/topmed_freeze3_calling.wdl" as TopMed_variantcaller
-import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.9.0/variant-caller/variant-caller-wdl-checker/topmed-variantcaller-checker.wdl" as checker
+import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.10.0/variant-caller/variant-caller-wdl/topmed_freeze3_calling.wdl" as TopMed_variantcaller
+import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.10.0/variant-caller/variant-caller-wdl-checker/topmed-variantcaller-checker.wdl" as checker
 
 workflow checkerWorkflow {
   File inputTruthVCFFile
+
+  # Deprecated: No need to input this anymore
+  # Disk size requirements will be calculated internally
+  # This will be removed in the next release
+  Float? reference_files_size
 
   String docker_image
 
   Array[File] input_crai_files
   Array[File] input_cram_files
-
-  Float reference_files_size
 
   File ref_1000G_omni2_5_b38_sites_PASS_vcf_gz
   File ref_1000G_omni2_5_b38_sites_PASS_vcf_gz_tbi
@@ -77,7 +80,6 @@ workflow checkerWorkflow {
       input_crai_files = input_crai_files,
       input_cram_files = input_cram_files,
 
-      reference_files_size = reference_files_size,
       docker_image = docker_image,
 
       ref_1000G_omni2_5_b38_sites_PASS_vcf_gz = ref_1000G_omni2_5_b38_sites_PASS_vcf_gz,
