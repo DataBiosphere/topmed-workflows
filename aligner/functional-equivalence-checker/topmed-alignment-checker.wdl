@@ -3,14 +3,7 @@ task checkerTask {
   Int expectedNumofReads
   String docker_image
 
-  # Optional input to increase all disk sizes in case of outlier sample with strange size behavior
-  Int? increase_disk_size
-
-  # Some tasks need wiggle room, and we also need to add a small amount of disk to prevent getting a
-  # Cromwell error from asking for 0 disk when the input is less than 1GB
-  Int additional_disk = select_first([increase_disk_size, 20])
-
-  Float disk_size = size(inputCRAMFile, "GB") + additional_disk
+  Float disk_size = size(inputCRAMFile, "GB")
 
   command {
     printf "The CRAM file is ${inputCRAMFile}"
