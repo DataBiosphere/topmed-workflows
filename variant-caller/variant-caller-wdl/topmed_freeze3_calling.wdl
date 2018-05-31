@@ -156,7 +156,7 @@ workflow TopMedVariantCaller {
     input:
       input_crams = input_cram_files,
       input_crais = input_crai_files,
-      disk_size = reference_size +  + additional_disk,
+      disk_size = reference_size + additional_disk,
       docker_image = docker_image
   }
 
@@ -165,7 +165,7 @@ workflow TopMedVariantCaller {
      input:
       input_crais = input_crai_files,
       input_crams = input_cram_files,
-      disk_size = sumCRAMSizes.total_size + reference_size +  + additional_disk,
+      disk_size = sumCRAMSizes.total_size + reference_size + additional_disk,
       docker_image = docker_image,
 
       ref_1000G_omni2_5_b38_sites_PASS_vcf_gz = ref_1000G_omni2_5_b38_sites_PASS_vcf_gz,
