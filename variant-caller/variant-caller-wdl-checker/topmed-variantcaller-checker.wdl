@@ -2,7 +2,6 @@ task checkerTask {
   File inputTruthVCFFile
   File inputTestVCFFile
   String docker_image
-  String docker_concordance_image
 
   # Optional input to increase all disk sizes in case of outlier sample with strange size behavior
   Int? increase_disk_size
@@ -15,70 +14,9 @@ task checkerTask {
 
 
   command <<<
-    python3.5 <<CODE
+    python3 <<CODE
     from __future__ import print_function, division
     import sys, os, tarfile, gzip
-
-    def compare_vcf_files(file_like_object1, file_name_1, file_like_object2, file_name_2):
-        """
-        Asserts that two .vcf files contain the same variant findings.
-    
-        - Ignores potentially date-stamped comments (lines starting with '#').
-        - Ignores quality scores in .vcf files and only checks that they found
-          the same variants.  This is due to assumed small observed rounding
-          differences between systems.
-    
-        VCF File Column Contents:
-        1: #CHROM
-        2: POS
-        3: ID
-        4: REF
-        5: ALT
-        6: QUAL
-        7: FILTER
-        8: INFO
-    
-        :param file_like_object1: First .vcf file to compare.
-        :param file_like_object2: Second .vcf file to compare.
-        """
-
-        print("Comparing variant data in test file {} with data in truth file {}".format( file_name_1, file_name_2))
-        
-        with gzip.open(file_like_object1, 'rt') as default_file:
-            good_data = []
-            for line in default_file:
-                line = line.strip()
-                #print("default file 1 line: {}".format(line))
-                if not line.startswith('#'):
-                    good_data.append(line.split('\t'))
-
-        with gzip.open(file_like_object2, 'rt') as test_file:
-            test_data = []
-            for line in test_file:
-                line = line.strip()
-                #print("test file 2 line: {}".format(line))
-                if not line.startswith('#'):
-                    test_data.append(line.split('\t'))
-
-        # If there are more variants in one file then the VCFs are not concordant
-        if len(test_data) != len(good_data):
-            print("The truth VCF file {} has {} variants and the test VCF file {} has {} variants\n".format(file_name_1, len(good_data), file_name_2, len(test_data)))
-            return 1    
-
-        for i in range(len(test_data)):
-            if test_data[i] != good_data[i]:
-                for j in range(len(test_data[i])):
-                    # Only compare chromosome, position, ID, reference, and alts.
-                    # Quality score may vary (<1%) between systems because of
-                    # (assumed) rounding differences.  Same for the "info" sect.
-                    if j < 5:
-                        #assert test_data[i][j] == good_data[i][j], "File does not match: %r" % file_like_object1
-                        if test_data[i][j] != good_data[i][j]:
-                            print("Data {} in file {} does not match data {} in {}".format(good_data[i][j], file_name_1, test_data[i][j], file_name_2))
-                            return 1
-        print("The test VCF file {} is concordant with truth VCF file {}\n".format(file_name_1, file_name_2))
-        return 0
-    
     
     def read_and_compare_vcfs_from_tar_gz(tar_gz_test, tar_gz_truth):
         """
@@ -137,7 +75,6 @@ task checkerTask {
 
   runtime {
     docker: docker_image
-    docker: docker_concordance_image
     disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
   }
 }
