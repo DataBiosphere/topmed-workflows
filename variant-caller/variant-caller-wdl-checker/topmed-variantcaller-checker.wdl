@@ -2,6 +2,7 @@ task checkerTask {
   File inputTruthVCFFile
   File inputTestVCFFile
   String docker_image
+  String docker_concordance_image
 
   # Optional input to increase all disk sizes in case of outlier sample with strange size behavior
   Int? increase_disk_size
@@ -136,6 +137,7 @@ task checkerTask {
 
   runtime {
     docker: docker_image
+    docker: docker_concordance_image
     disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
   }
 }
