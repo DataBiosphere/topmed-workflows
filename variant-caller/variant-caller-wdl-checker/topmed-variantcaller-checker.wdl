@@ -17,6 +17,7 @@ task checkerTask {
     python3 <<CODE
     from __future__ import print_function, division
     import sys, os, tarfile, gzip
+    from subprocess import Popen
     
     def read_and_compare_vcfs_from_tar_gz(tar_gz_test, tar_gz_truth):
         """
