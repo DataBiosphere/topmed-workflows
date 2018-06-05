@@ -54,12 +54,10 @@ def run_concordance(test_fn, truth_fn, reference):
 
 
 test_fn = '/home/ubuntu/vcf_test/test.vcf'
-
 truth_fn = '/home/ubuntu/vcf_test/truth.vcf'
-
-reference = '/home/hg38/hs38DH.fa'
-
-run_concordance(test_fn, truth_fn, reference)
+reference = '/home/ubuntu/hg38/hs38DH.fa'
+output = '/home/ubuntu/vcf_test/out.grp'
+run_concordance(test_fn, truth_fn, reference, output)
 
 #if __name__=='__main__':
 #    run_concordance()
