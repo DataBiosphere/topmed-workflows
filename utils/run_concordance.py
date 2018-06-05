@@ -5,7 +5,7 @@ import tarfile
 import sys
 from subprocess import Popen, PIPE, STDOUT
 
-def run_concordance(test_fn, truth_fn, reference):
+def run_concordance(test_fn, truth_fn, reference, output):
 
     with tarfile.open(test_fn, 'r') as test_vcf, \
         tarfile.open(truth_fn, 'r') as truth_vcf:
@@ -47,7 +47,7 @@ def run_concordance(test_fn, truth_fn, reference):
                            '-R', reference,
                            '-eval', test_vcf_file,
                            '-comp', truth_vcf_file,
-                           '-o', '/home/michael/dev/topmed-workflows/utils/output.grp'],
+                           '-o', output],
                           stdout=PIPE, stderr=STDOUT)
 
                 print("p output arg from Java command: {}".format(p))
