@@ -5,7 +5,7 @@ import tarfile
 import sys
 from subprocess import Popen, PIPE, STDOUT
 
-def run_concordance(test_fn, truth_fn, reference, output):
+def main(test_fn, truth_fn, reference, output):
 
     with tarfile.open(test_fn, 'r') as test_vcf, \
         tarfile.open(truth_fn, 'r') as truth_vcf:
@@ -53,11 +53,11 @@ def run_concordance(test_fn, truth_fn, reference, output):
                 print("p output arg from Java command: {}".format(p))
 
 
-test_fn = '/home/ubuntu/vcf_test/test.vcf'
-truth_fn = '/home/ubuntu/vcf_test/truth.vcf'
+test_fn = '/home/ubuntu/vcf_test/test.vcf.gz'
+truth_fn = '/home/ubuntu/vcf_test/truth.vcf.gz'
 reference = '/home/ubuntu/hg38/hs38DH.fa'
 output = '/home/ubuntu/vcf_test/out.grp'
-run_concordance(test_fn, truth_fn, reference, output)
+main(test_fn, truth_fn, reference, output)
 
 #if __name__=='__main__':
-#    run_concordance()
+#    main()
