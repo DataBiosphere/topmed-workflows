@@ -1,3 +1,4 @@
+import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/feature/contamination-calc/variant-caller/variant-caller-wdl/calculate_contamination.wdl" as getDNAContamination
 ## This is the U of Michigan variant caller workflow WDL for the workflow code located here:
 ## https://github.com/statgen/topmed_freeze3_calling
 ##
@@ -15,11 +16,6 @@ workflow TopMedVariantCaller {
 
   Array[File] input_crai_files
   Array[File] input_cram_files
-
-  # Deprecated: No need to input this anymore
-  # Disk size requirements will be calculated internally
-  # This will be removed in the next release
-  Float? reference_files_size
 
   String docker_image
 
@@ -158,6 +154,71 @@ workflow TopMedVariantCaller {
       input_crais = input_crai_files,
       disk_size = reference_size +  + additional_disk,
       docker_image = docker_image
+  }
+
+  scatter(cram_file in input_crams) {
+      call getDNAContamination.calulateDNAContamination as scatter_getContamination {
+        input:
+            input_cram_file = cram_file,
+            ref_fasta = ref_fasta,
+            ref_fasta_index = ref_fasta_index
+      }
+  }
+ 
+  call createIndexFile {
+    input:
+      contamination_scatter_outputs = scatter_getContamination.calculate_DNA_contamination_output,
+      contamination_scatter_inputs = scatter_getContamination.input_cram_file
+  }
+
+  task createIndexFile {
+      # Create the index file that lists the CRAM files and their location
+      Array[File] contamination_scatter_output_files
+      Array[File] contamination_scatter_input_filenames 
+
+      File indexFile = "trio_data.index"
+     
+      command {
+      python3 <<CODE
+
+      from __future__ import print_function
+      import csv
+      import os
+      import itertools
+
+      cram_filenames_string = "${ sep=',' contamination_scatter_input_filenames }"
+      crams_filenames_list = cram_filenames_string.split(',')
+
+      contamination_filenames_string = "${ sep=',' contamination_scatter_output_files }"
+      contamination_filenames_list = contamination_filenames_string.split(',')
+
+
+      tsv_crams_rows = []
+      for cram_file, contamination_file in zip(crams_filenames_list, contamination_filenames_list):
+
+          with open(contamination_file, 'rt') as in_file:
+              contents = in_file.read()
+              broj = contents.split("Alpha:",4)
+              contamination = broj[1].rstrip()
+
+          # Get the Cromwell location of the CRAM file
+          # The worklow will be able to access them 
+          # since the Cromwell path is mounted in the
+          # docker run commmand that Cromwell sets up
+          base_name = os.path.basename(cram_file)
+          base_name_wo_extension = base_name.split('.')[0]
+          tsv_crams_rows.append([base_name_wo_extension, cram_file, contamination])
+
+      with open(${indexFile}, 'w+') as tsv_index_file:
+          writer = csv.writer(tsv_index_file, delimiter = '\t')
+          for cram_info in tsv_crams_rows:
+              writer.writerow(cram_info)
+
+      CODE
+
+      }
+
+
   }
 
   call variantCalling {
@@ -376,6 +437,8 @@ workflow TopMedVariantCaller {
           base_name = os.path.basename(cram_file)
           base_name_wo_extension = base_name.split('.')[0]
           tsv_crams_rows.append([base_name_wo_extension, cram_file, '0.000'])
+
+
 
       # Remove the old PED file; we will not use a PED file?
       open('/root/topmed_freeze3_calling/data/trio_data.ped', 'w+').close()
