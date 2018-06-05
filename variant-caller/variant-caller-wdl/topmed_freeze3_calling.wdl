@@ -1,4 +1,6 @@
-import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/feature/contamination-calc/variant-caller/variant-caller-wdl/calculate_contamination.wdl" as getDNAContamination
+import "/home/ubuntu/dataBiosphere/topmed-workflows/variant-caller/variant-caller-wdl/calculate_contamination.wdl" as getDNAContamination
+#import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/feature/contamination-calc/variant-caller/variant-caller-wdl/calculate_contamination.wdl" as getDNAContamination
+
 ## This is the U of Michigan variant caller workflow WDL for the workflow code located here:
 ## https://github.com/statgen/topmed_freeze3_calling
 ##
@@ -156,74 +158,38 @@ workflow TopMedVariantCaller {
       docker_image = docker_image
   }
 
-  scatter(cram_file in input_crams) {
+  Array[Pair[File, File]] cram_and_crai_files = zip(input_cram_files, input_crai_files)
+
+  scatter(cram_or_crai_file in cram_and_crai_files) {
       call getDNAContamination.calulateDNAContamination as scatter_getContamination {
         input:
-            input_cram_file = cram_file,
-            ref_fasta = ref_fasta,
-            ref_fasta_index = ref_fasta_index
+            input_cram_file = cram_or_crai_file.left,
+            input_crai_file = cram_or_crai_file.right,
+            ref_fasta = ref_hs38DH_fa,
+            ref_fasta_index = ref_hs38DH_fa_fai
       }
   }
+
+  #Array[String] contamination_scatter_input_file_names = scatter_getContamination.input_cram_files
  
   call createIndexFile {
     input:
-      contamination_scatter_outputs = scatter_getContamination.calculate_DNA_contamination_output,
-      contamination_scatter_inputs = scatter_getContamination.input_cram_file
-  }
+      contamination_scatter_output_files = scatter_getContamination.calculate_DNA_contamination_output,
+      contamination_scatter_input_filenames = input_cram_files,
 
-  task createIndexFile {
-      # Create the index file that lists the CRAM files and their location
-      Array[File] contamination_scatter_output_files
-      Array[File] contamination_scatter_input_filenames 
+      #contamination_scatter_input_file_names = contamination_scatter_input_file_names,
+      #contamination_scatter_inputs = scatter_getContamination.input_cram_file
+      # assume this is enough storage to hold the contamination files
+      disk_size = additional_disk,
+      docker_image = docker_image
+ }
 
-      File indexFile = "trio_data.index"
-     
-      command {
-      python3 <<CODE
-
-      from __future__ import print_function
-      import csv
-      import os
-      import itertools
-
-      cram_filenames_string = "${ sep=',' contamination_scatter_input_filenames }"
-      crams_filenames_list = cram_filenames_string.split(',')
-
-      contamination_filenames_string = "${ sep=',' contamination_scatter_output_files }"
-      contamination_filenames_list = contamination_filenames_string.split(',')
-
-
-      tsv_crams_rows = []
-      for cram_file, contamination_file in zip(crams_filenames_list, contamination_filenames_list):
-
-          with open(contamination_file, 'rt') as in_file:
-              contents = in_file.read()
-              broj = contents.split("Alpha:",4)
-              contamination = broj[1].rstrip()
-
-          # Get the Cromwell location of the CRAM file
-          # The worklow will be able to access them 
-          # since the Cromwell path is mounted in the
-          # docker run commmand that Cromwell sets up
-          base_name = os.path.basename(cram_file)
-          base_name_wo_extension = base_name.split('.')[0]
-          tsv_crams_rows.append([base_name_wo_extension, cram_file, contamination])
-
-      with open(${indexFile}, 'w+') as tsv_index_file:
-          writer = csv.writer(tsv_index_file, delimiter = '\t')
-          for cram_info in tsv_crams_rows:
-              writer.writerow(cram_info)
-
-      CODE
-
-      }
-
-
-  }
 
   call variantCalling {
 
      input:
+      index_file = createIndexFile.ceate_index_output_file,
+
       input_crais = input_crai_files,
       input_crams = input_cram_files,
       disk_size = sumCRAMSizes.total_size + reference_size +  + additional_disk,
@@ -339,8 +305,71 @@ workflow TopMedVariantCaller {
     }
   }
 
+  task createIndexFile {
+      # Create the index file that lists the CRAM files and their location
+      Array[File] contamination_scatter_output_files
+      Array[String] contamination_scatter_input_filenames
+
+      File indexFile = "trio_data.index"
+
+      Float disk_size
+      String docker_image
+
+      command <<<
+          python3.5 <<CODE
+
+          import csv
+          import os
+          import itertools
+
+          cram_filenames_string = "${ sep=',' contamination_scatter_input_filenames }"
+          crams_filenames_list = cram_filenames_string.split(',')
+
+          contamination_filenames_string = "${ sep=',' contamination_scatter_output_files }"
+          contamination_filenames_list = contamination_filenames_string.split(',')
+
+
+
+          tsv_crams_rows = []
+          for cram_file, contamination_file in zip(crams_filenames_list, contamination_filenames_list):
+              print("createIndexFile: Retrieving contamination for input file {} from contamination file {}".format(cram_file, contamination_file))
+
+              with open(contamination_file, 'rt') as in_file:
+                  contents = in_file.read()
+                  broj = contents.split("Alpha:",4)
+                  contamination = broj[1].rstrip()
+
+              # Get the Cromwell location of the CRAM file
+              # The worklow will be able to access them
+              # since the Cromwell path is mounted in the
+              # docker run commmand that Cromwell sets up
+              base_name = os.path.basename(cram_file)
+              base_name_wo_extension = base_name.split('.')[0]
+              tsv_crams_rows.append([base_name_wo_extension, cram_file, contamination])
+
+          print("createIndexFile: Writing index file {}".format(${indexFile}))
+          with open(${indexFile}, 'w+') as tsv_index_file:
+              writer = csv.writer(tsv_index_file, delimiter = '\t')
+              for cram_info in tsv_crams_rows:
+                  writer.writerow(cram_info)
+
+          CODE
+      >>>
+     output {
+      File ceate_index_output_file = indexFile
+     }
+     runtime {
+       memory: "10 GB"
+       cpu: "16"
+       disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
+       zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"
+       docker: docker_image
+     }
+  }
 
   task variantCalling {
+     File index_file
+
      # The CRAM index files are listed as an input because they are required
      # by various tools, e.g. Samtools. They should be in the same location
      # as the CRAM files when specified in the input JSON
@@ -419,27 +448,6 @@ workflow TopMedVariantCaller {
       import os
       from shutil import copyfile     
 
-      if not os.path.exists('/root/topmed_freeze3_calling/data/'):
-          os.makedirs('/root/topmed_freeze3_calling/data/')
-
-      # Create the index file that lists the CRAM files and their location
-      # We do not need to do this for the CRAM index files because the 
-      # tools assume they are located in the same place as the CRAM files
-      cram_string = "${ sep=',' input_crams }"
-      crams_list = cram_string.split(',')
-
-      tsv_crams_rows = []
-      for cram_file in crams_list:
-          # Get the Cromwell location of the CRAM file
-          # The worklow will be able to access them 
-          # since the Cromwell path is mounted in the
-          # docker run commmand that Cromwell sets up
-          base_name = os.path.basename(cram_file)
-          base_name_wo_extension = base_name.split('.')[0]
-          tsv_crams_rows.append([base_name_wo_extension, cram_file, '0.000'])
-
-
-
       # Remove the old PED file; we will not use a PED file?
       open('/root/topmed_freeze3_calling/data/trio_data.ped', 'w+').close()
 
@@ -458,9 +466,12 @@ workflow TopMedVariantCaller {
       set -o xtrace
       #to turn of echo do 'set +o xtrace'
 
+
       # Make sure the directory where the reference files are supposed to be
       # located exists in the container
       mkdir -p /root/topmed_freeze3_calling/data/local.org/ref/gotcloud.ref/hg38
+
+      ln -s ${index_file} /root/topmed_freeze3_calling/data/trio_data.index
 
       # Create a symlink from the where the workflow expects the reference files
       # to the Cromwell location of the reference files 

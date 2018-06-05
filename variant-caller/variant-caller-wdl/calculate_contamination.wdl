@@ -4,7 +4,7 @@
 
 workflow calulateDNAContamination {
 
-  #File input_crai_file
+  File input_crai_file
   File input_cram_file
 
   File ref_fasta
@@ -18,16 +18,16 @@ workflow calulateDNAContamination {
   Int additional_disk = select_first([increase_disk_size, 20])
 
   Float reference_size = size(ref_fasta, "GB") + size(ref_fasta_index, "GB")
-  #Float cram_size = size(input_cram_file, "GB") + size(input_crai_file, "GB")
-  Float cram_size = size(input_cram_file, "GB")
+  Float cram_size = size(input_cram_file, "GB") + size(input_crai_file, "GB")
 
-  String? reference_genome = 'hg38'
+  String? reference_genome_version
+  String reference_genome = select_first([reference_genome_version, 'hg38'])
 
   String? docker_image = "images.sbgenomics.com/vladimir_obucina/topmed:VerifyBamID"
 
   call VerifyBamID {
      input:
-      #input_crai = input_crai_file,
+      input_crai = input_crai_file,
       input_cram = input_cram_file,
 
       ref_fasta = ref_fasta,
@@ -41,8 +41,13 @@ workflow calulateDNAContamination {
       
   }
 
+  output {
+      File calculate_DNA_contamination_output = VerifyBamID.DNA_contamination_output_file
+  }
+}
+
   task VerifyBamID {
-     #File input_crai
+     File input_crai
      File input_cram
 
      File ref_fasta
@@ -55,13 +60,10 @@ workflow calulateDNAContamination {
 
      # We have to use a trick to make Cromwell
      # skip substitution when using the bash ${<variable} syntax
-     # This is necessary to get the <var>=$(<command>) sub shell 
-     # syntax to work and assign the value to a variable when 
-     # running in Cromwell
      # See https://gatkforums.broadinstitute.org/wdl/discussion/comment/44570#Comment_44570 
      String dollar = "$"
 
-     command {
+     command <<<
       # Set the exit code of a pipeline to that of the rightmost command
       # to exit with a non-zero status, or zero if all commands of the pipeline exit 
       set -o pipefail
@@ -75,16 +77,20 @@ workflow calulateDNAContamination {
 
       echo "Running VerifyBamID"
 
-      if [ ${dollar}{reference_genome}" == 'hg37' ]; then 
+      if [[ ${reference_genome} == 'hg37' ]]
+      then
+             printf "VerifyBamID: Using hg37 genome\n"
              UDPath="/VerifyBamID/resource/1000g.phase3.100k.b37.vcf.gz.dat.UD"
              BedPath="/VerifyBamID/resource/1000g.phase3.100k.b37.vcf.gz.dat.bed"
              MeanPath="/VerifyBamID/resource/1000g.phase3.100k.b37.vcf.gz.dat.mu"
-      elif [ ${dollar}{reference_genome} == 'hg38']; then
+      elif [[ ${reference_genome} == 'hg38' ]]
+      then
+             printf "VerifyBamID: Using hg38 genome\n"
              UDPath="/VerifyBamID/resource/1000g.phase3.100k.b38.vcf.gz.dat.UD"
              BedPath="/VerifyBamID/resource/1000g.phase3.100k.b38.vcf.gz.dat.bed"
              MeanPath="/VerifyBamID/resource/1000g.phase3.100k.b38.vcf.gz.dat.mu"
       else
-          printf "ERROR: Invalid reference genome version string: %s. It should be hg37 or hg38\n" "$reference_genome"
+          printf "ERROR: Invalid reference genome version string: %s. It should be hg37 or hg38\n" ${reference_genome}
           exit 1
       fi
        
@@ -94,7 +100,7 @@ workflow calulateDNAContamination {
           --MeanPath ${dollar}{MeanPath} \
           --Reference ${ref_fasta} --BamFile ${input_cram}
 
-    }
+    >>>
      output {
       File DNA_contamination_output_file = "result.out"
     }
@@ -107,7 +113,4 @@ workflow calulateDNAContamination {
     }
   }
 
-  output {
-      File calculate_DNA_contamination_output = VerifyBamID.DNA_contamination_output_file
-  }
-}
+
