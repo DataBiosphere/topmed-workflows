@@ -52,10 +52,10 @@ def main(test_fn, truth_fn, reference, output):
                 p = Popen(['java', '-cp',
                            'java -jar /home/michael/bin/GenomeAnalysisTK.jar',
                            '-T', 'GenotypeConcordance',
-                           '-R', reference,
-                           '-eval', test_vcf_file,
-                           '-comp', truth_vcf_file,
-                           '-o', output],
+                           '-R', str(reference),
+                           '-eval', str(test_vcf_file),
+                           '-comp', str(truth_vcf_file),
+                           '-o', str(output)],
                           stdout=PIPE, stderr=STDOUT)
 
                 print("p output arg from Java command: {}".format(p))
