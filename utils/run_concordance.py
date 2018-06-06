@@ -11,24 +11,30 @@ def main(test_fn, truth_fn, reference, output):
         tarfile.open(truth_fn, 'r') as truth_vcf:
 
         test_vcf_fnames = test_vcf.getmembers()
-        truth_vcf_fnames = truth_vcf.getmembers()
 
-        for test_vcf_info in test_vcf.getmembers():
-            test_vcf_fname = os.path.basename(test_vcf_info.name)
+        # Make sure truth VCF tar file is not empty; else something is wrong.
+        truth_vcf_file_names = truth_vcf.getnames()
+        if not truth_vcf_file_names or len(truth_vcf_file_names) == 0:
+            print("The truth tar gz file is empty", file=sys.stderr)
+            sys.exit(1)
+
+        for truth_vcf_info in truth_vcf.getmembers():
+            #test_vcf_fname = os.path.basename(test_vcf_info.name)
             #print("Test VCF filename: {}".format(test_vcf_fname))
 
-            if test_vcf_info.isfile() and \
+            if truth_vcf_info.isfile() and \
                     os.path.basename(
-                        test_vcf_info.name).startswith("chr") and \
+                        truth_vcf_info.name).startswith("chr") and \
                     os.path.basename(
-                        test_vcf_info.name).endswith("vcf.gz"):
+                        truth_vcf_info.name).endswith("vcf.gz"):
 
                 print("Checking to see if truth vcf file {} is present in {}".format(
-                        test_vcf_info.name, test_fn))
+                        truth_vcf_info.name, test_fn))
                 # If a VCF file is missing in the test output then
                 # the VCFs are not the same and return error
-                if test_vcf_info.name not in test_vcf_fnames:
-                    print("VCF file {} is missing from variant caller output".format(test_vcf_info.name))
+                if truth_vcf_info.name not in test_vcf_fnames:
+                    print("VCF file {} is missing from variant caller output".
+                          format(test_vcf_info.name))
                     #print("VCF file {} is missing from variant caller output".format(test_vcf_info.name), file=sys.stderr)
                 sys.exit(1)
 
