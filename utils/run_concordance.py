@@ -10,7 +10,8 @@ def main(test_fn, truth_fn, reference, output):
     with tarfile.open(test_fn, 'r') as test_vcf, \
         tarfile.open(truth_fn, 'r') as truth_vcf:
 
-        test_vcf_fnames = test_vcf.getmembers()
+        test_vcf_fnames = test_vcf.getnames()  # is a list
+        #test_vcf_fnames = test_vcf.getmembers()  # is a list
 
         # Make sure truth VCF tar file is not empty; else something is wrong.
         truth_vcf_file_names = truth_vcf.getnames()
@@ -34,6 +35,7 @@ def main(test_fn, truth_fn, reference, output):
                 # If a VCF file is missing in the test output then
                 # the VCFs are not the same and return error
                 if truth_vcf_info.name not in test_vcf_fnames:
+                    # (checks whether string is in list)
                     print("VCF file {} is missing from test variant caller output".
                           format(truth_vcf_info.name))
                     #print("VCF file {} is missing from variant caller output".format(test_vcf_info.name), file=sys.stderr)
