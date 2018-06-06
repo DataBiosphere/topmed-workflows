@@ -69,4 +69,4 @@ output = '/home/ubuntu/vcf_test/out.grp'
 main(test_fn, truth_fn, reference, output)
 
 if __name__=='__main__':
-    main()
+    main(test_fn, truth_fn, reference, output)
