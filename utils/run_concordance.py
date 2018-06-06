@@ -28,10 +28,9 @@ def main(test_fn, truth_fn, reference, output):
                 # If a VCF file is missing in the test output then
                 # the VCFs are not the same and return error
                 if test_vcf_info.name not in test_vcf_fnames:
-                    print(
-                        "VCF file {} is missing from variant caller output".format(
-                            test_vcf_info.name), file=sys.stderr)
-                    sys.exit(1)
+                    print("VCF file {} is missing from variant caller output".format(test_vcf_info.name))
+                    #print("VCF file {} is missing from variant caller output".format(test_vcf_info.name), file=sys.stderr)
+                sys.exit(1)
 
                 # Get file like objects for the gzipped vcf files
                 test_vcf_file_info = test_vcf.getmember(test_vcf_info.name)
@@ -53,11 +52,12 @@ def main(test_fn, truth_fn, reference, output):
                 print("p output arg from Java command: {}".format(p))
 
 
-test_fn = '/home/ubuntu/vcf_test/test.vcf.gz'
-truth_fn = '/home/ubuntu/vcf_test/truth.vcf.gz'
+test_fn = '/home/ubuntu/vcf_test/test.varcall.tar.gz'
+truth_fn = '/home/ubuntu/vcf_test/truth.varcall.tar.gz'
 reference = '/home/ubuntu/hg38/hs38DH.fa'
 output = '/home/ubuntu/vcf_test/out.grp'
+
 main(test_fn, truth_fn, reference, output)
 
-#if __name__=='__main__':
-#    main()
+if __name__=='__main__':
+    main()
