@@ -42,11 +42,11 @@ def main(test_fn, truth_fn, reference, output):
                     sys.exit(1)
 
                 # Get file like objects for the gzipped vcf files
-                test_vcf_file_info = test_vcf.getmember(test_vcf_info.name)
+                test_vcf_file_info = test_vcf.getmember(truth_vcf_info.name)
                 test_vcf_file = test_vcf.extractfile(test_vcf_file_info)
 
-                truth_vcf_file_info = truth_vcf.getmember(test_vcf_info.name)
-                truth_vcf_file = truth_vcf.extractfile(truth_vcf_file_info)
+                #truth_vcf_file_info = truth_vcf.getmember(truth_vcf_info.name)
+                truth_vcf_file = truth_vcf.extractfile(truth_vcf_info)
                 print("Test VCF: {}".format(test_vcf_file))
 
                 p = Popen(['java', '-cp',
