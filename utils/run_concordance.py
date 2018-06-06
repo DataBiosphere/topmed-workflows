@@ -15,7 +15,8 @@ def main(test_fn, truth_fn, reference, output):
         # Make sure truth VCF tar file is not empty; else something is wrong.
         truth_vcf_file_names = truth_vcf.getnames()
         if not truth_vcf_file_names or len(truth_vcf_file_names) == 0:
-            print("The truth tar gz file is empty", file=sys.stderr)
+            print("The truth tar gz file is empty")
+            #print("The truth tar gz file is empty", file=sys.stderr)
             sys.exit(1)
 
         for truth_vcf_info in truth_vcf.getmembers():
