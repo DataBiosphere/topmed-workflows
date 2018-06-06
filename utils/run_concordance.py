@@ -35,7 +35,7 @@ def main(test_fn, truth_fn, reference, output):
                 # the VCFs are not the same and return error
                 if truth_vcf_info.name not in test_vcf_fnames:
                     print("VCF file {} is missing from variant caller output".
-                          format(test_vcf_info.name))
+                          format(truth_vcf_info.name))
                     #print("VCF file {} is missing from variant caller output".format(test_vcf_info.name), file=sys.stderr)
                 sys.exit(1)
 
