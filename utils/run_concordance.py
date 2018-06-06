@@ -34,10 +34,10 @@ def main(test_fn, truth_fn, reference, output):
                 # If a VCF file is missing in the test output then
                 # the VCFs are not the same and return error
                 if truth_vcf_info.name not in test_vcf_fnames:
-                    print("VCF file {} is missing from variant caller output".
+                    print("VCF file {} is missing from test variant caller output".
                           format(truth_vcf_info.name))
                     #print("VCF file {} is missing from variant caller output".format(test_vcf_info.name), file=sys.stderr)
-                sys.exit(1)
+                    sys.exit(1)
 
                 # Get file like objects for the gzipped vcf files
                 test_vcf_file_info = test_vcf.getmember(test_vcf_info.name)
