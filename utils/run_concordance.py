@@ -43,13 +43,12 @@ def main(test_fn, truth_fn, reference, output):
 
                 # Get file like objects for the gzipped vcf files
                 test_vcf_file_info = test_vcf.getmember(truth_vcf_info.name)
-                test_vcf_file = test_vcf.extractfile(test_vcf_file_info)
+                test_vcf_file = test_vcf.extractfile(test_vcf_file_info).read()
 
                 #truth_vcf_file_info = truth_vcf.getmember(truth_vcf_info.name)
-                truth_vcf_file = truth_vcf.extractfile(truth_vcf_info)
+                truth_vcf_file = truth_vcf.extractfile(truth_vcf_info).read()
                 print("Test VCF: {}".format(test_vcf_file))
 
-                #p = Popen(['java', '-cp',
                 p = Popen(['java', '-jar', '/home/ubuntu/bin/GenomeAnalysisTK.jar',
                            '-T', 'GenotypeConcordance',
                            '-R', str(reference),
@@ -58,9 +57,7 @@ def main(test_fn, truth_fn, reference, output):
                            '-o', str(output)],
                           stdout=PIPE, stderr=STDOUT)
 
-
-
-                print("p output arg from Java command: {}".format(p.communicate()))
+                print("Java output: {}".format(p.communicate()))
 
 
 test_fn = '/home/ubuntu/vcf_test/test.varcall.tar.gz'
