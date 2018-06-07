@@ -58,7 +58,9 @@ def main(test_fn, truth_fn, reference, output):
                            '-o', str(output)],
                           stdout=PIPE, stderr=STDOUT)
 
-                print("p output arg from Java command: {}".format(p))
+
+
+                print("p output arg from Java command: {}".format(p.communicate()))
 
 
 test_fn = '/home/ubuntu/vcf_test/test.varcall.tar.gz'
