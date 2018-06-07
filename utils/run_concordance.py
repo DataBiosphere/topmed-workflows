@@ -50,7 +50,7 @@ def main(test_fn, truth_fn, reference, output):
                 print("Test VCF: {}".format(test_vcf_file))
 
                 #p = Popen(['java', '-cp',
-                p = Popen(['java', '-jar', '$HOME/bin/GenomeAnalysisTK.jar',
+                p = Popen(['java', '-jar', '/home/ubuntu/bin/GenomeAnalysisTK.jar',
                            '-T', 'GenotypeConcordance',
                            '-R', str(reference),
                            '-eval', str(test_vcf_file),
