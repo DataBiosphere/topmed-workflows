@@ -10,6 +10,11 @@ workflow calulateDNAContamination {
   File ref_fasta
   File ref_fasta_index
 
+  #DEBUG
+  File debug_bed_file
+  File debug_mu_file
+  File debug_result_file
+
   # Optional input to increase all disk sizes in case of outlier sample with strange size behavior
   Int? increase_disk_size
 
@@ -33,6 +38,11 @@ workflow calulateDNAContamination {
       ref_fasta = ref_fasta,
       ref_fasta_index = ref_fasta_index,
 
+      #DEBUG
+      debug_bed_file = debug_bed_file,
+      debug_mu_file = debug_mu_file,
+      debug_result_file = debug_result_file,
+
       reference_genome = reference_genome,
 
       disk_size = cram_size + reference_size +  + additional_disk,
@@ -42,7 +52,9 @@ workflow calulateDNAContamination {
   }
 
   output {
-      File calculate_DNA_contamination_output = VerifyBamID.DNA_contamination_output_file
+      #File calculate_DNA_contamination_output = VerifyBamID.DNA_contamination_output_file
+      Array[File] calculate_DNA_contamination_output = VerifyBamID.DNA_contamination_output_files
+
   }
 }
 
@@ -52,6 +64,11 @@ workflow calulateDNAContamination {
 
      File ref_fasta
      File ref_fasta_index
+
+     #DEBUG
+     File debug_bed_file
+     File debug_mu_file
+     File debug_result_file
 
      String reference_genome
 
@@ -89,20 +106,27 @@ workflow calulateDNAContamination {
              UDPath="/VerifyBamID/resource/1000g.phase3.100k.b38.vcf.gz.dat.UD"
              BedPath="/VerifyBamID/resource/1000g.phase3.100k.b38.vcf.gz.dat.bed"
              MeanPath="/VerifyBamID/resource/1000g.phase3.100k.b38.vcf.gz.dat.mu"
+             #BedPath="${debug_bed_file}"
+             #MeanPath="${debug_mu_file}"
       else
           printf "ERROR: Invalid reference genome version string: %s. It should be hg37 or hg38\n" ${reference_genome}
           exit 1
       fi
        
-      export PATH=$PATH:/VerifyBamID/bin/ && VerifyBamID \
-          --UDPath ${dollar}{UDPath} \
-          --BedPath ${dollar}{BedPath} \
-          --MeanPath ${dollar}{MeanPath} \
-          --Reference ${ref_fasta} --BamFile ${input_cram}
+      printf "DEBUG!!!! SIMULATING CALL TO VERIFY BAM ID"
+      #export PATH=$PATH:/VerifyBamID/bin/ && VerifyBamID \
+      #    --UDPath ${dollar}{UDPath} \
+      #    --BedPath ${dollar}{BedPath} \
+      #    --MeanPath ${dollar}{MeanPath} \
+      #    --Reference ${ref_fasta} --BamFile ${input_cram}
 
     >>>
      output {
-      File DNA_contamination_output_file = "result.out"
+       #File DNA_contamination_output_file = "result.out"
+
+       #Array[File] DNA_contamination_output_files = [input_cram, "result.out"]
+
+       Array[File] DNA_contamination_output_files = [input_cram, debug_result_file]
     }
    runtime {
       memory: "10 GB"

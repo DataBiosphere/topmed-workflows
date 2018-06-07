@@ -165,30 +165,38 @@ workflow TopMedVariantCaller {
         input:
             input_cram_file = cram_or_crai_file.left,
             input_crai_file = cram_or_crai_file.right,
+
             ref_fasta = ref_hs38DH_fa,
             ref_fasta_index = ref_hs38DH_fa_fai
       }
   }
 
+  #not needed
   #Array[String] contamination_scatter_input_file_names = scatter_getContamination.input_cram_files
  
-  call createIndexFile {
-    input:
-      contamination_scatter_output_files = scatter_getContamination.calculate_DNA_contamination_output,
-      contamination_scatter_input_filenames = input_cram_files,
-
-      #contamination_scatter_input_file_names = contamination_scatter_input_file_names,
-      #contamination_scatter_inputs = scatter_getContamination.input_cram_file
-      # assume this is enough storage to hold the contamination files
-      disk_size = additional_disk,
-      docker_image = docker_image
- }
+##  call createIndexFile {
+##    input:
+##      contamination_scatter_output_files = scatter_getContamination.calculate_DNA_contamination_output,
+##      # DEBUG ONLY
+##      #contamination_scatter_output_files = test_input_contamination_file,
+##
+##      #contamination_scatter_input_filenames = input_cram_files,
+##
+##      #next three lines not needed
+##      #contamination_scatter_input_file_names = contamination_scatter_input_file_names,
+##      #contamination_scatter_inputs = scatter_getContamination.input_cram_file
+##      # assume this is enough storage to hold the contamination files
+##      disk_size = additional_disk,
+##      docker_image = docker_image
+## }
 
 
   call variantCalling {
 
      input:
-      index_file = createIndexFile.ceate_index_output_file,
+      #index_file = createIndexFile.create_index_output_file,
+
+      contamination_scatter_output_files = scatter_getContamination.calculate_DNA_contamination_output,
 
       input_crais = input_crai_files,
       input_crams = input_cram_files,
@@ -308,9 +316,9 @@ workflow TopMedVariantCaller {
   task createIndexFile {
       # Create the index file that lists the CRAM files and their location
       Array[File] contamination_scatter_output_files
-      Array[String] contamination_scatter_input_filenames
+      Array[File] contamination_scatter_input_filenames
 
-      File indexFile = "trio_data.index"
+      String indexFileName = "TopMed_trio_data.index"
 
       Float disk_size
       String docker_image
@@ -321,6 +329,11 @@ workflow TopMedVariantCaller {
           import csv
           import os
           import itertools
+
+          # Remove the old index file; we will not use it and instead
+          # create a new one and use the old path to create a symbolic link to
+          # the new one; ln requires that the old file be removed.
+          open('/root/topmed_freeze3_calling/data/trio_data.ped', 'w+').close()
 
           cram_filenames_string = "${ sep=',' contamination_scatter_input_filenames }"
           crams_filenames_list = cram_filenames_string.split(',')
@@ -338,6 +351,7 @@ workflow TopMedVariantCaller {
                   contents = in_file.read()
                   broj = contents.split("Alpha:",4)
                   contamination = broj[1].rstrip()
+                  print("createIndexFile: Contamination is {}".format(contamination))
 
               # Get the Cromwell location of the CRAM file
               # The worklow will be able to access them
@@ -347,8 +361,8 @@ workflow TopMedVariantCaller {
               base_name_wo_extension = base_name.split('.')[0]
               tsv_crams_rows.append([base_name_wo_extension, cram_file, contamination])
 
-          print("createIndexFile: Writing index file {}".format(${indexFile}))
-          with open(${indexFile}, 'w+') as tsv_index_file:
+          print("createIndexFile: Writing index file {}".format("${indexFileName}"))
+          with open("${indexFileName}", 'w+') as tsv_index_file:
               writer = csv.writer(tsv_index_file, delimiter = '\t')
               for cram_info in tsv_crams_rows:
                   writer.writerow(cram_info)
@@ -356,7 +370,7 @@ workflow TopMedVariantCaller {
           CODE
       >>>
      output {
-      File ceate_index_output_file = indexFile
+      File create_index_output_file = indexFileName
      }
      runtime {
        memory: "10 GB"
@@ -368,7 +382,19 @@ workflow TopMedVariantCaller {
   }
 
   task variantCalling {
-     File index_file
+     #File index_file
+     String? chromosomes
+     String chromosomes_to_process = select_first([chromosomes, "1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 X" ])
+
+     Int? num_of_jobs
+     Int num_of_jobs_to_run = select_first([num_of_jobs, 23 ])
+
+
+
+     Array[Array[File]] contamination_scatter_output_files
+
+     #DEBUG
+     Array[Array[File]] contamination_scatter_output_file_pairs
 
      # The CRAM index files are listed as an input because they are required
      # by various tools, e.g. Samtools. They should be in the same location
@@ -439,9 +465,16 @@ workflow TopMedVariantCaller {
      File ref_hs38DH_fa_sa
      File ref_hs38DH_winsize100_gc
 
+     # see https://gatkforums.broadinstitute.org/wdl/discussion/11930/how-to-process-array-array-file-outside-a-scatter
+     # DEBUG
+     Array[File] file_pairs = flatten(contamination_scatter_output_file_pairs)     
 
-     command {
-      python <<CODE
+     Array[File] contamination_output_files = flatten(contamination_scatter_output_files)     
+
+     String indexFileName = "trio_data.index"
+
+     command <<<
+      python3.5 <<CODE
 
       from __future__ import print_function
       import csv
@@ -451,11 +484,55 @@ workflow TopMedVariantCaller {
       # Remove the old PED file; we will not use a PED file?
       open('/root/topmed_freeze3_calling/data/trio_data.ped', 'w+').close()
 
-      with open('/root/topmed_freeze3_calling/data/trio_data.index', 'w+') as tsv_index_file:
+      # Convert the WDL array of strings to a python list
+      contamination_output_file_names_string = "${ sep=',' contamination_output_files }"
+      contamination_output_file_names_list = contamination_output_file_names_string.split(',')
+      print("variantCalling: Contamination output files list is {}".format(contamination_output_file_names_list))
+
+      # Convert the WDL array of strings to a python list
+      contamination_file_names_string = "${ sep=',' file_pairs }"
+      contamination_file_names_list = contamination_file_names_string.split(',')
+
+      tsv_crams_rows = []
+      # Create list of tuples from the list of cram paths and contamination
+      # Input is [/path/to/cram, contamination, /path/to/cram, contamination...]
+      # see https://stackoverflow.com/questions/23286254/convert-list-to-a-list-of-tuples-python
+      file_pairs_it = iter(contamination_file_names_list)
+      file_pairs_tuples = zip(file_pairs_it, file_pairs_it)
+      for file_tuple in file_pairs_tuples:
+          cram_file = file_tuple[0]
+          contamination_file = file_tuple[1]
+          print("variantCalling: CRAM file is {} contamination file is {}".format(cram_file, contamination_file))
+      
+          with open(contamination_file, 'rt') as in_file:
+             contents = in_file.read()
+             broj = contents.split("Alpha:",4)
+             contamination = broj[1].rstrip()
+             print("variantCalling: Contamination is {}".format(contamination))
+
+          # Get the Cromwell location of the CRAM file
+          # The worklow will be able to access them
+          # since the Cromwell path is mounted in the
+          # docker run commmand that Cromwell sets up
+          base_name = os.path.basename(cram_file)
+          base_name_wo_extension = base_name.split('.')[0]
+ 
+          # Get the Cromwell path to the input CRAM file using the filename. The
+          # filename at this time consists of the TopMed DNA sample
+          # unique identifier of the form NWD123456.  
+          tsv_crams_rows.append([base_name_wo_extension, cram_file, contamination])
+
+
+      print("variantCalling:  Writing index file {} with contents {}".format("${indexFileName}", tsv_crams_rows))
+      with open("/root/topmed_freeze3_calling/data/${indexFileName}", 'w+') as tsv_index_file:
           writer = csv.writer(tsv_index_file, delimiter = '\t')
           for cram_info in tsv_crams_rows:
               writer.writerow(cram_info)
-
+      
+      
+      with open("/root/topmed_freeze3_calling/data/${indexFileName}", 'r') as tsv_index_file:
+          print("variantCalling: Index file is:\n")
+          print(tsv_index_file.read())
       CODE
 
 
@@ -471,7 +548,7 @@ workflow TopMedVariantCaller {
       # located exists in the container
       mkdir -p /root/topmed_freeze3_calling/data/local.org/ref/gotcloud.ref/hg38
 
-      ln -s ${index_file} /root/topmed_freeze3_calling/data/trio_data.index
+      #ln -s ./${indexFileName} /root/topmed_freeze3_calling/data/TopMed_trio_data.index
 
       # Create a symlink from the where the workflow expects the reference files
       # to the Cromwell location of the reference files 
@@ -546,32 +623,36 @@ workflow TopMedVariantCaller {
       sed -i '/.*our $dbsnp.*/ c\our $dbsnp = "$refDir\/dbsnp_142.b38.vcf.gz";' "$WORKING_DIR"/scripts/gcconfig.pm
       sed -i '/.*our $hapmapvcf.*/ c\our $hapmapvcf = "$refDir\/hapmap_3.3.b38.sites.vcf.gz";' "$WORKING_DIR"/scripts/gcconfig.pm
       sed -i '/.*our $omnivcf.*/ c\our $omnivcf = "$refDir\/1000G_omni2.5.b38.sites.PASS.vcf.gz";' "$WORKING_DIR"/scripts/gcconfig.pm
+      #sed -i '/.*our $index.*/ c\our $index = "data/TopMed_trio_data.index";' "$WORKING_DIR"/scripts/gcconfig.pm
 
-
-      # Put the correct location of the output directory into the global config file
+      # Put the correct location of the output directory into the local config file
       #sed -i '/.*our $out =.*/ c\our $out = "/root/topmed_freeze3_calling/out";' "$WORKING_DIR"/scripts/gcconfig.pm
       # Put the correct location of references into the config file
       sed -i '/.*our $md5 =.*/ c\our $md5 = "\/data\/local.org\/ref\/gotcloud.ref\/md5\/%2s\/%s\/%s";' "$WORKING_DIR"/scripts/config.pm
       sed -i '/.*our $ref =.*/ c\our $ref = "\/data\/local.org\/ref\/gotcloud.ref\/hg38\/hs38DH.fa";' "$WORKING_DIR"/scripts/config.pm
-
+      #sed -i '/.*our $index.*/ c\our $index = "data/TopMed_trio_data.index";' "$WORKING_DIR"/scripts/config.pm
 
       echo "Running step1 - detect and merge variants"
       echo "Running step1 - detect and merge variants - removing old output dir if it exists"
       if [ -d "$WORKING_DIR"/out ]; then rm -Rf "$WORKING_DIR"/out; fi
       echo "Running step1 - detect and merge variants - generating Makefile"
-      perl "$WORKING_DIR"/scripts/step1-detect-and-merge-variants.pl $(seq 1 22 | xargs -n 1 -I% echo chr%) chrX
+      perl "$WORKING_DIR"/scripts/step1-detect-and-merge-variants.pl $(for i in ${chromosomes_to_process};  do printf "chr"$i" "; done)
+      #perl "$WORKING_DIR"/scripts/step1-detect-and-merge-variants.pl $(seq 1 22 | xargs -n 1 -I% echo chr%) chrX
       echo "Running step1 - detect and merge variants - running Makefile"
-      make SHELL='/bin/bash' -f "$WORKING_DIR"/out/aux/Makefile -j 23
+      make SHELL='/bin/bash' -f "$WORKING_DIR"/out/aux/Makefile -j ${num_of_jobs_to_run}
       
 
       echo "Running step2 - joing genotyping"
       echo "Running step2 - joing genotyping - removing old output dir if it exists"
       if [ -d "$WORKING_DIR"/paste ]; then rm -Rf "$WORKING_DIR"/paste; fi
       echo "Running step2 - joing genotyping - generating Makefile"
-      perl "$WORKING_DIR"/scripts/step2-joint-genotyping.pl $(seq 1 22 | xargs -n 1 -I% echo chr%) chrX
+      perl "$WORKING_DIR"/scripts/step2-joint-genotyping.pl $(for i in ${chromosomes_to_process};  do printf "chr"$i" "; done)
+      #perl "$WORKING_DIR"/scripts/step2-joint-genotyping.pl $(seq 1 22 | xargs -n 1 -I% echo chr%) chrX
       echo "Running step2 - joing genotyping - running Makefile"
-      MAKEFILE_NAME="chrchr"$(seq -s '_chr' 1 22)_chrX".Makefile"
-      make SHELL='/bin/bash' -f "$WORKING_DIR"/out/paste/"$MAKEFILE_NAME" -j 23
+      total=$(echo ${chromosomes_to_process} | wc -w)
+      MAKEFILE_NAME="chr"$(j=0; for i in ${chromosomes_to_process}; do printf "chr""$i"; let "j=j+1"; if [ "$j" -lt "$total" ]; then printf "_"; fi done)".Makefile"
+      #MAKEFILE_NAME="chrchr"$(seq -s '_chr' 1 22)_chrX".Makefile"
+      make SHELL='/bin/bash' -f "$WORKING_DIR"/out/paste/"$MAKEFILE_NAME" -j ${num_of_jobs_to_run}
 
       # Pop back to the original working directory; on FireCloud this will be a
       # special directory 
@@ -580,7 +661,7 @@ workflow TopMedVariantCaller {
       # Tar up the output directories into the output file provided in the input JSON
       tar -zcvf topmed_variant_caller_output.tar.gz /root/topmed_freeze3_calling/out/paste/ /root/topmed_freeze3_calling/out/aux/individual/
 
-    }
+    >>>
      output {
       File topmed_variant_caller_output_file = "topmed_variant_caller_output.tar.gz"
     }
