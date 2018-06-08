@@ -3,7 +3,11 @@
 import os
 import tarfile
 import sys
+import tempfile
+import shutil
 from subprocess import Popen, PIPE, STDOUT
+
+uname = home = os.path.expanduser('~')
 
 def main(test_fn, truth_fn, reference, output):
 
@@ -20,52 +24,83 @@ def main(test_fn, truth_fn, reference, output):
             #print("The truth tar gz file is empty", file=sys.stderr)
             sys.exit(1)
 
-        for truth_vcf_info in truth_vcf.getmembers():
+        for truth_vcf_member in truth_vcf.getmembers():
             #test_vcf_fname = os.path.basename(test_vcf_info.name)
             #print("Test VCF filename: {}".format(test_vcf_fname))
 
-            if truth_vcf_info.isfile() and \
+            if truth_vcf_member.isfile() and \
                     os.path.basename(
-                        truth_vcf_info.name).startswith("chr") and \
+                        truth_vcf_member.name).startswith("chr") and \
                     os.path.basename(
-                        truth_vcf_info.name).endswith("vcf.gz"):
+                        truth_vcf_member.name).endswith("vcf.gz"):
 
                 print("Checking to see if truth vcf file {} is present in {}".format(
-                        truth_vcf_info.name, test_fn))
+                        truth_vcf_member.name, test_fn))
                 # If a VCF file is missing in the test output then
                 # the VCFs are not the same and return error
-                if truth_vcf_info.name not in test_vcf_fnames:
+                if truth_vcf_member.name not in test_vcf_fnames:
                     # (checks whether string is in list)
                     print("VCF file {} is missing from test variant caller output".
-                          format(truth_vcf_info.name))
+                          format(truth_vcf_member.name))
                     #print("VCF file {} is missing from variant caller output".format(test_vcf_info.name), file=sys.stderr)
                     sys.exit(1)
 
-                # Get file like objects for the gzipped vcf files
-                test_vcf_file_info = test_vcf.getmember(truth_vcf_info.name)
-                test_vcf_file = test_vcf.extractfile(test_vcf_file_info).read()
+                with tempfile.TemporaryDirectory() as tmpdirname:
+                    os.chdir(tmpdirname)
+                    truth_vcf_file = truth_vcf.getmember(truth_vcf_member.name)
+                    truth_vcf.extract(truth_vcf_file, path=tmpdirname)
+                    # Need to rename directory as we need to extract another one.
+                    os.rename(os.listdir(tmpdirname)[0], 'truth')
+                    truth_path = os.path.join(tmpdirname,
+                                              os.listdir(tmpdirname)[0])
+                    truth_vcf_name = get_vcf_filename(truth_path)
+                    print(truth_vcf_name)
 
-                #truth_vcf_file_info = truth_vcf.getmember(truth_vcf_info.name)
-                truth_vcf_file = truth_vcf.extractfile(truth_vcf_info).read()
-                print("Test VCF: {}".format(test_vcf_file))
+                    truth_vcf.extract(truth_vcf_file, path=tmpdirname)
+                    # Need to rename directory as we need to extract another one.
+                    os.rename(os.listdir(tmpdirname)[0], 'test')
+                    test_path = os.path.join(tmpdirname,
+                                              os.listdir(tmpdirname)[0])
+                    test_vcf_name = get_vcf_filename(test_path)
+                    print(test_vcf_name)
 
-                p = Popen(['java', '-jar', '/home/ubuntu/bin/GenomeAnalysisTK.jar',
-                           '-T', 'GenotypeConcordance',
-                           '-R', str(reference),
-                           '-eval', str(test_vcf_file),
-                           '-comp', str(truth_vcf_file),
-                           '-o', str(output)],
-                          stdout=PIPE, stderr=STDOUT)
+                    jar = uname + '/bin/GenomeAnalysisTK.jar'
 
-                print("Java output: {}".format(p.communicate()))
+                    p = Popen(['java', '-jar', str(jar),
+                               '-T', 'GenotypeConcordance',
+                               '-R', str(reference),
+                               '-eval', str(truth_vcf_name),
+                               '-comp', str(test_vcf_name),
+                               '-o', str(output)],
+                              stdout=PIPE, stderr=STDOUT)
+
+                    print("Java output: {}".format(p.communicate()))
+
+def get_vcf_filename(dirname):
+    for root, dirs, files in os.walk(dirname):
+        for name in files:
+            return os.path.join(root, name)
 
 
-test_fn = '/home/ubuntu/vcf_test/test.varcall.tar.gz'
-truth_fn = '/home/ubuntu/vcf_test/truth.varcall.tar.gz'
-reference = '/home/ubuntu/hg38/hs38DH.fa'
-output = '/home/ubuntu/vcf_test/out.grp'
+test_fn = uname + '/dev/topmed-workflows-local/vcf_files/test.varcall.tar.gz'
+truth_fn = uname + '/dev/topmed-workflows-local/vcf_files/truth.varcall.tar.gz'
+reference = uname + '/dev/hg38/hs38DH.fa'
+output = uname + '/dev/topmed-workflows-local/vcf_test/out.grp'
 
 main(test_fn, truth_fn, reference, output)
 
 if __name__=='__main__':
     main(test_fn, truth_fn, reference, output)
+
+
+
+
+
+
+
+
+
+
+
+
+
