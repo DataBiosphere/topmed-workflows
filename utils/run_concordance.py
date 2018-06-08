@@ -45,22 +45,27 @@ def main(test_fn, truth_fn, reference, output):
                     #print("VCF file {} is missing from variant caller output".format(test_vcf_info.name), file=sys.stderr)
                     sys.exit(1)
 
-                with tempfile.TemporaryDirectory() as tmpdirname:
-                    os.chdir(tmpdirname)
+                # Use two temporary directories, one for truth, one for test,
+                # and write the VCFs into each, get their file names, and pass
+                # them as arguments to the Java executable.
+                with tempfile.TemporaryDirectory() as tmpdirname1, tempfile.TemporaryDirectory() as tmpdirname2:
                     truth_vcf_file = truth_vcf.getmember(truth_vcf_member.name)
-                    truth_vcf.extract(truth_vcf_file, path=tmpdirname)
-                    # Need to rename directory as we need to extract another one.
-                    os.rename(os.listdir(tmpdirname)[0], 'truth')
-                    truth_path = os.path.join(tmpdirname,
-                                              os.listdir(tmpdirname)[0])
+
+                    # Extract truth VCF.
+                    os.chdir(tmpdirname1)
+                    truth_vcf.extract(truth_vcf_file, path=tmpdirname1)
+                    os.rename(os.listdir(tmpdirname1)[0], 'truth')
+                    truth_path = os.path.join(tmpdirname1,
+                                              os.listdir(tmpdirname1)[0])
                     truth_vcf_name = get_vcf_filename(truth_path)
                     print(truth_vcf_name)
 
-                    truth_vcf.extract(truth_vcf_file, path=tmpdirname)
-                    # Need to rename directory as we need to extract another one.
-                    os.rename(os.listdir(tmpdirname)[0], 'test')
-                    test_path = os.path.join(tmpdirname,
-                                              os.listdir(tmpdirname)[0])
+                    # Extract test VCF.
+                    os.chdir(tmpdirname2)
+                    truth_vcf.extract(truth_vcf_file, path=tmpdirname2)
+                    os.rename(os.listdir(tmpdirname2)[0], 'test')
+                    test_path = os.path.join(tmpdirname2,
+                                              os.listdir(tmpdirname2)[0])
                     test_vcf_name = get_vcf_filename(test_path)
                     print(test_vcf_name)
 
@@ -73,7 +78,7 @@ def main(test_fn, truth_fn, reference, output):
                                '-comp', str(test_vcf_name),
                                '-o', str(output)],
                               stdout=PIPE, stderr=STDOUT)
-
+                    p.wait()
                     print("Java output: {}".format(p.communicate()))
 
 def get_vcf_filename(dirname):
