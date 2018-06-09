@@ -8,7 +8,7 @@ import shutil
 import gzip
 from subprocess import Popen, PIPE, STDOUT
 
-uname = home = os.path.expanduser('~')
+uname = os.path.expanduser('~')
 
 def main(test_fn, truth_fn, reference, output):
 
@@ -104,7 +104,7 @@ def get_vcf_filename(dirname):
 test_fn = uname + '/dev/topmed-workflows-local/vcf_files/test.varcall.tar.gz'
 truth_fn = uname + '/dev/topmed-workflows-local/vcf_files/truth.varcall.tar.gz'
 reference = uname + '/dev/hg38/hs38DH.fa'
-output = uname + '/dev/topmed-workflows-local/vcf_test/out.grp'
+output = uname + '/dev/topmed-workflows-local/vcf_files/out.grp'
 
 main(test_fn, truth_fn, reference, output)
 
