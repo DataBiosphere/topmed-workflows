@@ -5,6 +5,7 @@ import tarfile
 import sys
 import tempfile
 import shutil
+import gzip
 from subprocess import Popen, PIPE, STDOUT
 
 uname = home = os.path.expanduser('~')
@@ -48,34 +49,47 @@ def main(test_fn, truth_fn, reference, output):
                 # Use two temporary directories, one for truth, one for test,
                 # and write the VCFs into each, get their file names, and pass
                 # them as arguments to the Java executable.
-                with tempfile.TemporaryDirectory() as tmpdirname1, tempfile.TemporaryDirectory() as tmpdirname2:
-                    truth_vcf_file = truth_vcf.getmember(truth_vcf_member.name)
+                with tempfile.TemporaryDirectory() as tmpdir_truth_outer, \
+                        tempfile.TemporaryDirectory() as tmpdir_test_outer, \
+                        tempfile.TemporaryDirectory() as tmpdir_truth_inner, \
+                        tempfile.TemporaryDirectory() as tmpdir_test_inner:
 
+                    os.chdir(tmpdir_truth_outer)
+                    truth_vcf_arc = truth_vcf.getmember(truth_vcf_member.name)
                     # Extract truth VCF.
-                    os.chdir(tmpdirname1)
-                    truth_vcf.extract(truth_vcf_file, path=tmpdirname1)
-                    os.rename(os.listdir(tmpdirname1)[0], 'truth')
-                    truth_path = os.path.join(tmpdirname1,
-                                              os.listdir(tmpdirname1)[0])
-                    truth_vcf_name = get_vcf_filename(truth_path)
-                    print(truth_vcf_name)
+                    truth_vcf.extract(truth_vcf_arc, path=tmpdir_truth_outer)
+                    os.rename(os.listdir(tmpdir_truth_outer)[0], 'truth')
+                    truth_path = os.path.join(tmpdir_truth_outer,
+                                              os.listdir(tmpdir_truth_outer)[0])
+                    truth_vcf_gz = get_vcf_filename(truth_path)
+                    print(truth_vcf_gz)
+                    os.chdir(tmpdir_truth_inner)
+                    with gzip.open(truth_vcf_gz, 'r') as f_in, \
+                            open('truth_file.vcf', 'wb') as f_out:
+                        shutil.copyfileobj(f_in, f_out)
+                    truth_vcf_full_name = os.path.abspath('truth_file.vcf')
 
                     # Extract test VCF.
-                    os.chdir(tmpdirname2)
-                    truth_vcf.extract(truth_vcf_file, path=tmpdirname2)
-                    os.rename(os.listdir(tmpdirname2)[0], 'test')
-                    test_path = os.path.join(tmpdirname2,
-                                              os.listdir(tmpdirname2)[0])
-                    test_vcf_name = get_vcf_filename(test_path)
-                    print(test_vcf_name)
+                    os.chdir(tmpdir_test_outer)
+                    truth_vcf.extract(truth_vcf_arc, path=tmpdir_test_outer)
+                    os.rename(os.listdir(tmpdir_test_outer)[0], 'test')
+                    test_path = os.path.join(tmpdir_test_outer,
+                                              os.listdir(tmpdir_test_outer)[0])
+                    test_vcf_gz = get_vcf_filename(test_path)
+                    print(test_vcf_gz)
+                    os.chdir(tmpdir_test_inner)
+                    with gzip.open(test_vcf_gz, 'r') as f_in, \
+                            open('test_file.vcf', 'wb') as f_out:
+                        shutil.copyfileobj(f_in, f_out)
+                    test_vcf_full_name = os.path.abspath('test_file.vcf')
 
                     jar = uname + '/bin/GenomeAnalysisTK.jar'
 
                     p = Popen(['java', '-jar', str(jar),
                                '-T', 'GenotypeConcordance',
                                '-R', str(reference),
-                               '-eval', str(truth_vcf_name),
-                               '-comp', str(test_vcf_name),
+                               '-eval', str(truth_vcf_full_name),
+                               '-comp', str(test_vcf_full_name),
                                '-o', str(output)],
                               stdout=PIPE, stderr=STDOUT)
                     p.wait()
