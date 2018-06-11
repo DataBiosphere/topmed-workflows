@@ -1,3 +1,5 @@
+import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.14.0/variant-caller/variant-caller-wdl/calculate_contamination.wdl" as getDNAContamination
+
 ## This is the U of Michigan variant caller workflow WDL for the workflow code located here:
 ## https://github.com/statgen/topmed_freeze3_calling
 ##
@@ -12,14 +14,12 @@
 ##
 
 workflow TopMedVariantCaller {
+  Boolean? calculate_DNA_contamination
+  Boolean calculate_contamination = select_first([calculate_DNA_contamination, true])
+
 
   Array[File] input_crai_files
   Array[File] input_cram_files
-
-  # Deprecated: No need to input this anymore
-  # Disk size requirements will be calculated internally
-  # This will be removed in the next release
-  Float? reference_files_size
 
   String docker_image
 
@@ -156,16 +156,37 @@ workflow TopMedVariantCaller {
     input:
       input_crams = input_cram_files,
       input_crais = input_crai_files,
-      disk_size = reference_size +  + additional_disk,
+      disk_size = reference_size + additional_disk,
       docker_image = docker_image
   }
+
+  if (calculate_contamination) {
+    Array[Pair[File, File]] cram_and_crai_files = zip(input_cram_files, input_crai_files)
+    scatter(cram_or_crai_file in cram_and_crai_files) {
+        call getDNAContamination.calulateDNAContamination as scatter_getContamination {
+          input:
+              input_cram_file = cram_or_crai_file.left,
+              input_crai_file = cram_or_crai_file.right,
+  
+              ref_fasta = ref_hs38DH_fa,
+              ref_fasta_index = ref_hs38DH_fa_fai
+        }
+    }
+
+    Array[Array[File]] optional_contamination_scatter_output_files = scatter_getContamination.calculate_DNA_contamination_output
+    Array[File] contamination_output_files = flatten(optional_contamination_scatter_output_files)     
+  }
+
+  Array[File]? optional_contamination_output_files = contamination_output_files
 
   call variantCalling {
 
      input:
+      contamination_output_files = optional_contamination_output_files,
+
       input_crais = input_crai_files,
       input_crams = input_cram_files,
-      disk_size = sumCRAMSizes.total_size + reference_size +  + additional_disk,
+      disk_size = sumCRAMSizes.total_size + reference_size + additional_disk,
       docker_image = docker_image,
 
       ref_1000G_omni2_5_b38_sites_PASS_vcf_gz = ref_1000G_omni2_5_b38_sites_PASS_vcf_gz,
@@ -248,16 +269,17 @@ workflow TopMedVariantCaller {
 
       cram_string = "${ sep=',' input_crams }"
       cram_list = cram_string.split(',')
-      if len(cram_list) > 1:
-          crams_size = functools.reduce((lambda x, y: os.stat(x).st_size + os.stat(y).st_size), cram_list)
-      else:
-          crams_size = os.stat(cram_list[0]).st_size
+
+      crams_size = 0
+      for cram_file in cram_list:
+          crams_size = crams_size + os.stat(cram_file).st_size
+
       crai_string = "${ sep=',' input_crais }"
       crai_list = crai_string.split(',')
-      if len(crai_list) > 1:      
-          crais_size = functools.reduce((lambda x, y: os.stat(x).st_size + os.stat(y).st_size), crai_list)
-      else:
-          crais_size = os.stat(crai_list[0]).st_size
+
+      crais_size = 0
+      for crai_file in crai_list:
+          crais_size = crais_size + os.stat(crai_file).st_size
 
       total_size = crams_size + crais_size
       # Shift right by 30 bits to get Gigabyte size of files
@@ -278,8 +300,19 @@ workflow TopMedVariantCaller {
     }
   }
 
-
   task variantCalling {
+     String? chromosomes
+     String chromosomes_to_process = select_first([chromosomes, "1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 X" ])
+
+     Int? num_of_jobs
+     Int num_of_jobs_to_run = select_first([num_of_jobs, 23 ])
+
+     Int? discoverUnit
+     Int? genotypeUnit 
+     File? PED_file
+
+     Array[File]? contamination_output_files
+
      # The CRAM index files are listed as an input because they are required
      # by various tools, e.g. Samtools. They should be in the same location
      # as the CRAM files when specified in the input JSON
@@ -349,42 +382,103 @@ workflow TopMedVariantCaller {
      File ref_hs38DH_fa_sa
      File ref_hs38DH_winsize100_gc
 
+     String indexFileName = "trio_data.index"
 
-     command {
-      python <<CODE
+     # We have to use a trick to make Cromwell
+     # skip substitution when using the bash ${<variable} syntax
+     # This is necessary to get the <var>=$(<command>) sub shell 
+     # syntax to work and assign the value to a variable when 
+     # running in Cromwell
+     # See https://gatkforums.broadinstitute.org/wdl/discussion/comment/44570#Comment_44570 
+     String dollar = "$"
 
-      from __future__ import print_function
+     command <<<
+      python3.5 <<CODE
+
       import csv
       import os
-      from shutil import copyfile     
+      from shutil import copy 
 
-      if not os.path.exists('/root/topmed_freeze3_calling/data/'):
-          os.makedirs('/root/topmed_freeze3_calling/data/')
-
-      # Create the index file that lists the CRAM files and their location
-      # We do not need to do this for the CRAM index files because the 
-      # tools assume they are located in the same place as the CRAM files
-      cram_string = "${ sep=',' input_crams }"
-      crams_list = cram_string.split(',')
-
-      tsv_crams_rows = []
-      for cram_file in crams_list:
-          # Get the Cromwell location of the CRAM file
-          # The worklow will be able to access them 
-          # since the Cromwell path is mounted in the
-          # docker run commmand that Cromwell sets up
-          base_name = os.path.basename(cram_file)
-          base_name_wo_extension = base_name.split('.')[0]
-          tsv_crams_rows.append([base_name_wo_extension, cram_file, '0.000'])
-
-      # Remove the old PED file; we will not use a PED file?
+      # Erase the existing PED file; if no PED file is provided as input
+      # this will sidestep the pedigree operations
       open('/root/topmed_freeze3_calling/data/trio_data.ped', 'w+').close()
 
-      with open('/root/topmed_freeze3_calling/data/trio_data.index', 'w+') as tsv_index_file:
+      # If there is a PED file input copy the contents to the PED file
+      # in the location where the program expects it to be 
+      if len("${PED_file}") > 0:
+         copy("${PED_file}", "/root/topmed_freeze3_calling/data/trio_data.ped")
+
+      # Convert the WDL array of strings to a python list
+      # The resulting string will be empty if the contamination values
+      # are not calculated
+      contamination_output_file_names_string = "${ sep=',' contamination_output_files }"
+      # If DNA contaminiation was calculated for input files (CRAMs)
+      if len(contamination_output_file_names_string) > 0:
+          contamination_output_file_names_list = contamination_output_file_names_string.split(',')
+          print("variantCalling: Contamination output files list is {}".format(contamination_output_file_names_list))
+
+   
+          # The user did not provide an index file so create it 
+          # DNA contamination values should have already been calculated in
+          # a previous task
+          tsv_crams_rows = []
+          # Create list of tuples from the list of cram paths and contamination
+          # Input is [/path/to/cram, contamination, /path/to/cram, contamination...]
+          # see https://stackoverflow.com/questions/23286254/convert-list-to-a-list-of-tuples-python
+          file_pairs_it = iter(contamination_output_file_names_list)
+          file_pairs_tuples = zip(file_pairs_it, file_pairs_it)
+          for file_tuple in file_pairs_tuples:
+              cram_file = file_tuple[0]
+              contamination_file = file_tuple[1]
+              print("variantCalling: CRAM file is {} contamination file is {}".format(cram_file, contamination_file))
+          
+              with open(contamination_file, 'rt') as in_file:
+                 contents = in_file.read()
+                 broj = contents.split("Alpha:",4)
+                 contamination = broj[1].rstrip()
+                 print("variantCalling: Contamination is {}".format(contamination))
+    
+              # Get the Cromwell location of the CRAM file
+              # The worklow will be able to access them
+              # since the Cromwell path is mounted in the
+              # docker run commmand that Cromwell sets up
+              base_name = os.path.basename(cram_file)
+              base_name_wo_extension = base_name.split('.')[0]
+     
+              # Get the Cromwell path to the input CRAM file using the filename. The
+              # filename at this time consists of the TopMed DNA sample
+              # unique identifier of the form NWD123456.  
+              tsv_crams_rows.append([base_name_wo_extension, cram_file, contamination])
+    
+      else:
+          tsv_crams_rows = []
+          # Convert the WDL array of strings to a python list
+          input_crams_file_names_string = "${ sep=',' input_crams }"
+          input_crams_file_names_list = input_crams_file_names_string.split(',')
+          print("variantCalling: Input CRAM files names list is {}".format(input_crams_file_names_list))
+          for cram_file in input_crams_file_names_list:
+              # Get the Cromwell location of the CRAM file
+              # The worklow will be able to access them
+              # since the Cromwell path is mounted in the
+              # docker run commmand that Cromwell sets up
+              base_name = os.path.basename(cram_file)
+              base_name_wo_extension = base_name.split('.')[0]
+    
+              # Get the Cromwell path to the input CRAM file using the filename. The
+              # filename at this time consists of the TopMed DNA sample
+              # unique identifier of the form NWD123456.  
+              tsv_crams_rows.append([base_name_wo_extension, cram_file, "0.0"])
+
+      print("variantCalling:  Writing index file {} with contents {}".format("${indexFileName}", tsv_crams_rows))
+      with open("/root/topmed_freeze3_calling/data/${indexFileName}", 'w+') as tsv_index_file:
           writer = csv.writer(tsv_index_file, delimiter = '\t')
           for cram_info in tsv_crams_rows:
               writer.writerow(cram_info)
 
+      # Print the index file to stdout for debugging purposes
+      with open("/root/topmed_freeze3_calling/data/${indexFileName}", 'r') as tsv_index_file:
+          print("variantCalling: Index file is:\n")
+          print(tsv_index_file.read())
       CODE
 
 
@@ -394,6 +488,7 @@ workflow TopMedVariantCaller {
       #echo each line of the script to stdout so we can see what is happening
       set -o xtrace
       #to turn of echo do 'set +o xtrace'
+
 
       # Make sure the directory where the reference files are supposed to be
       # located exists in the container
@@ -473,40 +568,67 @@ workflow TopMedVariantCaller {
       sed -i '/.*our $hapmapvcf.*/ c\our $hapmapvcf = "$refDir\/hapmap_3.3.b38.sites.vcf.gz";' "$WORKING_DIR"/scripts/gcconfig.pm
       sed -i '/.*our $omnivcf.*/ c\our $omnivcf = "$refDir\/1000G_omni2.5.b38.sites.PASS.vcf.gz";' "$WORKING_DIR"/scripts/gcconfig.pm
 
+      # Check if the variable is set
+      #https://unix.stackexchange.com/questions/212183/how-do-i-check-if-a-variable-exists-in-an-if-statement
+      if [[ -n "${discoverUnit}" ]]; then
+         printf "Setting discoverUnit to %s in gcconfig.pm\n" ${discoverUnit}
+         sed -i '/.*our $discoverUnit.*/ c\our $discoverUnit = ${discoverUnit};' "$WORKING_DIR"/scripts/gcconfig.pm
+      fi
 
-      # Put the correct location of the output directory into the global config file
+      if [[ -n "${genotypeUnit}" ]]; then
+         printf "Setting genotypeUnit to %s in gcconfig.pm\n" ${genotypeUnit}
+         sed -i '/.*our $genotypeUnit.*/ c\our $genotypeUnit = ${genotypeUnit};' "$WORKING_DIR"/scripts/gcconfig.pm
+      fi
+
+      # Put the correct location of the output directory into the local config file
       #sed -i '/.*our $out =.*/ c\our $out = "/root/topmed_freeze3_calling/out";' "$WORKING_DIR"/scripts/gcconfig.pm
       # Put the correct location of references into the config file
       sed -i '/.*our $md5 =.*/ c\our $md5 = "\/data\/local.org\/ref\/gotcloud.ref\/md5\/%2s\/%s\/%s";' "$WORKING_DIR"/scripts/config.pm
       sed -i '/.*our $ref =.*/ c\our $ref = "\/data\/local.org\/ref\/gotcloud.ref\/hg38\/hs38DH.fa";' "$WORKING_DIR"/scripts/config.pm
 
+      # Format the list of chromosomes to be e.g. "chr2 chr5 chrX"
+      total=$(echo ${chromosomes_to_process} | wc -w)
+      formatted_chromosomes_string=$(j=0; for i in ${chromosomes_to_process}; do printf "chr""$i"; let "j=j+1"; if [ "$j" -lt "$total" ]; then printf " "; fi done)
 
       echo "Running step1 - detect and merge variants"
       echo "Running step1 - detect and merge variants - removing old output dir if it exists"
       if [ -d "$WORKING_DIR"/out ]; then rm -Rf "$WORKING_DIR"/out; fi
       echo "Running step1 - detect and merge variants - generating Makefile"
-      perl "$WORKING_DIR"/scripts/step1-detect-and-merge-variants.pl $(seq 1 22 | xargs -n 1 -I% echo chr%) chrX
+      perl "$WORKING_DIR"/scripts/step1-detect-and-merge-variants.pl ${dollar}{formatted_chromosomes_string} 
       echo "Running step1 - detect and merge variants - running Makefile"
-      make SHELL='/bin/bash' -f "$WORKING_DIR"/out/aux/Makefile -j 23
+      make SHELL='/bin/bash' -f "$WORKING_DIR"/out/aux/Makefile -j ${num_of_jobs_to_run}
       
 
-      echo "Running step2 - joing genotyping"
-      echo "Running step2 - joing genotyping - removing old output dir if it exists"
+      echo "Running step2 - joint genotyping"
+      echo "Running step2 - joint genotyping - removing old output dir if it exists"
       if [ -d "$WORKING_DIR"/paste ]; then rm -Rf "$WORKING_DIR"/paste; fi
-      echo "Running step2 - joing genotyping - generating Makefile"
-      perl "$WORKING_DIR"/scripts/step2-joint-genotyping.pl $(seq 1 22 | xargs -n 1 -I% echo chr%) chrX
-      echo "Running step2 - joing genotyping - running Makefile"
-      MAKEFILE_NAME="chrchr"$(seq -s '_chr' 1 22)_chrX".Makefile"
-      make SHELL='/bin/bash' -f "$WORKING_DIR"/out/paste/"$MAKEFILE_NAME" -j 23
+      echo "Running step2 - joint genotyping - generating Makefile"
+      perl "$WORKING_DIR"/scripts/step2-joint-genotyping.pl ${dollar}{formatted_chromosomes_string}
+      echo "Running step2 - joint genotyping - running Makefile"
+      # Format makefile name to be e.g. "chrchr2_chr15_chrX.Makefile"
+      MAKEFILE_NAME="chr"$(j=0; for i in ${chromosomes_to_process}; do printf "chr""$i"; let "j=j+1"; if [ "$j" -lt "$total" ]; then printf "_"; fi done)".Makefile"
+      make SHELL='/bin/bash' -f "$WORKING_DIR"/out/paste/"$MAKEFILE_NAME" -j ${num_of_jobs_to_run}
+
+      if [[ -n "${PED_file}" ]]; then
+         printf "variantCalling: Performing variant filtering using pedigree information\n"
+         perl "$WORKING_DIR"/scripts/step3a-compute-milk-score.pl ${dollar}{formatted_chromosomes_string}
+         make SHELL='/bin/bash' -f "$WORKING_DIR"/out/aux/milk/*.Makefile -j ${num_of_jobs_to_run}
+         perl "$WORKING_DIR"/scripts/step3b-run-svm-milk-filter.pl ${dollar}{formatted_chromosomes_string}
+      fi
 
       # Pop back to the original working directory; on FireCloud this will be a
       # special directory 
       popd
 
-      # Tar up the output directories into the output file provided in the input JSON
-      tar -zcvf topmed_variant_caller_output.tar.gz /root/topmed_freeze3_calling/out/paste/ /root/topmed_freeze3_calling/out/aux/individual/
-
-    }
+      if [[ -n "${PED_file}" ]]; then
+          # Tar up the output directories into the output file provided in the input JSON
+          # Pedigree information is in the svm directory
+          tar -zcvf topmed_variant_caller_output.tar.gz /root/topmed_freeze3_calling/out/paste/ /root/topmed_freeze3_calling/out/aux/individual/ /root/topmed_freeze3_calling/out/svm/
+      else
+           # Tar up the output directories into the output file provided in the input JSON
+          tar -zcvf topmed_variant_caller_output.tar.gz /root/topmed_freeze3_calling/out/paste/ /root/topmed_freeze3_calling/out/aux/individual/
+      fi  
+    >>>
      output {
       File topmed_variant_caller_output_file = "topmed_variant_caller_output.tar.gz"
     }
