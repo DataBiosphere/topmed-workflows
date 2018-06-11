@@ -15,7 +15,9 @@ import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/feature
 ##
 
 workflow TopMedVariantCaller {
-  File? Index_file
+  Boolean? calculate_DNA_contamination
+  Boolean calculate_contamination = select_first([calculate_DNA_contamination, true])
+
 
   Array[File] input_crai_files
   Array[File] input_cram_files
@@ -159,7 +161,7 @@ workflow TopMedVariantCaller {
       docker_image = docker_image
   }
 
-  if (! defined(Index_file)) {
+  if (calculate_contamination) {
     Array[Pair[File, File]] cram_and_crai_files = zip(input_cram_files, input_crai_files)
     scatter(cram_or_crai_file in cram_and_crai_files) {
         call getDNAContamination.calulateDNAContamination as scatter_getContamination {
@@ -177,12 +179,10 @@ workflow TopMedVariantCaller {
   }
 
   Array[File]? optional_contamination_output_files = contamination_output_files
-  File? optional_Index_file = Index_file
 
   call variantCalling {
 
      input:
-      Index_file = optional_Index_file,
       contamination_output_files = optional_contamination_output_files,
 
       input_crais = input_crai_files,
@@ -311,7 +311,6 @@ workflow TopMedVariantCaller {
      Int? discoverUnit
      Int? genotypeUnit 
      File? PED_file
-     File? Index_file
 
      Array[File]? contamination_output_files
 
@@ -386,6 +385,14 @@ workflow TopMedVariantCaller {
 
      String indexFileName = "trio_data.index"
 
+     # We have to use a trick to make Cromwell
+     # skip substitution when using the bash ${<variable} syntax
+     # This is necessary to get the <var>=$(<command>) sub shell 
+     # syntax to work and assign the value to a variable when 
+     # running in Cromwell
+     # See https://gatkforums.broadinstitute.org/wdl/discussion/comment/44570#Comment_44570 
+     String dollar = "$"
+
      command <<<
       python3.5 <<CODE
 
@@ -403,13 +410,15 @@ workflow TopMedVariantCaller {
          copy("${PED_file}", "/root/topmed_freeze3_calling/data/trio_data.ped")
 
       # Convert the WDL array of strings to a python list
+      # The resulting string will be empty if the contamination values
+      # are not calculated
       contamination_output_file_names_string = "${ sep=',' contamination_output_files }"
-      contamination_output_file_names_list = contamination_output_file_names_string.split(',')
-      print("variantCalling: Contamination output files list is {}".format(contamination_output_file_names_list))
+      # If DNA contaminiation was calculated for input files (CRAMs)
+      if len(contamination_output_file_names_string) > 0:
+          contamination_output_file_names_list = contamination_output_file_names_string.split(',')
+          print("variantCalling: Contamination output files list is {}".format(contamination_output_file_names_list))
 
-      if len("${Index_file}") > 0:
-         copy("${Index_file}", "/root/topmed_freeze3_calling/data/${indexFileName}")
-      else:
+   
           # The user did not provide an index file so create it 
           # DNA contamination values should have already been calculated in
           # a previous task
@@ -442,13 +451,31 @@ workflow TopMedVariantCaller {
               # unique identifier of the form NWD123456.  
               tsv_crams_rows.append([base_name_wo_extension, cram_file, contamination])
     
+      else:
+          tsv_crams_rows = []
+          # Convert the WDL array of strings to a python list
+          input_crams_file_names_string = "${ sep=',' input_crams }"
+          input_crams_file_names_list = input_crams_file_names_string.split(',')
+          print("variantCalling: Input CRAM files names list is {}".format(input_crams_file_names_list))
+          for cram_file in input_crams_file_names_list:
+              # Get the Cromwell location of the CRAM file
+              # The worklow will be able to access them
+              # since the Cromwell path is mounted in the
+              # docker run commmand that Cromwell sets up
+              base_name = os.path.basename(cram_file)
+              base_name_wo_extension = base_name.split('.')[0]
     
-          print("variantCalling:  Writing index file {} with contents {}".format("${indexFileName}", tsv_crams_rows))
-          with open("/root/topmed_freeze3_calling/data/${indexFileName}", 'w+') as tsv_index_file:
-              writer = csv.writer(tsv_index_file, delimiter = '\t')
-              for cram_info in tsv_crams_rows:
-                  writer.writerow(cram_info)
-      
+              # Get the Cromwell path to the input CRAM file using the filename. The
+              # filename at this time consists of the TopMed DNA sample
+              # unique identifier of the form NWD123456.  
+              tsv_crams_rows.append([base_name_wo_extension, cram_file, "0.0"])
+
+      print("variantCalling:  Writing index file {} with contents {}".format("${indexFileName}", tsv_crams_rows))
+      with open("/root/topmed_freeze3_calling/data/${indexFileName}", 'w+') as tsv_index_file:
+          writer = csv.writer(tsv_index_file, delimiter = '\t')
+          for cram_info in tsv_crams_rows:
+              writer.writerow(cram_info)
+
       # Print the index file to stdout for debugging purposes
       with open("/root/topmed_freeze3_calling/data/${indexFileName}", 'r') as tsv_index_file:
           print("variantCalling: Index file is:\n")
@@ -554,43 +581,54 @@ workflow TopMedVariantCaller {
          sed -i '/.*our $genotypeUnit.*/ c\our $genotypeUnit = ${genotypeUnit};' "$WORKING_DIR"/scripts/gcconfig.pm
       fi
 
-
-
       # Put the correct location of the output directory into the local config file
       #sed -i '/.*our $out =.*/ c\our $out = "/root/topmed_freeze3_calling/out";' "$WORKING_DIR"/scripts/gcconfig.pm
       # Put the correct location of references into the config file
       sed -i '/.*our $md5 =.*/ c\our $md5 = "\/data\/local.org\/ref\/gotcloud.ref\/md5\/%2s\/%s\/%s";' "$WORKING_DIR"/scripts/config.pm
       sed -i '/.*our $ref =.*/ c\our $ref = "\/data\/local.org\/ref\/gotcloud.ref\/hg38\/hs38DH.fa";' "$WORKING_DIR"/scripts/config.pm
 
+      # Format the list of chromosomes to be e.g. "chr2 chr5 chrX"
+      total=$(echo ${chromosomes_to_process} | wc -w)
+      formatted_chromosomes_string=$(j=0; for i in ${chromosomes_to_process}; do printf "chr""$i"; let "j=j+1"; if [ "$j" -lt "$total" ]; then printf " "; fi done)
+
       echo "Running step1 - detect and merge variants"
       echo "Running step1 - detect and merge variants - removing old output dir if it exists"
       if [ -d "$WORKING_DIR"/out ]; then rm -Rf "$WORKING_DIR"/out; fi
       echo "Running step1 - detect and merge variants - generating Makefile"
-      perl "$WORKING_DIR"/scripts/step1-detect-and-merge-variants.pl $(for i in ${chromosomes_to_process};  do printf "chr"$i" "; done)
-      #perl "$WORKING_DIR"/scripts/step1-detect-and-merge-variants.pl $(seq 1 22 | xargs -n 1 -I% echo chr%) chrX
+      perl "$WORKING_DIR"/scripts/step1-detect-and-merge-variants.pl ${dollar}{formatted_chromosomes_string} 
       echo "Running step1 - detect and merge variants - running Makefile"
       make SHELL='/bin/bash' -f "$WORKING_DIR"/out/aux/Makefile -j ${num_of_jobs_to_run}
       
 
-      echo "Running step2 - joing genotyping"
-      echo "Running step2 - joing genotyping - removing old output dir if it exists"
+      echo "Running step2 - joint genotyping"
+      echo "Running step2 - joint genotyping - removing old output dir if it exists"
       if [ -d "$WORKING_DIR"/paste ]; then rm -Rf "$WORKING_DIR"/paste; fi
-      echo "Running step2 - joing genotyping - generating Makefile"
-      perl "$WORKING_DIR"/scripts/step2-joint-genotyping.pl $(for i in ${chromosomes_to_process};  do printf "chr"$i" "; done)
-      #perl "$WORKING_DIR"/scripts/step2-joint-genotyping.pl $(seq 1 22 | xargs -n 1 -I% echo chr%) chrX
-      echo "Running step2 - joing genotyping - running Makefile"
-      total=$(echo ${chromosomes_to_process} | wc -w)
+      echo "Running step2 - joint genotyping - generating Makefile"
+      perl "$WORKING_DIR"/scripts/step2-joint-genotyping.pl ${dollar}{formatted_chromosomes_string}
+      echo "Running step2 - joint genotyping - running Makefile"
+      # Format makefile name to be e.g. "chrchr2_chr15_chrX.Makefile"
       MAKEFILE_NAME="chr"$(j=0; for i in ${chromosomes_to_process}; do printf "chr""$i"; let "j=j+1"; if [ "$j" -lt "$total" ]; then printf "_"; fi done)".Makefile"
-      #MAKEFILE_NAME="chrchr"$(seq -s '_chr' 1 22)_chrX".Makefile"
       make SHELL='/bin/bash' -f "$WORKING_DIR"/out/paste/"$MAKEFILE_NAME" -j ${num_of_jobs_to_run}
+
+      if [[ -n "${PED_file}" ]]; then
+         printf "variantCalling: Performing variant filtering using pedigree information\n"
+         perl "$WORKING_DIR"/scripts/step3a-compute-milk-score.pl ${dollar}{formatted_chromosomes_string}
+         make SHELL='/bin/bash' -f "$WORKING_DIR"/out/aux/milk/*.Makefile -j ${num_of_jobs_to_run}
+         perl "$WORKING_DIR"/scripts/step3b-run-svm-milk-filter.pl ${dollar}{formatted_chromosomes_string}
+      fi
 
       # Pop back to the original working directory; on FireCloud this will be a
       # special directory 
       popd
 
-      # Tar up the output directories into the output file provided in the input JSON
-      tar -zcvf topmed_variant_caller_output.tar.gz /root/topmed_freeze3_calling/out/paste/ /root/topmed_freeze3_calling/out/aux/individual/
-
+      if [[ -n "${PED_file}" ]]; then
+          # Tar up the output directories into the output file provided in the input JSON
+          # Pedigree information is in the svm directory
+          tar -zcvf topmed_variant_caller_output.tar.gz /root/topmed_freeze3_calling/out/paste/ /root/topmed_freeze3_calling/out/aux/individual/ /root/topmed_freeze3_calling/out/svm/
+      else
+           # Tar up the output directories into the output file provided in the input JSON
+          tar -zcvf topmed_variant_caller_output.tar.gz /root/topmed_freeze3_calling/out/paste/ /root/topmed_freeze3_calling/out/aux/individual/
+      fi  
     >>>
      output {
       File topmed_variant_caller_output_file = "topmed_variant_caller_output.tar.gz"
