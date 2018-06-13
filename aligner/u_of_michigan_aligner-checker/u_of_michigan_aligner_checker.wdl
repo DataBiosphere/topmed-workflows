@@ -1,12 +1,13 @@
-import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.13.0/aligner/u_of_michigan_aligner/u_of_michigan_aligner.wdl" as TopMed_aligner
-import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.13.0/aligner/functional-equivalence-checker/topmed-alignment-checker.wdl" as checker
+import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.14.0/aligner/u_of_michigan_aligner/u_of_michigan_aligner.wdl" as TopMed_aligner
+import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/feature/align-check-wdl--md5/aligner/functional-equivalence-checker/u_of_michigan_aligner_checker_calculation.wdl" as checker
 
 workflow checkerWorkflow {
-  Int expectedNumofReads
   String docker_image
 
   File input_crai_file
   File input_cram_file
+
+  File inputTruthCRAMFile
 
   File ref_alt
   File ref_bwt
@@ -20,7 +21,6 @@ workflow checkerWorkflow {
 
   File dbSNP_vcf
   File dbSNP_vcf_index
-
 
  call TopMed_aligner.TopMedAligner as aligner { 
    input:
@@ -45,5 +45,10 @@ workflow checkerWorkflow {
  }
 
 
- call checker.checkerTask { input: inputCRAMFile=aligner.aligner_output, expectedNumofReads=expectedNumofReads, docker_image=docker_image }
+ call checker.checkerTask { 
+    input: 
+        inputCRAMFile = aligner.aligner_output, 
+        inputTruthCRAMFile = inputTruthCRAMFile,
+        referenceFile = ref_fasta,
+        docker_image = docker_image }
 }
