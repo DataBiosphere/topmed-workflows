@@ -1,6 +1,6 @@
 # Topmed Workflows
 
-## Attribution
+## About
 The original pipelines were assembled and written by Hyun Min Kang (hmkang@umich.edu) and Adrian Tan (atks@umich.edu) 
 at the [Abecasis Lab at the University of Michigan](https://genome.sph.umich.edu/wiki/Abecasis_Lab)
 
