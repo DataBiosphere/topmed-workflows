@@ -64,6 +64,7 @@
   "checkerWorkflow.ref_hs38DH_fa_sa":  "gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa.sa",
   "checkerWorkflow.ref_hs38DH_winsize100_gc":  "gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.winsize100.gc",
 
-  "checkerWorkflow.docker_concordance_image": "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.2-1510681135"
+  "checkerWorkflow.docker_concordance_image": "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.2-1510681135",
+  "checkerWorkflow.concordance_outputTSV": "/home/ubuntu/concordance_output.tsv"
 }
 

@@ -1,6 +1,8 @@
 task checkerTask {
   File inputTruthVCFFile
   File inputTestVCFFile
+  File ref_hs38DH_fa
+  File concordance_outputTSV
   String docker_image
 
   # Optional input to increase all disk sizes in case of outlier sample with strange size behavior
@@ -19,7 +21,8 @@ task checkerTask {
     import sys, os, tarfile, gzip, csv, math
     from subprocess import Popen, PIPE, STDOUT
     
-    def read_and_compare_vcfs_from_tar_gz(tar_gz_test, tar_gz_truth):
+    def read_and_compare_vcfs_from_tar_gz(tar_gz_test, tar_gz_truth,
+     reference, output_tsv):
         """
         Reads the VCF files from the tar gz file produced by the U of Michigan
         WDL variant caller and the truth targ gz file and compares each of them
@@ -56,12 +59,11 @@ task checkerTask {
                         print("VCF file {} is missing from variant caller output".format(truth_vcf_file_info.name), file=sys.stderr)
                         sys.exit(1)
 
-
                     # Get file like objects for the gzipped vcf files
                     test_vcf_file_info = test_variant_caller_output.getmember(truth_vcf_file_info.name)
 
                     run_concordance(reference, \
-                    test_vcf_file_info, test_vcf_file_info, output_file=None)
+                    test_vcf_file_info, test_vcf_file_info, output_file)
 
     def run_concordance(reference, eval_file, truth_file, output_file=None):
         """Open a terminal shell to run a command in a Docker
@@ -146,7 +148,8 @@ task checkerTask {
                        dd[2][0]: dict(zip(dd[0][1:], dd[2][1:]))}
         return D
 
-    read_and_compare_vcfs_from_tar_gz("${inputTestVCFFile}", "${inputTruthVCFFile}")
+    read_and_compare_vcfs_from_tar_gz("${inputTestVCFFile}", \
+    "${inputTruthVCFFile}", "${ref_hs38DH_fa}, ${concordance_outputTSV})
 
     CODE
   >>>
