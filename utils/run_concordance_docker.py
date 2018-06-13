@@ -12,29 +12,41 @@ from subprocess import Popen, PIPE, STDOUT
 
 
 #def main(test_fn, truth_fn, reference, output):
-def main():
+def main(reference, eval_file, truth_file, output_file=None):
     """Open a terminal shell to run a command in a Docker 
     image with Genotype Concordance installed.
      :return: none 
      """
     user_name = os.path.expanduser('~')
-    output = user_name + '/dev/topmed-workflows/utils/concordance_output.tsv'
+    docker_permission = user_name + ':' + user_name
+    if output_file is None:
+        output_file = user_name + '/concordance_output.tsv'
+    run_concordance(docker_permission=docker_permission,
+                    reference=reference,
+                    eval_file=eval_file,
+                    truth_file=truth_file,
+                    output=output_file)
+
+
+def run_concordance(docker_permission, reference,
+                    eval_file, truth_file, output):
 
     cmd = ['docker', 'run', '-i', '-t', '-v',
-           '/home/michael:/home/michael',
+           docker_permission,
            'us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.2-1510681135',
            '/usr/gitc/gatk4/gatk-launch',
            'Concordance',
-           '-R', '/home/michael/dev/hg38/hs38DH.fa',
-           '--eval', '/home/michael/dev/topmed-workflows-local/vcf_files/root/topmed_freeze3_calling/out/paste/chr17_1_83257441_paste.sites.vcf.gz',
-           '--truth', '/home/michael/dev/topmed-workflows-local/vcf_files/root/topmed_freeze3_calling/out/paste/chr17_1_83257441_paste.sites.vcf.gz',
+           '-R', str(reference),
+           '--eval', str(eval_file),
+           '--truth', str(truth_file),
            '--summary', str(output)]
 
     p = Popen(cmd, stdout=PIPE, stderr=STDOUT)
+    p.wait()
     print("GenotypeConcordance out: {}".format(p.communicate()))
     #print(os.getcwd())
     d = process_output_tsv(output_tsv=output)
-    print(d)
+    print(d)  # print to stdout so we read it in WDL
 
 def process_output_tsv(output_tsv, threshold=None):
     """
@@ -56,19 +68,21 @@ def process_output_tsv(output_tsv, threshold=None):
 
     D = list2dict(L)
 
-    # Convert all values in dict to floats.
-    snp_prec = float(D['type']['SNP']['precision'])
-    snp_sens = float(D['type']['SNP']['sensitivity'])
-    ind_prec = float(D['type']['INDEL']['precision'])
-    ind_sens = float(D['type']['SNP']['sensitivity'])
+    # Convert relevant values in dict to floats.
+    vals = [D['type']['SNP']['precision'],
+            D['type']['SNP']['sensitivity'],
+            D['type']['INDEL']['precision'],
+            D['type']['SNP']['sensitivity']]
 
-    vals = [snp_prec, snp_sens, ind_prec, ind_sens]
-    # The next line is needed as I (MK) encounted NaNs in the output
+    vals = [float(val) for val in vals]
+
+    # The next line is needed as we encountered NaNs in the output
     # after I run Concordance with two identical inputs for truth and test.
+    # It removes NaNs from list.
     vals = [x for x in vals if not math.isnan(x)]
 
     # Test whether all values pass the threshold test:
-    if all(val >= 0.95 for val in vals):
+    if all(val >= threshold for val in vals):
         message = 'The VCFs can be considered identical.'
         print(message)
         return 0
@@ -91,7 +105,11 @@ def list2dict(L):
 
 
 if __name__=='__main__':
-    main()
+    ref = '/home/michael/dev/hg38/hs38DH.fa'
+    eval_fn = '/home/michael/dev/topmed-workflows/test_data/chr17_1_83257441_paste.sites.vcf.gz'
+    truth = eval_fn
+    output = '/home/michael/dev/topmed-workflows/out.tsv'
+    main(ref, eval_fn, truth, output)
 
 
 
