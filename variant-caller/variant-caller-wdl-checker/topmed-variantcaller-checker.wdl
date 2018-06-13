@@ -134,7 +134,7 @@ task checkerTask {
         else:
             message = 'The VCFs do not have enough overlap.'
             print(message)
-            sys.exit(0)
+            sys.exit(1)
 
 
     def list2dict(L):
