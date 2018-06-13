@@ -63,7 +63,7 @@ def process_output_tsv(output_tsv, threshold=None):
     vals = [D['type']['SNP']['precision'],
             D['type']['SNP']['sensitivity'],
             D['type']['INDEL']['precision'],
-            D['type']['SNP']['sensitivity']]
+            D['type']['INDEL']['sensitivity']]
 
     vals = [float(val) for val in vals]
 
@@ -101,7 +101,7 @@ if __name__=='__main__':
     eval_fn = '/home/michael/dev/topmed-workflows/test_data/chr17_1_83257441_paste.sites.vcf.gz'
     truth = eval_fn
     output = '/home/michael/dev/topmed-workflows/out.tsv'
-    main(ref, eval_fn, truth, output)
+    run_concordance(ref, eval_fn, truth, output)
 
 
 
