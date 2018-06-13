@@ -12,7 +12,7 @@ from subprocess import Popen, PIPE, STDOUT
 
 
 #def main(test_fn, truth_fn, reference, output):
-def main(reference, eval_file, truth_file, output_file=None):
+def run_concordance(reference, eval_file, truth_file, output_file=None):
     """Open a terminal shell to run a command in a Docker 
     image with Genotype Concordance installed.
      :return: none 
@@ -21,15 +21,6 @@ def main(reference, eval_file, truth_file, output_file=None):
     docker_permission = user_name + ':' + user_name
     if output_file is None:
         output_file = user_name + '/concordance_output.tsv'
-    run_concordance(docker_permission=docker_permission,
-                    reference=reference,
-                    eval_file=eval_file,
-                    truth_file=truth_file,
-                    output=output_file)
-
-
-def run_concordance(docker_permission, reference,
-                    eval_file, truth_file, output):
 
     cmd = ['docker', 'run', '-i', '-t', '-v',
            docker_permission,
@@ -39,7 +30,7 @@ def run_concordance(docker_permission, reference,
            '-R', str(reference),
            '--eval', str(eval_file),
            '--truth', str(truth_file),
-           '--summary', str(output)]
+           '--summary', str(output_file)]
 
     p = Popen(cmd, stdout=PIPE, stderr=STDOUT)
     p.wait()
@@ -85,11 +76,12 @@ def process_output_tsv(output_tsv, threshold=None):
     if all(val >= threshold for val in vals):
         message = 'The VCFs can be considered identical.'
         print(message)
-        return 0
+        sys.exit(0)
+
     else:
         message = 'The VCFs do not have enough overlap.'
         print(message)
-        return 1
+        sys.exit(0)
 
 
 def list2dict(L):
