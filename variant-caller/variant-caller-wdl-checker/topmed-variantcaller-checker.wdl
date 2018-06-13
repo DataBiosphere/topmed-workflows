@@ -116,7 +116,7 @@ task checkerTask {
         vals = [D['type']['SNP']['precision'],
                 D['type']['SNP']['sensitivity'],
                 D['type']['INDEL']['precision'],
-                D['type']['SNP']['sensitivity']]
+                D['type']['INDEL']['sensitivity']]
 
         vals = [float(val) for val in vals]
 
