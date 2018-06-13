@@ -1,8 +1,8 @@
 {
-  "checkerWorkflow.expectedNumofReads": 352552,
-
   "checkerWorkflow.input_cram_file": "gs://topmed_workflow_testing/topmed_aligner/input_files/NWD176325.0005.recab.cram",
   "checkerWorkflow.input_crai_file": "gs://topmed_workflow_testing/topmed_aligner/input_files/NWD176325.0005.recab.cram.crai",
+
+  "checkerWorkflow.inputTruthCRAMFile": "gs://topmed_workflow_testing/topmed_aligner_checker/truth_NWD176325.0005.recab.cram",
 
   "checkerWorkflow.ref_alt":  "gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa.alt",
   "checkerWorkflow.ref_bwt":  "gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa.bwt",
