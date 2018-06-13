@@ -12,7 +12,7 @@ task checkerTask {
   # Cromwell error from asking for 0 disk when the input is less than 1GB
   Int additional_disk = select_first([increase_disk_size, 20])
 
-  Float disk_size = size(inputTruthCRAMFile, "GB") + size(inputCRAMFile, "GB") + + size(referenceFile, "GB") + additional_disk
+  Float disk_size = size(inputTruthCRAMFile, "GB") + size(inputCRAMFile, "GB") + size(referenceFile, "GB") + additional_disk
 
   command {
      # The md5sums for the SAM files without headers created from the CRAM files should match
