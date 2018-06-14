@@ -75,9 +75,6 @@ task checkerTask {
         if output_file is None:
             output_file = '/tmp/concordance_output.tsv'
 
-#        cmd = ['docker', 'run', '-i', '-t', '-v',
-#               docker_permission,
-#               'us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.2-1510681135',
         cmd = ['/usr/gitc/gatk4/gatk-launch',
                'Concordance',
                '-R', str(reference),

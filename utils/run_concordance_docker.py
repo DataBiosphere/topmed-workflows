@@ -3,15 +3,10 @@
 import os
 import csv
 import math
-import tarfile
-import sys
 import tempfile
-import shutil
-import gzip
 from subprocess import Popen, PIPE, STDOUT
 
 
-#def main(test_fn, truth_fn, reference, output):
 def run_concordance(reference, eval_file, truth_file, output_file=None):
     """Open a terminal shell to run a command in a Docker 
     image with Genotype Concordance installed.
@@ -68,20 +63,20 @@ def process_output_tsv(output_tsv, threshold=None):
     vals = [float(val) for val in vals]
 
     # The next line is needed as we encountered NaNs in the output
-    # after I run Concordance with two identical inputs for truth and test.
-    # It removes NaNs from list.
+    # after we ran Concordance with two identical inputs for truth and test.
+    # The following lines removes NaNs from the list.
     vals = [x for x in vals if not math.isnan(x)]
 
     # Test whether all values pass the threshold test:
     if all(val >= threshold for val in vals):
         message = 'The VCFs can be considered identical.'
         print(message)
-        sys.exit(0)
+        return 0  # this line is sys.exit(0) in the WDL
 
     else:
         message = 'The VCFs do not have enough overlap.'
         print(message)
-        sys.exit(0)
+        return 1  # this line is sys.exit(0) in WDL
 
 
 def list2dict(L):
@@ -98,21 +93,12 @@ def list2dict(L):
 
 if __name__=='__main__':
     user_name = os.path.expanduser('~')
+    thisdir = os.getcwd()
+    os.chdir(thisdir)
+    newdir = os.path.split(thisdir)
+    print(os.getcwd())
     ref = user_name + '/dev/hg38/hs38DH.fa'
-    eval_fn = user_name +'/dev/topmed-workflows/test_data/chr17_1_83257441_paste.sites.vcf.gz'
+    eval_fn = '../../test_data/chr17_1_83257441_paste.sites.vcf.gz'
     truth = eval_fn
-    output = user_name + '/dev/topmed-workflows/out.tsv'
-    run_concordance(ref, eval_fn, truth, output)
-
-
-
-
-
-
-
-
-
-
-
-
+    run_concordance(ref, eval_fn, truth, output_file=outfile)
 
