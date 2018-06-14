@@ -3,7 +3,7 @@ task checkerTask {
   File inputTestVCFFile
   File ref_hs38DH_fa
   File concordance_outputTSV
-  String docker_image
+  String docker_concordance_image
 
   # Optional input to increase all disk sizes in case of outlier sample with strange size behavior
   Int? increase_disk_size
@@ -63,7 +63,7 @@ task checkerTask {
                     test_vcf_file_info = test_variant_caller_output.getmember(truth_vcf_file_info.name)
 
                     run_concordance(reference, \
-                    test_vcf_file_info, test_vcf_file_info, output_file)
+                    test_vcf_file_info, truth_vcf_file_info, output_file)
 
     def run_concordance(reference, eval_file, truth_file, output_file=None):
         """Open a terminal shell to run a command in a Docker
@@ -71,14 +71,14 @@ task checkerTask {
          :return: none
          """
         user_name = os.path.expanduser('~')
-        docker_permission = user_name + ':' + user_name
+        #docker_permission = user_name + ':' + user_name
         if output_file is None:
-            output_file = user_name + '/concordance_output.tsv'
+            output_file = '/tmp/concordance_output.tsv'
 
-        cmd = ['docker', 'run', '-i', '-t', '-v',
-               docker_permission,
-               'us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.2-1510681135',
-               '/usr/gitc/gatk4/gatk-launch',
+#        cmd = ['docker', 'run', '-i', '-t', '-v',
+#               docker_permission,
+#               'us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.2-1510681135',
+        cmd = ['/usr/gitc/gatk4/gatk-launch',
                'Concordance',
                '-R', str(reference),
                '--eval', str(eval_file),
@@ -155,7 +155,7 @@ task checkerTask {
   >>>
 
   runtime {
-    docker: docker_image
+    docker: docker_concordance_image
     disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
   }
 }

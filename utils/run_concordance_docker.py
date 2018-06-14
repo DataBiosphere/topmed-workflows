@@ -97,10 +97,11 @@ def list2dict(L):
 
 
 if __name__=='__main__':
-    ref = '/home/michael/dev/hg38/hs38DH.fa'
-    eval_fn = '/home/michael/dev/topmed-workflows/test_data/chr17_1_83257441_paste.sites.vcf.gz'
+    user_name = os.path.expanduser('~')
+    ref = user_name + '/dev/hg38/hs38DH.fa'
+    eval_fn = user_name +'/dev/topmed-workflows/test_data/chr17_1_83257441_paste.sites.vcf.gz'
     truth = eval_fn
-    output = '/home/michael/dev/topmed-workflows/out.tsv'
+    output = user_name + '/dev/topmed-workflows/out.tsv'
     run_concordance(ref, eval_fn, truth, output)
 
 
