@@ -9,7 +9,7 @@ from utils.run_concordance_docker import process_output_tsv, \
 
 
 class TestRunConcordanceDocker(unittest.TestCase):
-    """Test the functionality of the Python wrapper for the GATK
+    """Test the functionality of the Python wrapper for Broad's GATK
     GenomeAnalysis to perform a concordance test on a truth compared 
     to a test VCF from the Variant Calling workflow.
     

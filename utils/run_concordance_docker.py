@@ -7,15 +7,13 @@ from pprint import pprint
 from subprocess import Popen, PIPE, STDOUT
 
 
-def run_concordance(reference, eval_file, truth_file, output_file=None):
-    """Open a terminal shell to run a command in a Docker 
-    image with Genotype Concordance installed.
+def run_concordance(reference, eval_file, truth_file, output_file):
+    """Run Genotype Concordance installed in a Docker image.
      :return: none 
      """
     user_name = os.path.expanduser('~')
+    # Give Docker access to local system.
     docker_permission = user_name + ':' + user_name
-    if output_file is None:
-        output_file = user_name + '/concordance_output.tsv'
 
     cmd = ['docker', 'run', '-i', '-v',
            str(docker_permission),
@@ -30,9 +28,7 @@ def run_concordance(reference, eval_file, truth_file, output_file=None):
     p = Popen(cmd, stdout=PIPE, stderr=STDOUT)
     p.wait()
     print("GenotypeConcordance out: {}".format(p.communicate()))
-    #print(os.getcwd())
-    d = process_output_tsv(output_tsv=output_file)
-    print(d)  # print to stdout so we read it in WDL
+
 
 def process_output_tsv(output_tsv, threshold=None, print_dict=False):
     """
@@ -40,7 +36,7 @@ def process_output_tsv(output_tsv, threshold=None, print_dict=False):
     :parameter: output_tsv: (string) path to a TSV file from Concordance VCF
     :parameter: threshold: (float) 0 < thresh < 1, sensitivity and precision
                 default: 0.95
-    :return: boolean, True is output passes threshold, otherwise false.
+    :return: 0 (if VCFs overlap within 95%), otherwise 1.
     """
 
     # Set default
@@ -83,7 +79,11 @@ def process_output_tsv(output_tsv, threshold=None, print_dict=False):
 
 def list2dict(L):
     """Returns a dictionary from input list, originating from the
-    Concordance TSV file."""
+    Concordance TSV file.
+    
+    :parameter L: a list from a Concordance summary output file.
+    :return D: a dict with key / value pairs from input list
+    """
 
     dd = {i: L[i].split('\t') for i in range(len(L))}  # auxiliary dict
     D = {}
@@ -91,16 +91,4 @@ def list2dict(L):
     D[dd[0][0]] = {dd[1][0]: dict(zip(dd[0][1:], dd[1][1:])),
                    dd[2][0]: dict(zip(dd[0][1:], dd[2][1:]))}
     return D
-
-
-if __name__=='__main__':
-    user_name = os.path.expanduser('~')
-    thisdir = os.getcwd()
-    os.chdir(thisdir)
-    newdir = os.path.split(thisdir)
-    print(os.getcwd())
-    ref = user_name + '/dev/hg38/hs38DH.fa'
-    eval_fn = '../../test_data/chr17_1_83257441_paste.sites.vcf.gz'
-    truth = eval_fn
-    run_concordance(ref, eval_fn, truth, output_file=outfile)
 
