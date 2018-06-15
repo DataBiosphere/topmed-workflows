@@ -33,7 +33,7 @@ def run_concordance(reference, eval_file, truth_file, output_file):
 
 
 def process_output_tsv(output_tsv, threshold=None, print_dict=False):
-    """Process TSV file written to the current directory.
+    """Process Concordance summary TSV output file.
     
     :parameter: output_tsv: (string) path to a TSV file from Concordance VCF
     :parameter: threshold: (float) 0 < thresh < 1, sensitivity and precision

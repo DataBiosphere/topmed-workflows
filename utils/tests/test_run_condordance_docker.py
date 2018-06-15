@@ -75,8 +75,8 @@ class TestRunConcordanceDocker(unittest.TestCase):
         self.assertEqual(tf, 0)
 
     def test_run_concordance_different_file(self):
-        # Challenging the method by using files from two different chromosomes,
-        # which likely have zero overlap. This test should fail.
+        """Challenging the method by using files from two different chromosomes,
+        which likely have zero overlap. This test should fail."""
         run_concordance(reference=self.reference,
                         eval_file=self.vcf_chr17,
                         truth_file=self.vcf_chr04,
@@ -86,8 +86,8 @@ class TestRunConcordanceDocker(unittest.TestCase):
         self.assertEqual(tf, 1)
 
     def test_run_concordance_SNPs_del(self):
-        # Challenging the method by using two files from the same chromosome,
-        # but in one of them 20% of SNPs have been deleted. Should fail.
+        """Challenging the method by using two files from the same chromosome,
+        but in one of them 20% of SNPs have been deleted. Should fail."""
         run_concordance(reference=self.reference,
                         eval_file=self.vcf_chr04_compromised,
                         truth_file=self.vcf_chr04,
