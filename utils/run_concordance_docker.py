@@ -9,15 +9,17 @@ from subprocess import Popen, PIPE, STDOUT
 
 def run_concordance(reference, eval_file, truth_file, output_file):
     """Run Genotype Concordance installed in a Docker image.
+    
      :return: none 
      """
     user_name = os.path.expanduser('~')
     # Give Docker access to local system.
     docker_permission = user_name + ':' + user_name
+    docker_url = 'us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.2-1510681135'
 
     cmd = ['docker', 'run', '-i', '-v',
            str(docker_permission),
-           'us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.2-1510681135',
+           str(docker_url),
            '/usr/gitc/gatk4/gatk-launch',
            'Concordance',
            '-R', str(reference),
@@ -31,8 +33,8 @@ def run_concordance(reference, eval_file, truth_file, output_file):
 
 
 def process_output_tsv(output_tsv, threshold=None, print_dict=False):
-    """
-    Process TSV file written to the current directory.
+    """Process TSV file written to the current directory.
+    
     :parameter: output_tsv: (string) path to a TSV file from Concordance VCF
     :parameter: threshold: (float) 0 < thresh < 1, sensitivity and precision
                 default: 0.95
