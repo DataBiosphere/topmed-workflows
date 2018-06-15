@@ -3,7 +3,7 @@
 import os
 import csv
 import math
-import tempfile
+from pprint import pprint
 from subprocess import Popen, PIPE, STDOUT
 
 
@@ -17,8 +17,8 @@ def run_concordance(reference, eval_file, truth_file, output_file=None):
     if output_file is None:
         output_file = user_name + '/concordance_output.tsv'
 
-    cmd = ['docker', 'run', '-i', '-t', '-v',
-           docker_permission,
+    cmd = ['docker', 'run', '-i', '-v',
+           str(docker_permission),
            'us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.2-1510681135',
            '/usr/gitc/gatk4/gatk-launch',
            'Concordance',
@@ -31,10 +31,10 @@ def run_concordance(reference, eval_file, truth_file, output_file=None):
     p.wait()
     print("GenotypeConcordance out: {}".format(p.communicate()))
     #print(os.getcwd())
-    d = process_output_tsv(output_tsv=output)
+    d = process_output_tsv(output_tsv=output_file)
     print(d)  # print to stdout so we read it in WDL
 
-def process_output_tsv(output_tsv, threshold=None):
+def process_output_tsv(output_tsv, threshold=None, print_dict=False):
     """
     Process TSV file written to the current directory.
     :parameter: output_tsv: (string) path to a TSV file from Concordance VCF
@@ -53,6 +53,8 @@ def process_output_tsv(output_tsv, threshold=None):
             L.append(row[0])
 
     D = list2dict(L)
+    if print_dict:
+        pprint('Concordance output: {}'.format(D))
 
     # Convert relevant values in dict to floats.
     vals = [D['type']['SNP']['precision'],
