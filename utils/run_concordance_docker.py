@@ -28,7 +28,6 @@ def run_concordance(reference, eval_file, truth_file, output_file):
            '--summary', str(output_file)]
 
     p = Popen(cmd, stdout=PIPE, stderr=STDOUT)
-    p.wait()
     print("GenotypeConcordance out: {}".format(p.communicate()))
 
 
@@ -45,10 +44,14 @@ def process_output_tsv(output_tsv, threshold=None, print_dict=False):
     if threshold is None:
         threshold = 0.95
     L = []  # list to capture results
-    with open(output_tsv, newline='') as csvfile:
-        file_reader = csv.reader(csvfile, delimiter=' ', quotechar='|')
-        for row in file_reader:
-            L.append(row[0])
+
+    try:
+        with open(output_tsv, newline='') as csvfile:
+            file_reader = csv.reader(csvfile, delimiter=' ', quotechar='|')
+            for row in file_reader:
+                L.append(row[0])
+    except FileNotFoundError:
+        print('no file test_output.tsv')
 
     D = list2dict(L)
     if print_dict:
@@ -60,7 +63,10 @@ def process_output_tsv(output_tsv, threshold=None, print_dict=False):
             D['type']['INDEL']['precision'],
             D['type']['INDEL']['sensitivity']]
 
-    vals = [float(val) for val in vals]
+    if not vals:
+        return 1  # this line is sys.exit(0) in WDL
+    else:
+        vals = [float(val) for val in vals]
 
     # The next line is needed as we encountered NaNs in the output
     # after we ran Concordance with two identical inputs for truth and test.
