@@ -131,7 +131,7 @@ task checkerTask {
                                 shutil.copyfileobj(f_in, f_out)
                         cnt = cnt + 1
 
-                    run_concordance(reference, 'truth.vcf','test.vcf')
+                    run_concordance(reference, 'truth.vcf', 'test.vcf')
 
     def run_concordance(reference, eval_file, truth_file):
         """Open a terminal shell to run a command in a Docker
