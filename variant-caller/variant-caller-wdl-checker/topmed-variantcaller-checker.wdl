@@ -80,8 +80,7 @@ task checkerTask {
     import sys, os, tarfile, gzip, csv, math, shutil
     from subprocess import Popen, PIPE, STDOUT
     
-    def read_and_compare_vcfs_from_tar_gz(tar_gz_test, tar_gz_truth,
-     reference):
+    def read_and_compare_vcfs_from_tar_gz(tar_gz_truth, tar_gz_test, reference):
         """
         Reads the VCF files from the tar gz file produced by the U of Michigan
         WDL variant caller and the truth targ gz file and compares each of them
