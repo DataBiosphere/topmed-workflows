@@ -28,7 +28,7 @@ class TestRunConcordanceDocker(unittest.TestCase):
         test_data_path = os.path.split(os.path.split(current_path)[0])[0]
         user_name = os.path.expanduser('~')
 
-        rel_path_to_hg38_ref = 'dev/hg38/hs38DH.fa'
+        rel_path_to_hg38_ref = 'dev/hg38/hs38DH.fa'  # 'dev/hg38/hs38DH.fa'
 
         self.reference = os.path.join(os.sep, user_name, rel_path_to_hg38_ref)
         self.tsv_file = os.path.join(
