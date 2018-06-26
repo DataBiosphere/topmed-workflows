@@ -189,6 +189,10 @@ task checkerTask {
                 D['type']['INDEL']['precision'],
                 D['type']['INDEL']['sensitivity']]
 
+        if not vals:
+            msg = 'GATK Concordance VCF checker output is empty - aborting.'
+            sys.exit(1)
+
         vals = [float(val) for val in vals]
 
         # The next line is needed as we encountered NaNs in the output
@@ -201,7 +205,6 @@ task checkerTask {
             message = 'The VCFs can be considered identical.'
             print(message)
             sys.exit(0)
-
         else:
             message = 'The VCFs do not have enough overlap.'
             print(message)
@@ -219,8 +222,8 @@ task checkerTask {
                        dd[2][0]: dict(zip(dd[0][1:], dd[2][1:]))}
         return D
 
-    read_and_compare_vcfs_from_tar_gz("${inputTestVCFFile}", \
-    "${inputTruthVCFFile}", "${ref_hs38DH_fa}")
+    read_and_compare_vcfs_from_tar_gz("${inputTruthVCFFile}", \
+    "${inputTestVCFFile}", "${ref_hs38DH_fa}")
 
     CODE
   >>>
