@@ -23,9 +23,15 @@ workflow TopMedAligner {
   File ref_ann
   File ref_amb
   File ref_sa
-
   File ref_fasta
   File ref_fasta_index
+
+
+  File? other_ref_fasta
+  File? other_ref_fasta_index
+
+  File pre_align_ref_fasta = select_first([other_ref_fasta, ref_fasta])
+  File pre_align_ref_fasta_index = select_first([other_ref_fasta_index, ref_fasta_index])
 
   File dbSNP_vcf
   File dbSNP_vcf_index
@@ -53,7 +59,7 @@ workflow TopMedAligner {
   Float sort_sam_disk_multiplier = 3.25
 
   # Get the size of the standard reference files as well as the additional reference files needed for BWA
-  Float ref_size = size(ref_fasta, "GB") + size(ref_fasta_index, "GB")
+  Float ref_size = size(ref_fasta, "GB") + size(ref_fasta_index, "GB") + size(pre_align_ref_fasta, "GB") + size(pre_align_ref_fasta_index, "GB")
   Float ref_extra_size = size(ref_alt, "GB") + size(ref_bwt, "GB") + size(ref_pac, "GB") + size(ref_ann, "GB") + size(ref_amb, "GB") + size(ref_sa, "GB")
   Float dbsnp_size = size(dbSNP_vcf, "GB") + size(dbSNP_vcf_index, "GB")
   Float cram_size = size(input_cram_file, "GB") + size(input_crai_file, "GB")
@@ -64,8 +70,8 @@ workflow TopMedAligner {
       input_cram = input_cram_file,
       disk_size = ref_size + (bwa_disk_multiplier * cram_size) + (sort_sam_disk_multiplier * cram_size) + cram_size + additional_disk,
       docker_image = docker_image,
-      ref_fasta = ref_fasta,
-      ref_fasta_index = ref_fasta_index
+      ref_fasta = pre_align_ref_fasta,
+      ref_fasta_index = pre_align_ref_fasta_index
   }
 
 

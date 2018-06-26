@@ -1,4 +1,7 @@
-import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.15.0/aligner/u_of_michigan_aligner/u_of_michigan_aligner.wdl" as TopMed_aligner
+#import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.15.0/aligner/u_of_michigan_aligner/u_of_michigan_aligner.wdl" as TopMed_aligner
+import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/feature/alt-ref-genome/aligner/u_of_michigan_aligner/u_of_michigan_aligner.wdl" as TopMed_aligner
+#import "/home/ubuntu/dataBiosphere/topmed-workflows/aligner/u_of_michigan_aligner/u_of_michigan_aligner.wdl" as TopMed_aligner
+
 import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.15.0/aligner/u_of_michigan_aligner-checker/u_of_michigan_aligner_checker_calculation.wdl" as checker
 
 workflow checkerWorkflow {
@@ -18,6 +21,9 @@ workflow checkerWorkflow {
 
   File ref_fasta
   File ref_fasta_index
+
+  File? other_ref_fasta
+  File? other_ref_fasta_index
 
   File dbSNP_vcf
   File dbSNP_vcf_index
@@ -39,6 +45,9 @@ workflow checkerWorkflow {
      ref_ann = ref_ann,
      ref_pac = ref_pac,
 
+     other_ref_fasta = other_ref_fasta,
+     other_ref_fasta_index = other_ref_fasta_index,
+    
      dbSNP_vcf = dbSNP_vcf,
      dbSNP_vcf_index = dbSNP_vcf_index
 
