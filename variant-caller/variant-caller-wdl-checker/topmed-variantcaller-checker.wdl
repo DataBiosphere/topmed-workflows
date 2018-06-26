@@ -123,6 +123,8 @@ task checkerTask {
                     test_vcf_file = test_variant_caller_output.extractfile(test_vcf_file_info)
                     truth_vcf_file = truth_variant_caller_output.extractfile(truth_vcf_file_info)
 
+                    # The following code writes the file-like objects to the host disk.
+                    # This is necessary for the Java executable to read the files.
                     fnames = ['truth.vcf', 'test.vcf']
                     file_like_objects = [truth_vcf_file, test_vcf_file]
                     cnt = 0
@@ -131,20 +133,18 @@ task checkerTask {
                                 shutil.copyfileobj(f_in, f_out)
                         cnt = cnt + 1
 
+                    # Run the GATK VCF checker procedure with those input files.
                     run_concordance(reference, 'truth.vcf', 'test.vcf')
 
-    def run_concordance(reference, eval_file, truth_file):
+    def run_concordance(reference, truth_file, eval_file):
         """Open a terminal shell to run a command in a Docker
         image with Genotype Concordance installed.
          :return: none
         """
-        curr_work_dir = os.getcwd()
+
+        # Create file to capture GATK Concordance output inside the Docker.
         open('/usr/gitc/concordance_outputTSV.tsv', 'a').close()
         output_file = '/usr/gitc/concordance_outputTSV.tsv'
-
-        print("Content-Type: text/plain\n\n")
-        for key in os.environ.keys():
-            print("%30s %s \n" % (key,os.environ[key]))
 
         cmd = ['/usr/gitc/gatk4/gatk-launch',
                'Concordance',
@@ -154,7 +154,8 @@ task checkerTask {
                '--summary', str(output_file)]
 
         p = Popen(cmd, stdout=PIPE, stderr=STDOUT)
-        
+
+        # Show the output from inside the Docker on the host terminal.
         print("GenotypeConcordance out: {}".format(p.communicate()))
         
         d = process_output_tsv(output_tsv=output_file)
