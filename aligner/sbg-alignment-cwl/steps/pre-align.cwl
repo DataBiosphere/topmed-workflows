@@ -6,17 +6,29 @@ id: marko_zecevic/topmed-alignment/topmed-pre-align/1
 baseCommand:
   - samtools
   - view
-  - '-uh'
-  - '-F'
-  - '0x900'
 inputs:
   - id: input_file
     type: File
     inputBinding:
-      position: 0
+      position: 2
       shellQuote: false
-  - id: out_name
+    label: Input CRAM file
+    'sbg:fileTypes': CRAM
+    secondaryFiles:
+      - .crai
+  - id: output_name
     type: string?
+    label: Output name
+  - 'sbg:category': Input file
+    id: decomp_ref
+    type: File?
+    label: Reference for input CRAM decompressing
+    'sbg:fileTypes': 'FASTA, FA'
+  - 'sbg:category': Input file
+    id: comp_ref
+    type: File
+    label: Reference for output CRAM compressing
+    'sbg:fileTypes': 'FASTA, FA'
 outputs:
   - id: fastq
     type: 'File[]?'
@@ -30,14 +42,14 @@ outputs:
       outputEval: '$(inheritMetadata(self, inputs.input_file))'
 label: Pre-align 1.0
 arguments:
-  - position: 1
+  - position: 3
     prefix: ''
     shellQuote: false
     valueFrom: >-
       | bam-ext-mem-sort-manager squeeze --in -.ubam --keepDups --rmTags
       AS:i,BD:Z,BI:Z,XS:i,MC:Z,MD:Z,NM:i,MQ:i --out -.ubam | samtools sort -l 1
       -@ 1 -n
-  - position: 2
+  - position: 4
     prefix: '-T'
     shellQuote: false
     valueFrom: |-
@@ -48,11 +60,11 @@ arguments:
            return inputs.input_file.nameroot + '.samtools_sort_tmp'
        }
       }
-  - position: 3
+  - position: 5
     prefix: ''
     shellQuote: false
     valueFrom: '- | samtools fixmate - - | bam-ext-mem-sort-manager bam2fastq --in -.bam'
-  - position: 4
+  - position: 6
     prefix: '--outBase'
     shellQuote: false
     valueFrom: |-
@@ -63,15 +75,29 @@ arguments:
            return inputs.input_file.nameroot
        }
       }
-  - position: 5
+  - position: 7
     prefix: ''
     shellQuote: false
     valueFrom: '--maxRecordLimitPerFq 20000000 --sortByReadNameOnTheFly --readname --gzip'
+  - position: 1
+    prefix: ''
+    shellQuote: false
+    valueFrom: '-uh -F 0x900'
+  - position: 2
+    prefix: '-T'
+    valueFrom: |-
+      ${
+       if (inputs.decomp_ref) {
+           return inputs.decomp_ref.path
+       } else {
+           return inputs.comp_ref.path
+       }
+      }
 requirements:
   - class: ShellCommandRequirement
   - class: ResourceRequirement
     ramMin: 7000
-    coresMin: 4
+    coresMin: 2
   - class: DockerRequirement
     dockerPull: images.sbgenomics.com/marko_zecevic/topmed_alignment
   - class: InlineJavascriptRequirement
@@ -115,9 +141,6 @@ requirements:
             }
             return o1;
         };
-hints:
-  - class: 'sbg:AWSInstanceType'
-    value: c4.2xlarge;ebs-gp2;512
 'sbg:appVersion':
   - v1.0
 'sbg:contributors':

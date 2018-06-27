@@ -41,8 +41,8 @@ arguments:
 requirements:
   - class: ShellCommandRequirement
   - class: ResourceRequirement
-    ramMin: 2000
-    coresMin: 1
+    ramMin: 3000
+    coresMin: 2
   - class: DockerRequirement
     dockerPull: images.sbgenomics.com/marko_zecevic/topmed_alignment
   - class: InlineJavascriptRequirement
@@ -86,28 +86,28 @@ requirements:
             }
             return o1;
         };
-'sbg:latestRevision': 0
-'sbg:revisionsInfo':
-  - 'sbg:revisionNotes': Copy of marko_zecevic/topmed-align/samtools-sort/1
-    'sbg:modifiedBy': marko_zecevic
-    'sbg:revision': 0
-    'sbg:modifiedOn': 1525523240
-'sbg:publisher': sbg
-'sbg:modifiedOn': 1525523240
-'sbg:id': marko_zecevic/topmed-alignment/samtools-sort/0
-'sbg:createdBy': marko_zecevic
-'sbg:image_url': >-
-  https://igor.sbgenomics.com/ns/brood/images/marko_zecevic/topmed-alignment/samtools-sort/0.png
-'sbg:copyOf': marko_zecevic/topmed-align/samtools-sort/1
-'sbg:validationErrors': []
-'sbg:revision': 0
-'sbg:createdOn': 1525523240
-'sbg:modifiedBy': marko_zecevic
-'sbg:projectName': TOPMed alignment
-'sbg:project': marko_zecevic/topmed-alignment
 'sbg:appVersion':
   - v1.0
-'sbg:revisionNotes': Copy of marko_zecevic/topmed-align/samtools-sort/1
 'sbg:contributors':
   - marko_zecevic
+'sbg:copyOf': marko_zecevic/topmed-align/samtools-sort/1
+'sbg:createdBy': marko_zecevic
+'sbg:createdOn': 1525523240
+'sbg:id': marko_zecevic/topmed-alignment/samtools-sort/0
+'sbg:image_url': >-
+  https://igor.sbgenomics.com/ns/brood/images/marko_zecevic/topmed-alignment/samtools-sort/0.png
+'sbg:latestRevision': 0
+'sbg:modifiedBy': marko_zecevic
+'sbg:modifiedOn': 1525523240
+'sbg:project': marko_zecevic/topmed-alignment
+'sbg:projectName': TOPMed alignment
+'sbg:publisher': sbg
+'sbg:revision': 0
+'sbg:revisionNotes': Copy of marko_zecevic/topmed-align/samtools-sort/1
+'sbg:revisionsInfo':
+  - 'sbg:modifiedBy': marko_zecevic
+    'sbg:modifiedOn': 1525523240
+    'sbg:revision': 0
+    'sbg:revisionNotes': Copy of marko_zecevic/topmed-align/samtools-sort/1
 'sbg:sbgMaintained': false
+'sbg:validationErrors': []

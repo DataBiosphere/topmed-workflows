@@ -1,16 +1,19 @@
 class: Workflow
 cwlVersion: v1.0
 id: topmed_alignment
+doc: >-
+  A CWL wrapper of the TopMed alignment workflow described here:
+  https://github.com/statgen/docker-alignment
 label: TOPMed Alignment
 $namespaces:
   sbg: 'https://sevenbridges.com'
 inputs:
   - id: input_file
-    'sbg:fileTypes': BAM
+    'sbg:fileTypes': CRAM
     type: File
-    label: Input BAM file
-    'sbg:x': 0
-    'sbg:y': 60.5
+    label: Input CRAM file
+    'sbg:x': -233.1334991455078
+    'sbg:y': -43.2740478515625
   - id: bwa_index
     'sbg:fileTypes': TAR
     type: File
@@ -20,15 +23,21 @@ inputs:
   - id: reference_genome
     'sbg:fileTypes': 'FA, FASTA'
     type: File
-    label: Reference genome sequence
-    'sbg:x': 239.34042358398438
-    'sbg:y': -142.0425567626953
+    label: Reference for output CRAM compressing
+    'sbg:x': -106.77165222167969
+    'sbg:y': -187.8012237548828
   - id: dbsnp
     'sbg:fileTypes': 'VCF, VCF.GZ'
     type: File?
     label: dbSNP VCF file
     'sbg:x': 400
     'sbg:y': 222
+  - id: decomp_ref
+    'sbg:fileTypes': 'FASTA, FA'
+    type: File?
+    label: Reference for input CRAM decompressing
+    'sbg:x': -152.35092163085938
+    'sbg:y': 139.45030212402344
 outputs:
   - id: output
     outputSource:
@@ -36,13 +45,17 @@ outputs:
     'sbg:fileTypes': CRAM
     type: File?
     label: Output CRAM file
-    'sbg:x': 800.9786987304688
-    'sbg:y': 10.361701965332031
+    'sbg:x': 861
+    'sbg:y': -72
 steps:
   - id: topmed_pre_align
     in:
       - id: input_file
         source: input_file
+      - id: decomp_ref
+        source: decomp_ref
+      - id: comp_ref
+        source: reference_genome
     out:
       - id: fastq
       - id: list
@@ -97,8 +110,18 @@ steps:
     label: Post-align
     'sbg:x': 668.5106811523438
     'sbg:y': 8.829793930053711
+hints:
+  - class: 'sbg:AWSInstanceType'
+    value: c4.4xlarge;ebs-gp2;64
 requirements:
   - class: ScatterFeatureRequirement
 'dct:creator':
   'foaf:mbox': 'mailto:support@sbgenomics.com'
   'foaf:name': Seven Bridges
+'sbg:categories':
+  - Alignment
+'sbg:links':
+  - id: 'https://github.com/statgen/docker-alignment'
+    label: github
+'sbg:toolAuthor': Hyun Min Kang (hmkang@umich.edu) and Adrian Tan (atks@umich.edu)
+'sbg:wrapperAuthor': Marko Zecevic (marko.zecevic@sbgenomics.com)
