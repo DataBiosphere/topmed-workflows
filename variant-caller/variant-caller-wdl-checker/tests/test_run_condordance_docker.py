@@ -1,10 +1,11 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import unittest
 from pprint import pprint
 import csv
 import os
-from utils.run_concordance_docker import process_output_tsv, \
+
+from run_concordance_docker import process_output_tsv, \
     list2dict, run_concordance
 
 
