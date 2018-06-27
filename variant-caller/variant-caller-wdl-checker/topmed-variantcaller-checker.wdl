@@ -175,10 +175,14 @@ task checkerTask {
         if threshold is None:
             threshold = 0.95
         L = []  # list to capture results
-        with open(output_tsv, newline='') as csvfile:
-            file_reader = csv.reader(csvfile, delimiter=' ', quotechar='|')
-            for row in file_reader:
-                L.append(row[0])
+
+        try:
+            with open(output_tsv, newline='') as csvfile:
+                file_reader = csv.reader(csvfile, delimiter=' ', quotechar='|')
+                for row in file_reader:
+                    L.append(row[0])
+        except FileNotFoundError:
+            print('no output TSV file found')
 
         D = list2dict(L)
 
