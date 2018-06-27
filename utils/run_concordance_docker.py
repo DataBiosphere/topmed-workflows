@@ -28,7 +28,7 @@ def run_concordance(reference, eval_file, truth_file, output_file):
            '--summary', str(output_file)]
 
     p = Popen(cmd, stdout=PIPE, stderr=STDOUT)
-    print("GenotypeConcordance out: {}".format(p.communicate()))
+    print("Genotype Concordance output: {}".format(p.communicate()))
 
 
 def process_output_tsv(output_tsv, threshold=None, print_dict=False):
