@@ -1,6 +1,6 @@
 {
-  "TopMedVariantCaller.input_cram_files": ["gs://topmed_workflow_testing/topmed_aligner/input_files/NWD176325.0005.recab.cram"],
-  "TopMedVariantCaller.input_crai_files": ["gs://topmed_workflow_testing/topmed_aligner/input_files/NWD176325.0005.recab.cram.crai"],
+  "TopMedVariantCaller.input_cram_files": ["gs://topmed_workflow_testing/topmed_aligner/input_files/NWD176325.recab.cram"],
+  "TopMedVariantCaller.input_crai_files": ["gs://topmed_workflow_testing/topmed_aligner/input_files/NWD176325.recab.cram.crai"],
 
   "TopMedVariantCaller.ref_1000G_omni2_5_b38_sites_PASS_vcf_gz":  "gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/1000G_omni2.5.b38.sites.PASS.vcf.gz",
   "TopMedVariantCaller.ref_1000G_omni2_5_b38_sites_PASS_vcf_gz_tbi":  "gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/1000G_omni2.5.b38.sites.PASS.vcf.gz.tbi",

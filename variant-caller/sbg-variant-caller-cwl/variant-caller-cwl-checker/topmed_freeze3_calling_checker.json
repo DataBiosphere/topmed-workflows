@@ -1,0 +1,32 @@
+{
+    "bai_crai_file": {
+        "class": "File",
+        "path": "../testdata/NA12878_plumbing.cram.crai"
+    },
+    "bam_cram_file": {
+        "class": "File",
+        "path": "../testdata/NA12878_plumbing.cram"
+    },
+    "reference": {
+        "class": "File",
+        "path": "../testdata/hs38dh.fa"
+    },
+    "reference_genome": "hg38",
+    "chromosomes": ["20"],
+    "discover_unit": 20000000,
+    "genotype_unit": 1000000,
+    "index_files": [
+      {
+        "class": "File",
+        "path": "../testdata/NA12878.index"
+      }],
+    "num_of_jobs": 4,
+    "pedigree_file": {
+      "class": "File",
+      "path": "../testdata/trio_data.ped"
+    },
+    "reference_file":{
+      "class": "File",
+      "path": "../testdata/hs38DH-db142-v1OUT.tgz"
+    }
+}
