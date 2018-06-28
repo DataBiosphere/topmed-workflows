@@ -5,7 +5,7 @@ from pprint import pprint
 import csv
 import os
 
-from run_concordance_docker import process_output_tsv, \
+from .run_concordance_docker import process_output_tsv, \
     list2dict, run_concordance
 
 
@@ -24,28 +24,21 @@ class TestRunConcordanceDocker(unittest.TestCase):
     """
 
     def setUp(self):
-        current_path = os.getcwd()
-        # Move up two levels.
-        test_data_path = os.path.split(os.path.split(current_path)[0])[0]
-        user_name = os.path.expanduser('~')
 
+        path = os.getcwd()
+        user_name = os.path.expanduser('~')
         rel_path_to_hg38_ref = 'dev/hg38/hs38DH.fa'
 
         self.reference = os.path.join(os.sep, user_name, rel_path_to_hg38_ref)
         self.tsv_file = os.path.join(
-            os.sep, test_data_path,
-            'test_data/concordance_output_sample.tsv')
+            path, 'test_data/concordance_output_sample.tsv')
         self.vcf_chr17 = os.path.join(
-            os.sep, test_data_path,
-            'test_data/chr17_1_83257441_paste.sites.vcf.gz')
+            path, 'test_data/chr17_1_83257441_paste.sites.vcf.gz')
         self.vcf_chr04 = os.path.join(
-            os.sep, test_data_path,
-            'test_data/chr4_1_190214555_paste.sites.vcf.gz')
+            path, 'test_data/chr4_1_190214555_paste.sites.vcf.gz')
         self.vcf_chr04_compromised = os.path.join(
-            os.sep, test_data_path,
-            'test_data/chr4_1_190214555_paste_SNPs_del.sites.vcf.gz')
-        self.output_path = os.path.join(os.sep, test_data_path,
-                                        'test_data/test_output.tsv')
+            path, 'test_data/chr4_1_190214555_paste_SNPs_del.sites.vcf.gz')
+        self.output_path = os.path.join(path, 'test_data/test_output.tsv')
 
     def tearDown(self):
         pass
@@ -55,6 +48,7 @@ class TestRunConcordanceDocker(unittest.TestCase):
         pprint(d)
 
     def test_list2dict(self):
+        print(os.getcwd())
         L = []  # list to capture results
         with open(self.tsv_file, newline='') as csvfile:
             file_reader = csv.reader(csvfile, delimiter=' ', quotechar='|')
