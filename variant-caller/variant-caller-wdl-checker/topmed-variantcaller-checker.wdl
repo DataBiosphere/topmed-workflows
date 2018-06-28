@@ -205,8 +205,9 @@ task checkerTask {
         """
 
         # Create file to capture GATK Concordance output inside the Docker.
-        open('/usr/gitc/concordance_outputTSV.tsv', 'a').close()
-        output_file = '/usr/gitc/concordance_outputTSV.tsv'
+        # open('/usr/gitc/concordance_outputTSV.tsv', 'a').close()
+        # output_file = '/usr/gitc/concordance_outputTSV.tsv'
+        output_file = 'concordance_outputTSV.tsv'
 
         cmd = ['/usr/gitc/gatk4/gatk-launch',
                'Concordance',
