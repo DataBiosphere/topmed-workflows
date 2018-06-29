@@ -115,6 +115,9 @@ steps:
     label: Post-align
     'sbg:x': 668.5106811523438
     'sbg:y': 8.829793930053711
+hints:
+  - class: 'sbg:AWSInstanceType'
+    value: c4.4xlarge;ebs-gp2;256
 requirements:
   - class: ScatterFeatureRequirement
 'dct:creator':
