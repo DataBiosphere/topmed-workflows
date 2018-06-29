@@ -14,8 +14,6 @@ inputs:
       shellQuote: false
     label: Input CRAM file
     'sbg:fileTypes': CRAM
-    secondaryFiles:
-      - .crai
   - id: output_name
     type: string?
     label: Output name
@@ -96,10 +94,10 @@ arguments:
 requirements:
   - class: ShellCommandRequirement
   - class: ResourceRequirement
-    ramMin: 7000
+    ramMin: 7500
     coresMin: 2
   - class: DockerRequirement
-    dockerPull: images.sbgenomics.com/marko_zecevic/topmed_alignment
+    dockerPull: 'statgen/alignment:1.0.0'
   - class: InlineJavascriptRequirement
     expressionLib:
       - |-
@@ -141,6 +139,9 @@ requirements:
             }
             return o1;
         };
+hints:
+  - class: 'sbg:AWSInstanceType'
+    value: m5.large;ebs-gp2;1024
 'sbg:appVersion':
   - v1.0
 'sbg:contributors':

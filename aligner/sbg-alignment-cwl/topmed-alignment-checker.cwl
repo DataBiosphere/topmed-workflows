@@ -93,9 +93,6 @@ steps:
     label: Validation
     'sbg:x': 30
     'sbg:y': -107
-hints:
-  - class: 'sbg:AWSInstanceType'
-    value: c4.4xlarge;ebs-gp2;64
 requirements:
   - class: SubworkflowFeatureRequirement
 'dct:creator':

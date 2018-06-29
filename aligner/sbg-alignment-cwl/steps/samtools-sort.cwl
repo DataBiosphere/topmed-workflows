@@ -44,7 +44,7 @@ requirements:
     ramMin: 3000
     coresMin: 2
   - class: DockerRequirement
-    dockerPull: images.sbgenomics.com/marko_zecevic/topmed_alignment
+    dockerPull: 'statgen/alignment:1.0.0'
   - class: InlineJavascriptRequirement
     expressionLib:
       - |-
