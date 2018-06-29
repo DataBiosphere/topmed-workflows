@@ -35,7 +35,7 @@ arguments:
     shellQuote: false
     valueFrom: |-
       ${
-          input_filename = inputs.input_file.path.split('/').pop()
+          var input_filename = inputs.input_file.path.split('/').pop()
           return input_filename.slice(0,input_filename.lastIndexOf('.')) + '.sorted.bam'
       }
 requirements:
@@ -45,6 +45,9 @@ requirements:
     coresMin: 2
   - class: DockerRequirement
     dockerPull: 'statgen/alignment:1.0.0'
+  - class: InitialWorkDirRequirement
+    listing:
+      - $(inputs.reference)
   - class: InlineJavascriptRequirement
     expressionLib:
       - |-

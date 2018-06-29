@@ -1,0 +1,18 @@
+{
+    "bwa_index": {
+        "class": "File",
+        "path": "~/Documents/examplefiles/example_human_reference.fasta.tar"
+    },
+    "dbsnp": {
+        "class": "File",
+        "path": "~/Documents/examplefiles/example_human_known_snp.vcf"
+    },
+    "input_file": {
+        "class": "File",
+        "path": "~/Documents/examplefiles/example.cram"
+    },
+    "reference_genome": {
+        "class": "File",
+        "path": "~/Documents/examplefiles/example_human_reference.fasta "
+    }
+}

@@ -94,10 +94,13 @@ arguments:
 requirements:
   - class: ShellCommandRequirement
   - class: ResourceRequirement
-    ramMin: 7500
+    ramMin: 7000
     coresMin: 2
   - class: DockerRequirement
     dockerPull: 'statgen/alignment:1.0.0'
+  - class: InitialWorkDirRequirement
+    listing:
+      - $(inputs.comp_ref)
   - class: InlineJavascriptRequirement
     expressionLib:
       - |-
@@ -139,9 +142,6 @@ requirements:
             }
             return o1;
         };
-hints:
-  - class: 'sbg:AWSInstanceType'
-    value: m5.large;ebs-gp2;1024
 'sbg:appVersion':
   - v1.0
 'sbg:contributors':
