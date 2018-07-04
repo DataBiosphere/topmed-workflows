@@ -1,7 +1,7 @@
 class: CommandLineTool
 cwlVersion: v1.0
 id: >-
-  vladimir_obucina/topmed-freeze-3a-variant-calling-pipeline/topmed_freeze3_calling/15
+  vladimir_obucina/topmed-freeze-3a-variant-calling-pipeline/topmed_freeze3_calling/25
 baseCommand: []
 inputs:
   - format: 'BAI,CRAI'
@@ -46,7 +46,7 @@ inputs:
   - format: PED
     'sbg:category': Input Files
     id: pedigree_file
-    type: File
+    type: File?
     label: Pedigree File
     'sbg:fileTypes': PED
   - format: TGZ
@@ -82,6 +82,20 @@ outputs:
     outputBinding:
       glob: makefile.log
     format: LOG
+  - id: vcf_output
+    doc: Output VCF file
+    label: Output VCF file
+    type: 'File[]?'
+    outputBinding:
+      glob: '*vcf.gz'
+    'sbg:fileTypes': GZ
+  - id: vcf_index_output
+    doc: VCF index output file
+    label: Output Index
+    type: 'File[]?'
+    outputBinding:
+      glob: '*.tbi'
+    'sbg:fileTypes': TBI
 label: Topmed_freeze3_CWL1
 arguments:
   - position: 0
@@ -115,7 +129,12 @@ arguments:
           */
 
           comm += "python /root/topmed_freeze3_calling/scripts/append_gcconfig.py -du " + inputs.discover_unit + " -gu " + inputs.genotype_unit + " -gen " + inputs.reference_genome
-          comm += " && cp trio_data.index " + inputs.pedigree_file.path + " /root/topmed_freeze3_calling/data/ &&  cwd=\"$PWD\"  && cd /root/topmed_freeze3_calling/"
+          if (inputs.pedigree_file != null) {
+            comm += " && cp " + inputs.pedigree_file.path + " /root/topmed_freeze3_calling/data/"
+          }
+            
+          comm += " && cp trio_data.index /root/topmed_freeze3_calling/data/"
+          comm += " &&  cwd=\"$PWD\"  && cd /root/topmed_freeze3_calling/"
           comm += " && tar -xzvf " + inputs.reference_file.path + " -C /root/topmed_freeze3_calling/"
 
           // Step1
@@ -134,23 +153,27 @@ arguments:
               comm += " -j " + inputs.num_of_jobs
           }
           comm += " >> makefile.log"
-
-          // Step3a
-          comm += " && perl scripts/step3a-compute-milk-score.pl " + chr
-          comm += " && make -f out/aux/milk/*.Makefile"
-          if (inputs.num_of_jobs) {
-              comm += " -j " + inputs.num_of_jobs
+          if (inputs.pedigree_file) {
+              // Step3a
+              comm += " && perl scripts/step3a-compute-milk-score.pl " + chr
+              comm += " && make -f out/aux/milk/*.Makefile"
+              if (inputs.num_of_jobs) {
+                  comm += " -j " + inputs.num_of_jobs
+              }
+              comm += " >> makefile.log"
+              // Step3b
+              comm += " && perl scripts/step3b-run-svm-milk-filter.pl " + chr
+              comm += " >> makefile.log"
           }
-          comm += " >> makefile.log"
-          // Step3b
-          comm += " && perl scripts/step3b-run-svm-milk-filter.pl " + chr
-          comm += " >> makefile.log"
+          
           comm += " && cd out"
-
-
           comm += " && tar -zcvf genotypes.tar.gz paste"
-          comm += " && tar -zcvf called_variant_sites.tar.gz svm"
-          comm += " && mv ../makefile.log genotypes.tar.gz called_variant_sites.tar.gz \"$cwd\""
+          if (inputs.pedigree_file) {
+              comm += " && tar -zcvf called_variant_sites.tar.gz svm"
+              comm += " && mv called_variant_sites.tar.gz \"$cwd\""
+          }
+          comm += " && mv ../makefile.log genotypes.tar.gz paste/*vcf.gz paste/*.tbi \"$cwd\""
+          //comm += " && mv ../makefile.log paste/*vcf.gz paste/*.tbi \"$cwd\""
           return comm
       }
 requirements:
@@ -162,7 +185,6 @@ requirements:
     dockerPull: 'images.sbgenomics.com/vladimir_obucina/topmed:freeze3a'
   - class: InitialWorkDirRequirement
     listing:
-      - $(inputs.pedigree_file)
       - entryname: gcconfig.pm
         entry: >+
           package gcconfig;
@@ -369,10 +391,41 @@ requirements:
 hints:
   - class: 'sbg:useSbgFS'
     value: 'true'
-'sbg:modifiedOn': 1527500690
-'sbg:revision': 15
+'sbg:publisher': sbg
 'sbg:image_url': >-
-  https://igor.sbgenomics.com/ns/brood/images/vladimir_obucina/topmed-freeze-3a-variant-calling-pipeline/topmed_freeze3_calling/15.png
+  https://igor.sbgenomics.com/ns/brood/images/vladimir_obucina/topmed-freeze-3a-variant-calling-pipeline/topmed_freeze3_calling/25.png
+'sbg:cmdPreview': >-
+  cat /path/to/index_files-1.ext /path/to/index_files-2.ext > trio_data.index &&
+  ln -sf /path/to/bam_cram_files-1.ext
+  /root/topmed_freeze3_calling/bam_cram_files-1.ext &&  ln -sf
+  /path/to/bam_cram_files-2.ext
+  /root/topmed_freeze3_calling/bam_cram_files-2.ext &&  ln -sf
+  /path/to/bai_crai_files-1.ext
+  /root/topmed_freeze3_calling/bai_crai_files-1.ext &&  ln -sf
+  /path/to/bai_crai_files-1.ext
+  /root/topmed_freeze3_calling/bai_crai_files-1.ext && python
+  /root/topmed_freeze3_calling/scripts/append_gcconfig.py -du 4 -gu 7 -gen hg38
+  && cp trio_data.index /path/to/PedigreeFile.ext
+  /root/topmed_freeze3_calling/data/ &&  cwd="$PWD"  && cd
+  /root/topmed_freeze3_calling/ && tar -xzvf /path/to/ReferenceFile.ext -C
+  /root/topmed_freeze3_calling/ && perl
+  scripts/step1-detect-and-merge-variants.pl chrchromosome-string-value-1
+  chrchromosome-string-value-2 && sed -i '1s/^/SHELL:=\/bin\/bash\n/'
+  out/aux/Makefile && make -f out/aux/Makefile >> makefile.log && perl
+  scripts/step2-joint-genotyping.pl chrchromosome-string-value-1
+  chrchromosome-string-value-2 && make -f out/paste/*.Makefile >> makefile.log
+  && perl scripts/step3a-compute-milk-score.pl chrchromosome-string-value-1
+  chrchromosome-string-value-2 && make -f out/aux/milk/*.Makefile >>
+  makefile.log && perl scripts/step3b-run-svm-milk-filter.pl
+  chrchromosome-string-value-1 chrchromosome-string-value-2 >> makefile.log &&
+  cd out && tar -zcvf genotypes.tar.gz paste && tar -zcvf
+  called_variant_sites.tar.gz svm && mv ../makefile.log genotypes.tar.gz
+  called_variant_sites.tar.gz "$cwd"
+'sbg:contributors':
+  - mikojicic
+  - vladimir_obucina
+'sbg:sbgMaintained': false
+'sbg:project': vladimir_obucina/topmed-freeze-3a-variant-calling-pipeline
 'sbg:revisionsInfo':
   - 'sbg:revision': 0
     'sbg:modifiedOn': 1525956103
@@ -438,49 +491,58 @@ hints:
     'sbg:modifiedOn': 1527500690
     'sbg:modifiedBy': vladimir_obucina
     'sbg:revisionNotes': 'UPDATE: GRCh37 insted of hg19'
-$namespaces:
-  sbg: 'https://sevenbridges.com'
-'sbg:modifiedBy': vladimir_obucina
-'sbg:publisher': sbg
-'sbg:projectName': TOPMed Freeze 3a Variant Calling Pipeline
-'sbg:revisionNotes': 'UPDATE: GRCh37 insted of hg19'
+  - 'sbg:revision': 16
+    'sbg:modifiedOn': 1527503975
+    'sbg:modifiedBy': vladimir_obucina
+    'sbg:revisionNotes': 'UPDATE: changed append_gcconfig.py script to recognize GRCh37'
+  - 'sbg:revision': 17
+    'sbg:modifiedOn': 1529858460
+    'sbg:modifiedBy': vladimir_obucina
+    'sbg:revisionNotes': 'UPDATE: Added vcf and vcf_index output.'
+  - 'sbg:revision': 18
+    'sbg:modifiedOn': 1529872391
+    'sbg:modifiedBy': vladimir_obucina
+    'sbg:revisionNotes': ''
+  - 'sbg:revision': 19
+    'sbg:modifiedOn': 1530622544
+    'sbg:modifiedBy': vladimir_obucina
+    'sbg:revisionNotes': 'UPDATE: Removed PED file as mandatory (not running steps 3a and 3b)'
+  - 'sbg:revision': 20
+    'sbg:modifiedOn': 1530626397
+    'sbg:modifiedBy': vladimir_obucina
+    'sbg:revisionNotes': Fixed bug with file requirements of pedigree file
+  - 'sbg:revision': 21
+    'sbg:modifiedOn': 1530626919
+    'sbg:modifiedBy': vladimir_obucina
+    'sbg:revisionNotes': ''
+  - 'sbg:revision': 22
+    'sbg:modifiedOn': 1530627291
+    'sbg:modifiedBy': vladimir_obucina
+    'sbg:revisionNotes': ''
+  - 'sbg:revision': 23
+    'sbg:modifiedOn': 1530627554
+    'sbg:modifiedBy': vladimir_obucina
+    'sbg:revisionNotes': ''
+  - 'sbg:revision': 24
+    'sbg:modifiedOn': 1530628150
+    'sbg:modifiedBy': vladimir_obucina
+    'sbg:revisionNotes': ''
+  - 'sbg:revision': 25
+    'sbg:modifiedOn': 1530630624
+    'sbg:modifiedBy': vladimir_obucina
+    'sbg:revisionNotes': ''
+'sbg:createdOn': 1525956103
+'sbg:revisionNotes': ''
+'sbg:id': >-
+  vladimir_obucina/topmed-freeze-3a-variant-calling-pipeline/topmed_freeze3_calling/25
+'sbg:modifiedOn': 1530630624
 'sbg:appVersion':
   - v1.0
-'sbg:latestRevision': 15
-'sbg:sbgMaintained': false
-'sbg:id': >-
-  vladimir_obucina/topmed-freeze-3a-variant-calling-pipeline/topmed_freeze3_calling/15
-'sbg:createdOn': 1525956103
-'sbg:contributors':
-  - mikojicic
-  - vladimir_obucina
-'sbg:validationErrors': []
-'sbg:cmdPreview': >-
-  cat /path/to/index_files-1.ext /path/to/index_files-2.ext > trio_data.index &&
-  ln -sf /path/to/bam_cram_files-1.ext
-  /root/topmed_freeze3_calling/bam_cram_files-1.ext &&  ln -sf
-  /path/to/bam_cram_files-2.ext
-  /root/topmed_freeze3_calling/bam_cram_files-2.ext &&  ln -sf
-  /path/to/bai_crai_files-1.ext
-  /root/topmed_freeze3_calling/bai_crai_files-1.ext &&  ln -sf
-  /path/to/bai_crai_files-1.ext
-  /root/topmed_freeze3_calling/bai_crai_files-1.ext && python
-  /root/topmed_freeze3_calling/scripts/append_gcconfig.py -du 4 -gu 7 -gen hg38
-  && cp trio_data.index /path/to/PedigreeFile.ext
-  /root/topmed_freeze3_calling/data/ &&  cwd="$PWD"  && cd
-  /root/topmed_freeze3_calling/ && tar -xzvf /path/to/ReferenceFile.ext -C
-  /root/topmed_freeze3_calling/ && perl
-  scripts/step1-detect-and-merge-variants.pl chrchromosome-string-value-1
-  chrchromosome-string-value-2 && sed -i '1s/^/SHELL:=\/bin\/bash\n/'
-  out/aux/Makefile && make -f out/aux/Makefile >> makefile.log && perl
-  scripts/step2-joint-genotyping.pl chrchromosome-string-value-1
-  chrchromosome-string-value-2 && make -f out/paste/*.Makefile >> makefile.log
-  && perl scripts/step3a-compute-milk-score.pl chrchromosome-string-value-1
-  chrchromosome-string-value-2 && make -f out/aux/milk/*.Makefile >>
-  makefile.log && perl scripts/step3b-run-svm-milk-filter.pl
-  chrchromosome-string-value-1 chrchromosome-string-value-2 >> makefile.log &&
-  cd out && tar -zcvf genotypes.tar.gz paste && tar -zcvf
-  called_variant_sites.tar.gz svm && mv ../makefile.log genotypes.tar.gz
-  called_variant_sites.tar.gz "$cwd"
+$namespaces:
+  sbg: 'https://sevenbridges.com'
+'sbg:revision': 25
+'sbg:latestRevision': 25
+'sbg:projectName': TOPMed Freeze 3a Variant Calling Pipeline
 'sbg:createdBy': mikojicic
-'sbg:project': vladimir_obucina/topmed-freeze-3a-variant-calling-pipeline
+'sbg:modifiedBy': vladimir_obucina
+'sbg:validationErrors': []

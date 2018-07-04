@@ -1,7 +1,7 @@
 class: Workflow
 cwlVersion: v1.0
 id: >-
-  vladimir_obucina/topmed-freeze-3a-variant-calling-pipeline/topmed-variant-calling-pipeline-cwl1/11
+  vladimir_obucina/topmed-freeze-3a-variant-calling-pipeline/topmed-variant-calling-pipeline-cwl1/17
 label: TOPMed Variant Calling Pipeline CWL1
 inputs:
   - id: reference
@@ -26,7 +26,7 @@ inputs:
     'sbg:y': -629.1428833007812
   - id: pedigree_file
     'sbg:fileTypes': PED
-    type: File
+    type: File?
     'sbg:x': -119.71428680419922
     'sbg:y': -515.8571166992188
   - id: num_of_jobs
@@ -73,6 +73,20 @@ outputs:
     type: File?
     'sbg:x': 423.53741455078125
     'sbg:y': -332.6839599609375
+  - id: vcf_output
+    outputSource:
+      - topmed_freeze3_calling/vcf_output
+    'sbg:fileTypes': GZ
+    type: 'File[]?'
+    'sbg:y': -622.8525390625
+    'sbg:x': 421.19287109375
+  - id: vcf_index_output
+    outputSource:
+      - topmed_freeze3_calling/vcf_index_output
+    'sbg:fileTypes': TBI
+    type: 'File[]?'
+    'sbg:y': -474.9278869628906
+    'sbg:x': 424.314697265625
 steps:
   - id: verifybamid_cwl1
     in:
@@ -94,8 +108,8 @@ steps:
     label: VerifyBamID_CWL1
     scatter:
       - bam_cram_file
-    'sbg:x': -233.57144165039062
     'sbg:y': -197.14285278320312
+    'sbg:x': -233.57144165039062
   - id: topmed_freeze3_calling
     in:
       - id: bai_crai_files
@@ -133,21 +147,24 @@ steps:
       - id: called_variant_sites
       - id: genotypes
       - id: makefile_log
+      - id: vcf_output
+      - id: vcf_index_output
     run: steps/topmed_freeze3_calling/topmed_freeze3_calling.cwl
     label: Topmed_freeze3_CWL1
-    'sbg:x': 157.14285278320312
     'sbg:y': -198
+    'sbg:x': 157.14285278320312
 requirements:
   - class: ScatterFeatureRequirement
-'sbg:modifiedOn': 1527500740
-'sbg:latestRevision': 11
+'sbg:publisher': sbg
+'sbg:modifiedOn': 1530632680
 'sbg:sbgMaintained': false
-'sbg:validationErrors': []
-'sbg:id': >-
-  vladimir_obucina/topmed-freeze-3a-variant-calling-pipeline/topmed-variant-calling-pipeline-cwl1/11
-'sbg:createdOn': 1526996458
 'sbg:contributors':
   - vladimir_obucina
+'sbg:appVersion':
+  - v1.0
+$namespaces:
+  sbg: 'https://sevenbridges.com'
+'sbg:revision': 17
 'sbg:revisionsInfo':
   - 'sbg:revision': 0
     'sbg:modifiedOn': 1526996458
@@ -199,16 +216,39 @@ requirements:
     'sbg:modifiedOn': 1527500740
     'sbg:modifiedBy': vladimir_obucina
     'sbg:revisionNotes': 'UPDATE: GRCh37 insted of hg19'
-$namespaces:
-  sbg: 'https://sevenbridges.com'
-'sbg:modifiedBy': vladimir_obucina
-'sbg:image_url': >-
-  https://igor.sbgenomics.com/ns/brood/images/vladimir_obucina/topmed-freeze-3a-variant-calling-pipeline/topmed-variant-calling-pipeline-cwl1/11.png
-'sbg:publisher': sbg
+  - 'sbg:revision': 12
+    'sbg:modifiedOn': 1527503995
+    'sbg:modifiedBy': vladimir_obucina
+    'sbg:revisionNotes': 'UPDATE: changed append_gcconfig.py script to recognize GRCh37'
+  - 'sbg:revision': 13
+    'sbg:modifiedOn': 1529918908
+    'sbg:modifiedBy': vladimir_obucina
+    'sbg:revisionNotes': 'UPDATE: Added vcf and vcf_index outputs'
+  - 'sbg:revision': 14
+    'sbg:modifiedOn': 1530622626
+    'sbg:modifiedBy': vladimir_obucina
+    'sbg:revisionNotes': 'UPDATE: Removed PED file as mandatory (not running steps 3a and 3b)'
+  - 'sbg:revision': 15
+    'sbg:modifiedOn': 1530622728
+    'sbg:modifiedBy': vladimir_obucina
+    'sbg:revisionNotes': ''
+  - 'sbg:revision': 16
+    'sbg:modifiedOn': 1530626434
+    'sbg:modifiedBy': vladimir_obucina
+    'sbg:revisionNotes': Fixed bug with file requirements of pedigree file
+  - 'sbg:revision': 17
+    'sbg:modifiedOn': 1530632680
+    'sbg:modifiedBy': vladimir_obucina
+    'sbg:revisionNotes': 'UPDATE: Changed variant calling so pedigree file is not mandatory anymore'
+'sbg:latestRevision': 17
+'sbg:createdOn': 1526996458
 'sbg:projectName': TOPMed Freeze 3a Variant Calling Pipeline
-'sbg:revisionNotes': 'UPDATE: GRCh37 insted of hg19'
-'sbg:appVersion':
-  - v1.0
 'sbg:createdBy': vladimir_obucina
+'sbg:image_url': >-
+  https://igor.sbgenomics.com/ns/brood/images/vladimir_obucina/topmed-freeze-3a-variant-calling-pipeline/topmed-variant-calling-pipeline-cwl1/17.png
+'sbg:modifiedBy': vladimir_obucina
+'sbg:validationErrors': []
+'sbg:revisionNotes': 'UPDATE: Changed variant calling so pedigree file is not mandatory anymore'
+'sbg:id': >-
+  vladimir_obucina/topmed-freeze-3a-variant-calling-pipeline/topmed-variant-calling-pipeline-cwl1/17
 'sbg:project': vladimir_obucina/topmed-freeze-3a-variant-calling-pipeline
-'sbg:revision': 11
