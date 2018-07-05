@@ -1,9 +1,9 @@
 language: python
 python:
-  - "2.7"
+  - "3.6"
 script:
-  - pytest
-#services:
-#    - docker
-#jdk:
-#  - oraclejdk8
+  - python test_run_concordance.py
+services:
+  - docker
+jdk:
+  - oraclejdk8
