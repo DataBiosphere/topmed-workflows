@@ -2,7 +2,7 @@ language: python
 python:
   - "3.6"
 script:
-  - python test_run_concordance.py
+  - python -m unittest varian-caller/variant-caller-wdl-checker/tests/test_run_concordance_docker.py
 services:
   - docker
 jdk:
