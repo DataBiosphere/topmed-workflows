@@ -28,10 +28,10 @@ class TestRunConcordanceDocker(unittest.TestCase):
         path = os.getcwd()
         user_name = os.path.expanduser('~')
         rel_path_to_hg38_ref = 'dev/hg38/hs38DH.fa'
+        path_to_test = 'variant-caller/variant-caller-wdl-checker/test_data'
 
         self.reference = os.path.join(os.sep, user_name, rel_path_to_hg38_ref)
-        self.tsv_file = os.path.join(
-            path, 'test_data/concordance_output_sample.tsv')
+        self.tsv_file = os.path.join(path, path_to_test, 'concordance_output_sample.tsv')
         self.vcf_chr17 = os.path.join(
             path, 'test_data/chr17_1_83257441_paste.sites.vcf.gz')
         self.vcf_chr04 = os.path.join(
