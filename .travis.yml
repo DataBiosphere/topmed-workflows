@@ -1,5 +1,7 @@
-services:
-    - docker
+language: python
+
+#services:
+#    - docker
 
 #jdk:
 #  - oraclejdk8
