@@ -1,28 +1,23 @@
 class: Workflow
 cwlVersion: v1.0
-id: vladimir_obucina/topmed-freeze-3a-variant-calling-pipeline/checker-workflow/3
+id: vladimir_obucina/topmed-freeze-3a-variant-calling-pipeline/checker-workflow/12
 label: Checker Workflow
 inputs:
-  - id: Expected_result
-    'sbg:fileTypes': TAR.GZ
-    type: File
-    'sbg:x': -6
-    'sbg:y': 102
   - id: reference_file
     'sbg:fileTypes': TGZ
     type: File
-    'sbg:x': -465.4285583496094
-    'sbg:y': -429.0484924316406
+    'sbg:x': -484.54437255859375
+    'sbg:y': -419.2278137207031
   - id: reference
     'sbg:fileTypes': FA
     type: File
-    'sbg:x': -467
-    'sbg:y': -315.5714416503906
+    'sbg:x': -480.9602966308594
+    'sbg:y': -298.2476806640625
   - id: pedigree_file
     'sbg:fileTypes': PED
     type: File
-    'sbg:x': -466.5714416503906
-    'sbg:y': -199.85714721679688
+    'sbg:x': -481.3563232421875
+    'sbg:y': -179.4556121826172
   - id: bam_cram_file
     'sbg:fileTypes': 'BAM, CRAM'
     type: 'File[]'
@@ -35,16 +30,16 @@ inputs:
     'sbg:y': 545.4285888671875
   - id: num_of_jobs
     type: int?
-    'sbg:x': -469
-    'sbg:y': -81
+    'sbg:x': -471.79205322265625
+    'sbg:y': -61.45560836791992
   - id: genotype_unit
     type: int
     'sbg:x': -473.28570556640625
     'sbg:y': 60.85714340209961
   - id: discover_unit
     type: int
-    'sbg:x': -474.1428527832031
-    'sbg:y': 314.71429443359375
+    'sbg:x': -474
+    'sbg:y': 186.1717987060547
   - id: reference_genome_1
     type:
       type: enum
@@ -52,34 +47,25 @@ inputs:
         - hg38
         - GRCh37
       name: reference_genome
-    'sbg:x': -462.28570556640625
-    'sbg:y': -543.4285888671875
+    'sbg:x': -471.3960266113281
+    'sbg:y': -547.1881103515625
   - id: chromosomes
     type: 'string[]'
-    'sbg:x': -473.2857360839844
-    'sbg:y': 199.85714721679688
+    'sbg:x': -474.9367980957031
+    'sbg:y': 303.5867004394531
+  - id: inputTruthVCFFile
+    'sbg:fileTypes': TAR.GZ
+    type: File
+    'sbg:x': 86.9299087524414
+    'sbg:y': -197.2978973388672
 outputs:
-  - id: Match
+  - id: genotypes
     outputSource:
-      - validation_tool/Match
-    type: string?
-    'sbg:x': 381
-    'sbg:y': -2
+      - topmed_variant_calling_pipeline_cwl1/genotypes
+    type: File
+    'sbg:x': 364
+    'sbg:y': 101.92414093017578
 steps:
-  - id: validation_tool
-    in:
-      - id: Expected_result
-        source:
-          - Expected_result
-      - id: Workflow_result
-        source:
-          - topmed_variant_calling_pipeline_cwl1/genotypes
-    out:
-      - id: Match
-    run: topmed-variantcaller-validation-tool.cwl
-    label: Validation_tool
-    'sbg:x': 220
-    'sbg:y': -3
   - id: topmed_variant_calling_pipeline_cwl1
     in:
       - id: reference
@@ -116,10 +102,25 @@ steps:
       - id: called_variant_sites
       - id: genotypes
       - id: makefile_log
+      - id: vcf_output
+      - id: vcf_index_output
     run: ../topmed_variant_calling_pipeline.cwl
     label: TOPMed Variant Calling Pipeline CWL1
-    'sbg:x': -52
-    'sbg:y': -79
+    'sbg:x': -53.936790466308594
+    'sbg:y': 66.25931549072266
+  - id: topmed_variantcaller_checker
+    in:
+      - id: inputTruthVCFFile
+        source:
+          - inputTruthVCFFile
+      - id: inputTestVCFFile
+        source:
+          - topmed_variant_calling_pipeline_cwl1/genotypes
+    out: []
+    run: topmed-variantcaller-checker.cwl
+    label: topmed-variantcaller-checker
+    'sbg:x': 361.55609130859375
+    'sbg:y': -103.00116729736328
 requirements:
   - class: SubworkflowFeatureRequirement
 $namespaces:
@@ -130,17 +131,17 @@ $namespaces:
   - vladimir_obucina
 'sbg:createdBy': vladimir_obucina
 'sbg:createdOn': 1527589051
-'sbg:id': vladimir_obucina/topmed-freeze-3a-variant-calling-pipeline/checker-workflow/3
+'sbg:id': vladimir_obucina/topmed-freeze-3a-variant-calling-pipeline/checker-workflow/12
 'sbg:image_url': >-
-  https://igor.sbgenomics.com/ns/brood/images/vladimir_obucina/topmed-freeze-3a-variant-calling-pipeline/checker-workflow/3.png
-'sbg:latestRevision': 3
+  https://igor.sbgenomics.com/ns/brood/images/vladimir_obucina/topmed-freeze-3a-variant-calling-pipeline/checker-workflow/12.png
+'sbg:latestRevision': 12
 'sbg:modifiedBy': vladimir_obucina
-'sbg:modifiedOn': 1527589527
+'sbg:modifiedOn': 1530282177
 'sbg:project': vladimir_obucina/topmed-freeze-3a-variant-calling-pipeline
 'sbg:projectName': TOPMed Freeze 3a Variant Calling Pipeline
 'sbg:publisher': sbg
-'sbg:revision': 3
-'sbg:revisionNotes': ''
+'sbg:revision': 12
+'sbg:revisionNotes': 'UPDATE: Checker back to revision 13'
 'sbg:revisionsInfo':
   - 'sbg:modifiedBy': vladimir_obucina
     'sbg:modifiedOn': 1527589051
@@ -158,5 +159,47 @@ $namespaces:
     'sbg:modifiedOn': 1527589527
     'sbg:revision': 3
     'sbg:revisionNotes': ''
+  - 'sbg:modifiedBy': vladimir_obucina
+    'sbg:modifiedOn': 1527672587
+    'sbg:revision': 4
+    'sbg:revisionNotes': Changed validation tool to use python script for checkinf file size
+  - 'sbg:modifiedBy': vladimir_obucina
+    'sbg:modifiedOn': 1527690481
+    'sbg:revision': 5
+    'sbg:revisionNotes': >-
+      UPDATE: Making log.stderr and log.stdout files, with exit message in case
+      of failure.
+  - 'sbg:modifiedBy': vladimir_obucina
+    'sbg:modifiedOn': 1527691926
+    'sbg:revision': 6
+    'sbg:revisionNotes': ''
+  - 'sbg:modifiedBy': vladimir_obucina
+    'sbg:modifiedOn': 1529919626
+    'sbg:revision': 7
+    'sbg:revisionNotes': >-
+      UPDATE: Changed Checker tool, and update CWL1 which now has different
+      output format
+  - 'sbg:modifiedBy': vladimir_obucina
+    'sbg:modifiedOn': 1529919769
+    'sbg:revision': 8
+    'sbg:revisionNotes': ''
+  - 'sbg:modifiedBy': vladimir_obucina
+    'sbg:modifiedOn': 1530277807
+    'sbg:revision': 9
+    'sbg:revisionNotes': 'UPDATE!!!: changed checker tool'
+  - 'sbg:modifiedBy': vladimir_obucina
+    'sbg:modifiedOn': 1530279332
+    'sbg:revision': 10
+    'sbg:revisionNotes': >-
+      UPDATE: added output to check if everything works well. Last revision (13)
+      was working!!!
+  - 'sbg:modifiedBy': vladimir_obucina
+    'sbg:modifiedOn': 1530279360
+    'sbg:revision': 11
+    'sbg:revisionNotes': ''
+  - 'sbg:modifiedBy': vladimir_obucina
+    'sbg:modifiedOn': 1530282177
+    'sbg:revision': 12
+    'sbg:revisionNotes': 'UPDATE: Checker back to revision 13'
 'sbg:sbgMaintained': false
 'sbg:validationErrors': []
