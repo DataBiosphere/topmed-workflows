@@ -1,36 +1,27 @@
 {
-    "bai_crai_file": {
+    "bai_crai_file": [
+      {
         "class": "File",
-        "path": "testdata/NA12878_plumbing.cram.crai"
-    },
-    "bam_cram_file": {
+        "path": "gs://storage.googleapis.com/topmed_workflow_testing/topmed_variant_caller/input_files/NWD176325.recab.cram.crai"
+      }
+    ],
+    "bam_cram_file": [
+      {
         "class": "File",
-        "path": "testdata/NA12878_plumbing.cram"
-    },
+        "path": "gs://storage.googleapis.com/topmed_workflow_testing/topmed_variant_caller/input_files/NWD176325.recab.cram"
+      }
+    ],
     "reference": {
         "class": "File",
-        "path": "testdata/hs38dh.fa"
+        "path": "gs://storage.googleapis.com/topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa"
     },
     "reference_genome": "hg38",
     "chromosomes": ["20"],
     "discover_unit": 20000000,
     "genotype_unit": 1000000,
-    "index_files": [
-      {
-        "class": "File",
-        "path": "testdata/NA12878.index"
-      }],
     "num_of_jobs": 4,
-    "pedigree_file": {
-      "class": "File",
-      "path": "testdata/trio_data.ped"
-    },
     "reference_file":{
       "class": "File",
-      "path": "testdata/hs38DH-db142-v1OUT.tgz"
-    },
-    "expected_output":{
-      "class": "File",
-      "path": "testdata/expected_output.tar.gz"
+      "path": "gs://storage.googleapis.com/topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH-db142-v1.tgz"
     }
 }
