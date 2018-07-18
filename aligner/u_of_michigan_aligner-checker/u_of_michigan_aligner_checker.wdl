@@ -1,5 +1,5 @@
-import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.15.0/aligner/u_of_michigan_aligner/u_of_michigan_aligner.wdl" as TopMed_aligner
-import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.15.0/aligner/u_of_michigan_aligner-checker/u_of_michigan_aligner_checker_calculation.wdl" as checker
+import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/feature/rm-dos-demo/aligner/u_of_michigan_aligner/u_of_michigan_aligner.wdl" as TopMed_aligner
+import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/feature/rm-dos-demo/aligner/u_of_michigan_aligner-checker/u_of_michigan_aligner_checker_calculation.wdl" as checker
 
 workflow checkerWorkflow {
   String docker_image
@@ -22,6 +22,15 @@ workflow checkerWorkflow {
   File dbSNP_vcf
   File dbSNP_vcf_index
 
+  # Optional inputs for aligner checker task
+  Float? est_size_inputCRAMFile
+  Float? est_size_inputTruthCRAMFile
+  Float? est_ref_size
+
+  # Optional inputs for aligner task
+  Float? est_ref_extra_size
+  Float? est_dbsnp_size
+
  call TopMed_aligner.TopMedAligner as aligner { 
    input:
 
@@ -40,8 +49,12 @@ workflow checkerWorkflow {
      ref_pac = ref_pac,
 
      dbSNP_vcf = dbSNP_vcf,
-     dbSNP_vcf_index = dbSNP_vcf_index
+     dbSNP_vcf_index = dbSNP_vcf_index,
 
+     est_ref_size = est_ref_size,
+     est_ref_extra_size = est_ref_extra_size,
+     est_dbsnp_size = est_dbsnp_size,
+     est_cram_size = est_size_inputCRAMFile
  }
 
 
@@ -50,5 +63,10 @@ workflow checkerWorkflow {
         inputCRAMFile = aligner.aligner_output, 
         inputTruthCRAMFile = inputTruthCRAMFile,
         referenceFile = ref_fasta,
-        docker_image = docker_image }
+        docker_image = docker_image,
+
+        est_size_inputCRAMFile = est_size_inputCRAMFile,
+        est_size_inputTruthCRAMFile = est_size_inputTruthCRAMFile,
+        est_ref_size = est_ref_size
+    }
 }

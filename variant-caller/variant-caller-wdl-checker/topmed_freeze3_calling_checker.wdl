@@ -1,6 +1,5 @@
-
-import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.16.0/variant-caller/variant-caller-wdl/topmed_freeze3_calling.wdl" as TopMed_variantcaller
-import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.16.0/variant-caller/variant-caller-wdl-checker/topmed-variantcaller-checker.wdl" as checker
+import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/feature/rm-dos-demo/variant-caller/variant-caller-wdl/topmed_freeze3_calling.wdl" as TopMed_variantcaller
+import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/feature/rm-dos-demo/variant-caller/variant-caller-wdl-checker/topmed-variantcaller-checker.wdl" as checker
 
 workflow checkerWorkflow {
   File inputTruthVCFFile
@@ -10,6 +9,14 @@ workflow checkerWorkflow {
 
   Array[File] input_crai_files
   Array[File] input_cram_files
+
+  # Optional input for checker task
+  Float? est_reference_size
+  Float? est_size_inputTruthVCFFile
+  Float? est_size_inputTestVCFFile
+
+  # Optional input for variant caller
+  Float? est_refFasta_size
 
   File ref_1000G_omni2_5_b38_sites_PASS_vcf_gz
   File ref_1000G_omni2_5_b38_sites_PASS_vcf_gz_tbi
@@ -137,7 +144,11 @@ workflow checkerWorkflow {
       ref_hs38DH_fa_fai = ref_hs38DH_fa_fai,
       ref_hs38DH_fa_pac = ref_hs38DH_fa_pac,
       ref_hs38DH_fa_sa = ref_hs38DH_fa_sa,
-      ref_hs38DH_winsize100_gc = ref_hs38DH_winsize100_gc
+      ref_hs38DH_winsize100_gc = ref_hs38DH_winsize100_gc,
+
+      est_reference_size = est_reference_size,
+      est_refFasta_size = est_refFasta_size,
+      est_cram_size = est_size_inputTestVCFFile
   }
 
   call checker.checkerTask { 
@@ -204,7 +215,11 @@ workflow checkerWorkflow {
           ref_hs38DH_fa_sa = ref_hs38DH_fa_sa,
           ref_hs38DH_winsize100_gc = ref_hs38DH_winsize100_gc,
 
-          docker_concordance_image = docker_concordance_image
+          docker_concordance_image = docker_concordance_image,
+
+          est_reference_size = est_reference_size,
+          est_size_inputTruthVCFFile = est_size_inputTruthVCFFile,
+          est_size_inputTestVCFFile = est_size_inputTestVCFFile
   }
 }
 

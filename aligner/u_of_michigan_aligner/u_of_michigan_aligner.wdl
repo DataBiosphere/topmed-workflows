@@ -53,10 +53,18 @@ workflow TopMedAligner {
   Float sort_sam_disk_multiplier = 3.25
 
   # Get the size of the standard reference files as well as the additional reference files needed for BWA
-  Float ref_size = size(ref_fasta, "GB") + size(ref_fasta_index, "GB")
-  Float ref_extra_size = size(ref_alt, "GB") + size(ref_bwt, "GB") + size(ref_pac, "GB") + size(ref_ann, "GB") + size(ref_amb, "GB") + size(ref_sa, "GB")
-  Float dbsnp_size = size(dbSNP_vcf, "GB") + size(dbSNP_vcf_index, "GB")
-  Float cram_size = size(input_cram_file, "GB") + size(input_crai_file, "GB")
+  Float? est_ref_size
+  Float ref_size = select_first([est_ref_size, 4.0])
+  #Float ref_size = size(ref_fasta, "GB") + size(ref_fasta_index, "GB")
+  Float? est_ref_extra_size
+  Float ref_extra_size = select_first([est_ref_extra_size, 6.0])
+  #Float ref_extra_size = size(ref_alt, "GB") + size(ref_bwt, "GB") + size(ref_pac, "GB") + size(ref_ann, "GB") + size(ref_amb, "GB") + size(ref_sa, "GB")
+  Float? est_dbsnp_size
+  Float dbsnp_size = select_first([est_dbsnp_size, 2.0])
+  #Float dbsnp_size = size(dbSNP_vcf, "GB") + size(dbSNP_vcf_index, "GB")
+  Float? est_cram_size
+  Float cram_size = select_first([est_cram_size, 30.0])
+  #Float cram_size = size(input_cram_file, "GB") + size(input_crai_file, "GB")
 
   call PreAlign {
      input:

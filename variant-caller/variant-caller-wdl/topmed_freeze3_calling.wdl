@@ -1,4 +1,4 @@
-import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.14.0/variant-caller/variant-caller-wdl/calculate_contamination.wdl" as getDNAContamination
+import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/feature/rm-dos-demo/variant-caller/variant-caller-wdl/calculate_contamination.wdl" as getDNAContamination
 
 ## This is the U of Michigan variant caller workflow WDL for the workflow code located here:
 ## https://github.com/statgen/topmed_freeze3_calling
@@ -20,6 +20,7 @@ workflow TopMedVariantCaller {
 
   Array[File] input_crai_files
   Array[File] input_cram_files
+
 
   String docker_image
 
@@ -90,67 +91,74 @@ workflow TopMedVariantCaller {
   # Cromwell error from asking for 0 disk when the input is less than 1GB
   Int additional_disk = select_first([increase_disk_size, 20])
 
-  Float reference_size = ( 
-  size(ref_1000G_omni2_5_b38_sites_PASS_vcf_gz, "GB") +
-  size(ref_1000G_omni2_5_b38_sites_PASS_vcf_gz_tbi, "GB") +
-  size(chr10_vcf, "GB") +
-  size(chr11_KI270927v1_alt_vcf, "GB") +
-  size(chr11_vcf, "GB") +
-  size(chr12_vcf, "GB") +
-  size(chr13_vcf, "GB") +
-  size(chr14_GL000009v2_random_vcf, "GB") +
-  size(chr14_KI270846v1_alt_vcf, "GB") +
-  size(chr14_vcf, "GB") +
-  size(chr15_vcf, "GB") +
-  size(chr16_vcf, "GB") +
-  size(chr17_KI270857v1_alt_vcf, "GB") +
-  size(chr17_KI270862v1_alt_vcf, "GB") +
-  size(chr17_KI270909v1_alt_vcf, "GB") +
-  size(chr17_vcf, "GB") +
-  size(chr18_vcf, "GB") +
-  size(chr19_KI270938v1_alt_vcf, "GB") +
-  size(chr19_vcf, "GB") +
-  size(chr1_KI270706v1_random_vcf, "GB") +
-  size(chr1_KI270766v1_alt_vcf, "GB") +
-  size(chr1_vcf, "GB") +
-  size(chr20_vcf, "GB") +
-  size(chr21_vcf, "GB") +
-  size(chr22_KI270879v1_alt_vcf, "GB") +
-  size(chr22_KI270928v1_alt_vcf, "GB") +
-  size(chr22_vcf, "GB") +
-  size(chr2_KI270773v1_alt_vcf, "GB") +
-  size(chr2_KI270894v1_alt_vcf, "GB") +
-  size(chr2_vcf, "GB") +
-  size(chr3_vcf, "GB") +
-  size(chr4_GL000008v2_random_vcf, "GB") +
-  size(chr4_vcf, "GB") +
-  size(chr5_vcf, "GB") +
-  size(chr6_vcf, "GB") +
-  size(chr7_KI270803v1_alt_vcf, "GB") +
-  size(chr7_vcf, "GB") +
-  size(chr8_KI270821v1_alt_vcf, "GB") +
-  size(chr8_vcf, "GB") +
-  size(chr9_vcf, "GB") +
-  size(chrUn_KI270742v1_vcf, "GB") +
-  size(chrX_vcf, "GB") +
-  size(ref_dbsnp_142_b38_vcf_gz, "GB") +
-  size(ref_dbsnp_142_b38_vcf_gz_tbi, "GB") +
-  size(ref_dbsnp_All_vcf_gz, "GB") +
-  size(ref_dbsnp_All_vcf_gz_tbi, "GB") +
-  size(ref_hapmap_3_3_b38_sites_vcf_gz, "GB") +
-  size(ref_hapmap_3_3_b38_sites_vcf_gz_tbi, "GB") +
-  size(ref_hs38DH_bs_umfa, "GB") +
-  size(ref_hs38DH_dict, "GB") +
-  size(ref_hs38DH_fa, "GB") +
-  size(ref_hs38DH_fa_alt, "GB") +
-  size(ref_hs38DH_fa_amb, "GB") +
-  size(ref_hs38DH_fa_ann, "GB") +
-  size(ref_hs38DH_fa_bwt, "GB") +
-  size(ref_hs38DH_fa_fai, "GB") +
-  size(ref_hs38DH_fa_pac, "GB") +
-  size(ref_hs38DH_fa_sa, "GB") +
-  size(ref_hs38DH_winsize100_gc, "GB")
-  )
+  # Optional input to estimate cram and reference sizes for the calculating DNA contamination
+  Float? est_refFasta_size
+  Float? est_cram_size
+
+  # Optional input to estimate reference sizes for variantCalling
+  Float? est_reference_size
+  Float reference_size = select_first([est_reference_size, 30.0])
+  #Float reference_size = (
+  #size(ref_1000G_omni2_5_b38_sites_PASS_vcf_gz, "GB") +
+  #size(ref_1000G_omni2_5_b38_sites_PASS_vcf_gz_tbi, "GB") +
+  #size(chr10_vcf, "GB") +
+  #size(chr11_KI270927v1_alt_vcf, "GB") +
+  #size(chr11_vcf, "GB") +
+  #size(chr12_vcf, "GB") +
+  #size(chr13_vcf, "GB") +
+  #size(chr14_GL000009v2_random_vcf, "GB") +
+  #size(chr14_KI270846v1_alt_vcf, "GB") +
+  #size(chr14_vcf, "GB") +
+  #size(chr15_vcf, "GB") +
+  #size(chr16_vcf, "GB") +
+  #size(chr17_KI270857v1_alt_vcf, "GB") +
+  #size(chr17_KI270862v1_alt_vcf, "GB") +
+  #size(chr17_KI270909v1_alt_vcf, "GB") +
+  #size(chr17_vcf, "GB") +
+  #size(chr18_vcf, "GB") +
+  #size(chr19_KI270938v1_alt_vcf, "GB") +
+  #size(chr19_vcf, "GB") +
+  #size(chr1_KI270706v1_random_vcf, "GB") +
+  #size(chr1_KI270766v1_alt_vcf, "GB") +
+  #size(chr1_vcf, "GB") +
+  #size(chr20_vcf, "GB") +
+  #size(chr21_vcf, "GB") +
+  #size(chr22_KI270879v1_alt_vcf, "GB") +
+  #size(chr22_KI270928v1_alt_vcf, "GB") +
+  #size(chr22_vcf, "GB") +
+  #size(chr2_KI270773v1_alt_vcf, "GB") +
+  #size(chr2_KI270894v1_alt_vcf, "GB") +
+  #size(chr2_vcf, "GB") +
+  #size(chr3_vcf, "GB") +
+  #size(chr4_GL000008v2_random_vcf, "GB") +
+  #size(chr4_vcf, "GB") +
+  #size(chr5_vcf, "GB") +
+  #size(chr6_vcf, "GB") +
+  #size(chr7_KI270803v1_alt_vcf, "GB") +
+  #size(chr7_vcf, "GB") +
+  #size(chr8_KI270821v1_alt_vcf, "GB") +
+  #size(chr8_vcf, "GB") +
+  #size(chr9_vcf, "GB") +
+  #size(chrUn_KI270742v1_vcf, "GB") +
+  #size(chrX_vcf, "GB") +
+  #size(ref_dbsnp_142_b38_vcf_gz, "GB") +
+  #size(ref_dbsnp_142_b38_vcf_gz_tbi, "GB") +
+  #size(ref_dbsnp_All_vcf_gz, "GB") +
+  #size(ref_dbsnp_All_vcf_gz_tbi, "GB") +
+  #size(ref_hapmap_3_3_b38_sites_vcf_gz, "GB") +
+  #size(ref_hapmap_3_3_b38_sites_vcf_gz_tbi, "GB") +
+  #size(ref_hs38DH_bs_umfa, "GB") +
+  #size(ref_hs38DH_dict, "GB") +
+  #size(ref_hs38DH_fa, "GB") +
+  #size(ref_hs38DH_fa_alt, "GB") +
+  #size(ref_hs38DH_fa_amb, "GB") +
+  #size(ref_hs38DH_fa_ann, "GB") +
+  #size(ref_hs38DH_fa_bwt, "GB") +
+  #size(ref_hs38DH_fa_fai, "GB") +
+  #size(ref_hs38DH_fa_pac, "GB") +
+  #size(ref_hs38DH_fa_sa, "GB") +
+  #size(ref_hs38DH_winsize100_gc, "GB")
+  #)
 
   call sumCRAMSizes {
     input:
@@ -167,9 +175,11 @@ workflow TopMedVariantCaller {
           input:
               input_cram_file = cram_or_crai_file.left,
               input_crai_file = cram_or_crai_file.right,
-  
               ref_fasta = ref_hs38DH_fa,
-              ref_fasta_index = ref_hs38DH_fa_fai
+              ref_fasta_index = ref_hs38DH_fa_fai,
+
+              est_cram_size = est_cram_size,
+              est_refFasta_size = est_refFasta_size
         }
     }
 

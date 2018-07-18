@@ -17,8 +17,13 @@ workflow calulateDNAContamination {
   # Cromwell error from asking for 0 disk when the input is less than 1GB
   Int additional_disk = select_first([increase_disk_size, 20])
 
-  Float reference_size = size(ref_fasta, "GB") + size(ref_fasta_index, "GB")
-  Float cram_size = size(input_cram_file, "GB") + size(input_crai_file, "GB")
+  Float? est_refFasta_size
+  Float refFasta_size = select_first([est_refFasta_size, 4.0])
+  #Float reference_size = size(ref_fasta, "GB") + size(ref_fasta_index, "GB")
+
+  Float? est_cram_size
+  Float cram_size = select_first([est_cram_size, 30.0])
+  #Float cram_size = size(input_cram_file, "GB") + size(input_crai_file, "GB")
 
   String? reference_genome_version
   String reference_genome = select_first([reference_genome_version, 'hg38'])
@@ -35,7 +40,7 @@ workflow calulateDNAContamination {
 
       reference_genome = reference_genome,
 
-      disk_size = cram_size + reference_size +  + additional_disk,
+      disk_size = cram_size + refFasta_size + additional_disk,
       docker_image = docker_image
  
       
