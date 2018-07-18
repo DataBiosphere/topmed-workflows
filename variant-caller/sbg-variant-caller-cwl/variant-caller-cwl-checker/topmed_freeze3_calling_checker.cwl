@@ -40,15 +40,6 @@ inputs:
     type: int
     'sbg:x': -474
     'sbg:y': 186.1717987060547
-  - id: reference_genome_1
-    type:
-      type: enum
-      symbols:
-        - hg38
-        - GRCh37
-      name: reference_genome
-    'sbg:x': -471.3960266113281
-    'sbg:y': -547.1881103515625
   - id: chromosomes
     type: 'string[]'
     'sbg:x': -474.9367980957031
@@ -58,6 +49,15 @@ inputs:
     type: File
     'sbg:x': 86.9299087524414
     'sbg:y': -197.2978973388672
+  - id: reference_genome
+    type:
+      type: enum
+      symbols:
+        - hg38
+        - GRCh37
+      name: reference_genome
+    'sbg:x': -476.7496032714844
+    'sbg:y': -546.502685546875
 outputs:
   - id: genotypes
     outputSource:
@@ -95,9 +95,9 @@ steps:
       - id: chromosomes
         source:
           - chromosomes
-      - id: reference_genome_1
+      - id: reference_genome
         source:
-          - reference_genome_1
+          - reference_genome
     out:
       - id: called_variant_sites
       - id: genotypes
@@ -106,8 +106,8 @@ steps:
       - id: vcf_index_output
     run: ../topmed_variant_calling_pipeline.cwl
     label: TOPMed Variant Calling Pipeline CWL1
-    'sbg:x': -53.936790466308594
-    'sbg:y': 66.25931549072266
+    'sbg:x': 47.67938995361328
+    'sbg:y': 18.40610694885254
   - id: topmed_variantcaller_checker
     in:
       - id: inputTruthVCFFile
