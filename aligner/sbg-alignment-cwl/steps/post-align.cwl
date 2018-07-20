@@ -87,45 +87,17 @@ requirements:
   - class: DockerRequirement
     dockerPull: 'statgen/alignment:1.0.0'
   - class: InitialWorkDirRequirement
-    listing:
-      - $(inputs.alignment_files)
+    listing: |-
+        ${ 
+            var out = []
+            out.push(inputs.reference)
+            for (var i = 0; i < inputs.alignment_files.length; i++) { 
+                out.push(inputs.alignment_files[i]);
+            }
+            return out
+            
+        }
   - class: InlineJavascriptRequirement
 hints:
   - class: 'sbg:AWSInstanceType'
     value: c4.4xlarge;ebs-gp2;512
-'sbg:appVersion':
-  - v1.0
-'sbg:contributors':
-  - marko_zecevic
-'sbg:createdBy': marko_zecevic
-'sbg:createdOn': 1525523301
-'sbg:id': marko_zecevic/topmed-alignment/topmed-post-align/3
-'sbg:image_url': >-
-  https://igor.sbgenomics.com/ns/brood/images/marko_zecevic/topmed-alignment/topmed-post-align/3.png
-'sbg:latestRevision': 3
-'sbg:modifiedBy': marko_zecevic
-'sbg:modifiedOn': 1526052274
-'sbg:project': marko_zecevic/topmed-alignment
-'sbg:projectName': TOPMed alignment
-'sbg:publisher': sbg
-'sbg:revision': 3
-'sbg:revisionNotes': catch cram on output
-'sbg:revisionsInfo':
-  - 'sbg:modifiedBy': marko_zecevic
-    'sbg:modifiedOn': 1525523301
-    'sbg:revision': 0
-    'sbg:revisionNotes': Copy of marko_zecevic/topmed-align/post-align/2
-  - 'sbg:modifiedBy': marko_zecevic
-    'sbg:modifiedOn': 1525968584
-    'sbg:revision': 1
-    'sbg:revisionNotes': single output
-  - 'sbg:modifiedBy': marko_zecevic
-    'sbg:modifiedOn': 1526043700
-    'sbg:revision': 2
-    'sbg:revisionNotes': shellquote on arg3 off
-  - 'sbg:modifiedBy': marko_zecevic
-    'sbg:modifiedOn': 1526052274
-    'sbg:revision': 3
-    'sbg:revisionNotes': catch cram on output
-'sbg:sbgMaintained': false
-'sbg:validationErrors': []

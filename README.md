@@ -10,7 +10,7 @@ See the [variant calling pipeline](https://github.com/statgen/topmed_freeze3_cal
 
 ### 1. Cloud SDK (`gcloud`, `gsutil`)
 If you are on Debian / Ubuntu, follow the instructions on [Cloud SDK](https://cloud.google.com/sdk/downloads#apt-get). 
-After you execute `gcloud init` the installer asks you to log in and you should respond with `Y`, head to the provided URL, copy the code and past it to the prompt. After that it will ask you for the cloud project you want to use. Pick the (platform-dev-178517). I picked `us-west1-b` as the region.
+After you execute `gcloud init` the installer asks you to log in and you should respond with `Y`, head to the provided URL, copy the code and past it to the prompt. After that it will ask you for the cloud project you want to use, so you need to input the GCP _Project ID_. I picked `us-west1-b` as the region.
 
 #### Configuration and credentials file
 ```bash

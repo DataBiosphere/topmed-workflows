@@ -112,10 +112,18 @@ arguments:
 requirements:
   - class: ShellCommandRequirement
   - class: ResourceRequirement
+<<<<<<< HEAD
     ramMin: 7500
     coresMin: 8
+=======
+    ramMin: 7000
+    coresMin: 2
+>>>>>>> 651829587731214649050a67f371238c3b79fa67
   - class: DockerRequirement
     dockerPull: 'statgen/alignment:1.0.0'
+  - class: InitialWorkDirRequirement
+    listing:
+      - $(inputs.comp_ref)
   - class: InlineJavascriptRequirement
     expressionLib:
       - |-
@@ -160,55 +168,3 @@ requirements:
 hints:
   - class: 'sbg:AWSInstanceType'
     value: c4.4xlarge;ebs-gp2;512
-'sbg:appVersion':
-  - v1.0
-'sbg:contributors':
-  - marko_zecevic
-'sbg:createdBy': marko_zecevic
-'sbg:createdOn': 1527680399
-'sbg:id': marko_zecevic/validation-app-topmed-alignment/topmed-pre-align/7
-'sbg:image_url': >-
-  https://igor.sbgenomics.com/ns/brood/images/marko_zecevic/validation-app-topmed-alignment/topmed-pre-align/7.png
-'sbg:latestRevision': 7
-'sbg:modifiedBy': marko_zecevic
-'sbg:modifiedOn': 1530655047
-'sbg:project': marko_zecevic/validation-app-topmed-alignment
-'sbg:projectName': Validation app - TOPMed alignment
-'sbg:publisher': sbg
-'sbg:revision': 7
-'sbg:revisionNotes': ''
-'sbg:revisionsInfo':
-  - 'sbg:modifiedBy': marko_zecevic
-    'sbg:modifiedOn': 1527680399
-    'sbg:revision': 0
-    'sbg:revisionNotes': Copy of marko_zecevic/topmed-alignment/topmed-pre-align/0
-  - 'sbg:modifiedBy': marko_zecevic
-    'sbg:modifiedOn': 1527680399
-    'sbg:revision': 1
-    'sbg:revisionNotes': Copy of marko_zecevic/topmed-alignment/topmed-pre-align/1
-  - 'sbg:modifiedBy': marko_zecevic
-    'sbg:modifiedOn': 1530267373
-    'sbg:revision': 2
-    'sbg:revisionNotes': threads
-  - 'sbg:modifiedBy': marko_zecevic
-    'sbg:modifiedOn': 1530277627
-    'sbg:revision': 3
-    'sbg:revisionNotes': back to default instance
-  - 'sbg:modifiedBy': marko_zecevic
-    'sbg:modifiedOn': 1530653426
-    'sbg:revision': 4
-    'sbg:revisionNotes': back to default instance
-  - 'sbg:modifiedBy': marko_zecevic
-    'sbg:modifiedOn': 1530654447
-    'sbg:revision': 5
-    'sbg:revisionNotes': larger instance
-  - 'sbg:modifiedBy': marko_zecevic
-    'sbg:modifiedOn': 1530654713
-    'sbg:revision': 6
-    'sbg:revisionNotes': first is singlethreaded
-  - 'sbg:modifiedBy': marko_zecevic
-    'sbg:modifiedOn': 1530655047
-    'sbg:revision': 7
-    'sbg:revisionNotes': ''
-'sbg:sbgMaintained': false
-'sbg:validationErrors': []

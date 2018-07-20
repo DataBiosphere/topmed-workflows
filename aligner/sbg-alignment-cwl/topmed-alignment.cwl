@@ -43,8 +43,7 @@ inputs:
     'sbg:exposed': true
 outputs:
   - id: output
-    outputSource:
-      - topmed_post_align/output
+    outputSource: topmed_post_align/output
     'sbg:fileTypes': CRAM
     type: File?
     label: Output CRAM file
