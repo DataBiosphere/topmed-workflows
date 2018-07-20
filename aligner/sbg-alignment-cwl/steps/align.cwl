@@ -34,6 +34,14 @@ outputs:
 
         }
     format: CRAM
+  - id: script
+    type: File?
+    outputBinding:
+      glob: '*.sh'
+  - id: log
+    type: File?
+    outputBinding:
+      glob: log.txt
 label: Align 1.0
 arguments:
   - position: 1
@@ -76,8 +84,8 @@ arguments:
 requirements:
   - class: ShellCommandRequirement
   - class: ResourceRequirement
-    ramMin: 9000
-    coresMin: 2
+    ramMin: 14000
+    coresMin: 8
   - class: DockerRequirement
     dockerPull: 'statgen/alignment:1.0.0'
   - class: InitialWorkDirRequirement
@@ -93,17 +101,18 @@ requirements:
 
            s += 'line=$(grep $(basename $input_path) < $list)\n'
 
-           s += 'line_rg=$(echo $line | cut -d \' \' -f 4- | sed -e \"s\/ \/\\\t\/g\")\n'
+           s += 'line_rg=$(echo $line | cut -d \' \' -f 4- | sed -e \"s\/ \/\\\\\\t\/g\")\n'
            s += 'input_filename=$(basename $input_path)\n'
            s += 'output_filename=$(basename $input_filename \".fastq.gz\").cram\n'
 
            s += 'paired_flag=\"\"\n'
-           s += 'if [[ $input_file_name =~ interleaved\.fastq\.gz$ ]]\n'
+           s += 'if [[ $input_filename =~ interleaved\\.fastq\\.gz$ ]]\n'
            s += 'then\n'
            s += '\tpaired_flag=\"-p\"\n'
            s += 'fi\n'
 
-           s += 'bwa mem -t 32 -K 100000000 -Y ${paired_flag} -R \"$line_rg\" $ref_path $input_path | samblaster -a --addMateTags | samtools view -@ 32 -T $ref_path -C -o $output_filename -'
+           s += 'bwa mem -t 32 -K 100000000 -Y ${paired_flag} -R \"$line_rg\" $ref_path $input_path | samblaster -a --addMateTags | samtools view -@ 32 -T $ref_path -C -o $output_filename -\n'
+           
           return s
           }
   - class: InlineJavascriptRequirement
@@ -197,7 +206,7 @@ requirements:
         };
 hints:
   - class: 'sbg:AWSInstanceType'
-    value: c4.4xlarge;ebs-gp2;1024
+    value: c4.4xlarge;ebs-gp2;512
 'sbg:appVersion':
   - v1.0
 'sbg:cmdPreview': >-

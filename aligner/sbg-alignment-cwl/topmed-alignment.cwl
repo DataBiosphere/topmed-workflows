@@ -50,6 +50,18 @@ outputs:
     label: Output CRAM file
     'sbg:x': 861
     'sbg:y': -72
+  - id: script
+    outputSource:
+      - topmed_align/script
+    type: File?
+    'sbg:x': 797.263427734375
+    'sbg:y': 230.80984497070312
+  - id: log
+    outputSource:
+      - topmed_align/log
+    type: File?
+    'sbg:x': 667.6575927734375
+    'sbg:y': 309.8584899902344
 steps:
   - id: topmed_pre_align
     in:
@@ -61,6 +73,8 @@ steps:
         source: decomp_ref
       - id: comp_ref
         source: reference_genome
+      - id: threads
+        default: 8
     out:
       - id: fastq
       - id: list
@@ -78,6 +92,8 @@ steps:
         source: topmed_pre_align/list
     out:
       - id: cram
+      - id: script
+      - id: log
     run: steps/align.cwl
     label: Align 1.0
     scatter:
@@ -109,12 +125,17 @@ steps:
       - id: alignment_files
         source:
           - samtools_sort/output
+      - id: threads
+        default: 8
     out:
       - id: output
     run: steps/post-align.cwl
     label: Post-align
     'sbg:x': 668.5106811523438
     'sbg:y': 8.829793930053711
+hints:
+  - class: 'sbg:maxNumberOfParallelInstances'
+    value: '8'
 requirements:
   - class: ScatterFeatureRequirement
 'dct:creator':

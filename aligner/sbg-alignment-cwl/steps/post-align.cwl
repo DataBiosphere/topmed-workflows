@@ -12,12 +12,15 @@ inputs:
   - id: dbsnp
     type: File
     inputBinding:
-      position: 2
+      position: 3
       prefix: '--dbsnp'
       shellQuote: false
   - id: alignment_files
     type: 'File[]'
     'sbg:fileTypes': BAM
+  - id: threads
+    type: int?
+    label: Number of threads
 outputs:
   - id: output
     type: File?
@@ -25,47 +28,71 @@ outputs:
       glob: '*cram'
 label: Post-align
 arguments:
-  - position: 0
+  - position: 1
     prefix: ''
     shellQuote: false
     valueFrom: >-
-      --threads 1 -c merged.bam *.sorted.bam && bam-non-primary-dedup
-      dedup_LowMem --allReadNames --binCustom --binQualS
-      0:2,3:3,4:4,5:5,6:6,7:10,13:20,23:30 --log dedup_lowmem.metrics --recab
-      --in merged.bam --out -.ubam
-  - position: 1
+      -c merged.bam *.sorted.bam && bam-non-primary-dedup dedup_LowMem
+      --allReadNames --binCustom --binQualS 0:2,3:3,4:4,5:5,6:6,7:10,13:20,23:30
+      --log dedup_lowmem.metrics --recab --in merged.bam --out -.ubam
+  - position: 2
     prefix: '--refFile'
     shellQuote: false
     valueFrom: |-
       ${
           return inputs.reference.path
       }
-  - position: 3
+  - position: 4
     prefix: ''
     shellQuote: false
     valueFrom: '| samtools view -h -C'
-  - position: 4
+  - position: 5
     prefix: '-T'
     shellQuote: false
     valueFrom: |-
       ${
           return inputs.reference.path
       }
-  - position: 5
+  - position: 6
     prefix: ''
     shellQuote: false
-    valueFrom: '-o output.cram --threads 1'
+    valueFrom: '-o output.cram'
+  - position: 0
+    prefix: '--threads'
+    shellQuote: false
+    valueFrom: |-
+      ${
+       if (inputs.threads) {
+           return inputs.threads
+       } else {
+           return 1
+       }
+      }
+  - position: 7
+    prefix: '--threads'
+    shellQuote: false
+    valueFrom: |-
+      ${
+       if (inputs.threads) {
+           return inputs.threads
+       } else {
+           return 1
+       }
+      }
 requirements:
   - class: ShellCommandRequirement
   - class: ResourceRequirement
-    ramMin: 8000
-    coresMin: 0
+    ramMin: 7500
+    coresMin: 8
   - class: DockerRequirement
     dockerPull: 'statgen/alignment:1.0.0'
   - class: InitialWorkDirRequirement
     listing:
       - $(inputs.alignment_files)
   - class: InlineJavascriptRequirement
+hints:
+  - class: 'sbg:AWSInstanceType'
+    value: c4.4xlarge;ebs-gp2;512
 'sbg:appVersion':
   - v1.0
 'sbg:contributors':

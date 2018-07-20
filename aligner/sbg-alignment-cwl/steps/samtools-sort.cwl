@@ -41,7 +41,7 @@ arguments:
 requirements:
   - class: ShellCommandRequirement
   - class: ResourceRequirement
-    ramMin: 3000
+    ramMin: 7000
     coresMin: 2
   - class: DockerRequirement
     dockerPull: 'statgen/alignment:1.0.0'
@@ -86,6 +86,9 @@ requirements:
             }
             return o1;
         };
+hints:
+  - class: 'sbg:AWSInstanceType'
+    value: c4.4xlarge;ebs-gp2;512
 'sbg:appVersion':
   - v1.0
 'sbg:contributors':
