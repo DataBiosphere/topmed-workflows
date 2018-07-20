@@ -2,7 +2,7 @@ class: CommandLineTool
 cwlVersion: v1.0
 $namespaces:
   sbg: 'https://sevenbridges.com'
-id: marko_zecevic/validation-app-topmed-alignment/topmed-pre-align/7
+id: marko_zecevic_validation_app_topmed_alignment_topmed_pre_align_7
 baseCommand:
   - samtools
   - view
@@ -14,9 +14,6 @@ inputs:
       shellQuote: false
     label: Input CRAM file
     'sbg:fileTypes': CRAM
-  - id: output_name
-    type: string?
-    label: Output name
   - 'sbg:category': Input file
     id: decomp_ref
     type: File?
@@ -63,11 +60,7 @@ arguments:
     shellQuote: false
     valueFrom: |-
       ${
-       if (inputs.out_name) {
-           return inputs.out_name + '.samtools_sort_tmp'  
-       } else {
-           return inputs.input_file.nameroot + '.samtools_sort_tmp'
-       }
+          return inputs.input_file.nameroot + '.samtools_sort_tmp'
       }
   - position: 5
     prefix: ''
@@ -78,11 +71,7 @@ arguments:
     shellQuote: false
     valueFrom: |-
       ${
-       if (inputs.out_name) {
-           return inputs.out_name
-       } else {
-           return inputs.input_file.nameroot
-       }
+          return inputs.input_file.nameroot
       }
   - position: 7
     prefix: ''
@@ -112,13 +101,8 @@ arguments:
 requirements:
   - class: ShellCommandRequirement
   - class: ResourceRequirement
-<<<<<<< HEAD
     ramMin: 7500
     coresMin: 8
-=======
-    ramMin: 7000
-    coresMin: 2
->>>>>>> 651829587731214649050a67f371238c3b79fa67
   - class: DockerRequirement
     dockerPull: 'statgen/alignment:1.0.0'
   - class: InitialWorkDirRequirement

@@ -38,36 +38,20 @@ inputs:
     label: Reference for input CRAM decompressing
     'sbg:x': -152.35092163085938
     'sbg:y': 139.45030212402344
-  - id: output_name
-    type: string?
-    'sbg:exposed': true
 outputs:
   - id: output
-    outputSource: topmed_post_align/output
+    outputSource:
+      - topmed_post_align/output
     'sbg:fileTypes': CRAM
     type: File?
     label: Output CRAM file
     'sbg:x': 861
     'sbg:y': -72
-  - id: script
-    outputSource:
-      - topmed_align/script
-    type: File?
-    'sbg:x': 797.263427734375
-    'sbg:y': 230.80984497070312
-  - id: log
-    outputSource:
-      - topmed_align/log
-    type: File?
-    'sbg:x': 667.6575927734375
-    'sbg:y': 309.8584899902344
 steps:
   - id: topmed_pre_align
     in:
       - id: input_file
         source: input_file
-      - id: output_name
-        source: output_name
       - id: decomp_ref
         source: decomp_ref
       - id: comp_ref
@@ -91,8 +75,6 @@ steps:
         source: topmed_pre_align/list
     out:
       - id: cram
-      - id: script
-      - id: log
     run: steps/align.cwl
     label: Align 1.0
     scatter:

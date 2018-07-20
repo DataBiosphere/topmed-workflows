@@ -2,7 +2,7 @@ class: CommandLineTool
 cwlVersion: v1.0
 $namespaces:
   sbg: 'https://sevenbridges.com'
-id: marko_zecevic/topmed-alignment/topmed-align/0
+id: marko_zecevic_topmed_alignment_topmed_align_0
 baseCommand:
   - chmod
 inputs:
@@ -31,14 +31,6 @@ outputs:
 
         }
     format: CRAM
-  - id: script
-    type: File?
-    outputBinding:
-      glob: '*.sh'
-  - id: log
-    type: File?
-    outputBinding:
-      glob: log.txt
 label: Align 1.0
 arguments:
   - position: 1

@@ -2,7 +2,7 @@ class: CommandLineTool
 cwlVersion: v1.0
 $namespaces:
   sbg: 'https://sevenbridges.com'
-id: marko_zecevic/topmed-alignment/topmed-post-align/3
+id: marko_zecevic_topmed_alignment_topmed_post_align_3
 baseCommand:
   - samtools
   - merge
@@ -54,9 +54,25 @@ arguments:
           return inputs.reference.path
       }
   - position: 6
-    prefix: ''
+    prefix: '-o'
     shellQuote: false
-    valueFrom: '-o output.cram'
+    valueFrom: |-
+      ${
+        function sharedStart(array){
+          var A= array.concat().sort(), 
+          a1= A[0], a2= A[A.length-1], L= a1.length, i= 0;
+          while(i<L && a1.charAt(i)=== a2.charAt(i)) i++;
+          return a1.substring(0, i);
+        }
+        path_list = []
+        inputs.alignment_files.forEach(function(f){return path_list.push(f.path.replace(/\\/g,'/').replace( /.*\//, '' ))})
+        common_prefix = sharedStart(path_list)
+        if (common_prefix.length >0){
+          return common_prefix.concat(".recab.cram")
+        } else {
+          return "recab.cram"
+        }    
+      }
   - position: 0
     prefix: '--threads'
     shellQuote: false
@@ -68,7 +84,7 @@ arguments:
            return 1
        }
       }
-  - position: 7
+  - position: 8
     prefix: '--threads'
     shellQuote: false
     valueFrom: |-
@@ -87,7 +103,8 @@ requirements:
   - class: DockerRequirement
     dockerPull: 'statgen/alignment:1.0.0'
   - class: InitialWorkDirRequirement
-    listing: |-
+    listing:
+      - |-
         ${ 
             var out = []
             out.push(inputs.reference)
