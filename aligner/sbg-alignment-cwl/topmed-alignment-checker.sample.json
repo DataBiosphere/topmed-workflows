@@ -1,0 +1,19 @@
+{
+    "bwa_index": {
+        "class": "File",
+        "path": "gs://topmed_workflow_testing/topmed_aligner/reference_files/hg38/hs38DH.fa.tar"
+    },
+    "dbsnp": {
+        "class": "File",
+        "path": "gs://topmed_workflow_testing/topmed_aligner/reference_files/hg38/Homo_sapiens_assembly38.dbsnp138.vcf.gz"
+    },
+    "input_file": {
+        "class": "File",
+        "path": "gs://topmed_workflow_testing/topmed_aligner/input_files/NWD176325.0005.recab.cram"
+    },
+    "reference_genome": {
+        "class": "File",
+        "path": "gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa"
+    },
+    "expected_md5" : "e1787d34888a8ad9620b7a98bb4e8012"
+}

@@ -1,7 +1,7 @@
 class: Workflow
 cwlVersion: v1.0
 id: >-
-  vladimir_obucina/topmed-freeze-3a-variant-calling-pipeline/topmed-variant-calling-pipeline-cwl1/11
+  vladimir_obucina/topmed-freeze-3a-variant-calling-pipeline/topmed-variant-calling-pipeline-cwl1/17
 label: TOPMed Variant Calling Pipeline CWL1
 inputs:
   - id: reference
@@ -26,7 +26,7 @@ inputs:
     'sbg:y': -629.1428833007812
   - id: pedigree_file
     'sbg:fileTypes': PED
-    type: File
+    type: File?
     'sbg:x': -119.71428680419922
     'sbg:y': -515.8571166992188
   - id: num_of_jobs
@@ -45,7 +45,7 @@ inputs:
     type: 'string[]'
     'sbg:x': -128.14285278320312
     'sbg:y': 198.2857208251953
-  - id: reference_genome_1
+  - id: reference_genome
     type:
       type: enum
       symbols:
@@ -73,6 +73,20 @@ outputs:
     type: File?
     'sbg:x': 423.53741455078125
     'sbg:y': -332.6839599609375
+  - id: vcf_output
+    outputSource:
+      - topmed_freeze3_calling/vcf_output
+    'sbg:fileTypes': GZ
+    type: 'File[]?'
+    'sbg:x': 421.19287109375
+    'sbg:y': -622.8525390625
+  - id: vcf_index_output
+    outputSource:
+      - topmed_freeze3_calling/vcf_index_output
+    'sbg:fileTypes': TBI
+    type: 'File[]?'
+    'sbg:x': 424.314697265625
+    'sbg:y': -474.9278869628906
 steps:
   - id: verifybamid_cwl1
     in:
@@ -87,7 +101,7 @@ steps:
           - reference
       - id: reference_genome
         source:
-          - reference_genome_1
+          - reference_genome
     out:
       - id: output_index_file
     run: steps/verifybamid/verifybamid.cwl
@@ -128,87 +142,113 @@ steps:
           - reference_file
       - id: reference_genome
         source:
-          - reference_genome_1
+          - reference_genome
     out:
       - id: called_variant_sites
       - id: genotypes
       - id: makefile_log
+      - id: vcf_output
+      - id: vcf_index_output
     run: steps/topmed_freeze3_calling/topmed_freeze3_calling.cwl
     label: Topmed_freeze3_CWL1
     'sbg:x': 157.14285278320312
     'sbg:y': -198
 requirements:
   - class: ScatterFeatureRequirement
-'sbg:modifiedOn': 1527500740
-'sbg:latestRevision': 11
-'sbg:sbgMaintained': false
-'sbg:validationErrors': []
-'sbg:id': >-
-  vladimir_obucina/topmed-freeze-3a-variant-calling-pipeline/topmed-variant-calling-pipeline-cwl1/11
-'sbg:createdOn': 1526996458
+$namespaces:
+  sbg: 'https://sevenbridges.com'
+'sbg:appVersion':
+  - v1.0
 'sbg:contributors':
   - vladimir_obucina
+'sbg:createdBy': vladimir_obucina
+'sbg:createdOn': 1526996458
+'sbg:id': >-
+  vladimir_obucina/topmed-freeze-3a-variant-calling-pipeline/topmed-variant-calling-pipeline-cwl1/17
+'sbg:image_url': >-
+  https://igor.sbgenomics.com/ns/brood/images/vladimir_obucina/topmed-freeze-3a-variant-calling-pipeline/topmed-variant-calling-pipeline-cwl1/17.png
+'sbg:latestRevision': 17
+'sbg:modifiedBy': vladimir_obucina
+'sbg:modifiedOn': 1530632680
+'sbg:project': vladimir_obucina/topmed-freeze-3a-variant-calling-pipeline
+'sbg:projectName': TOPMed Freeze 3a Variant Calling Pipeline
+'sbg:publisher': sbg
+'sbg:revision': 17
+'sbg:revisionNotes': 'UPDATE: Changed variant calling so pedigree file is not mandatory anymore'
 'sbg:revisionsInfo':
-  - 'sbg:revision': 0
+  - 'sbg:modifiedBy': vladimir_obucina
     'sbg:modifiedOn': 1526996458
-    'sbg:modifiedBy': vladimir_obucina
+    'sbg:revision': 0
     'sbg:revisionNotes': null
-  - 'sbg:revision': 1
+  - 'sbg:modifiedBy': vladimir_obucina
     'sbg:modifiedOn': 1526996882
-    'sbg:modifiedBy': vladimir_obucina
+    'sbg:revision': 1
     'sbg:revisionNotes': 'Firste Version with CWL1 tools, scatter on VerifyBAMId is of type none'
-  - 'sbg:revision': 2
+  - 'sbg:modifiedBy': vladimir_obucina
     'sbg:modifiedOn': 1526997137
-    'sbg:modifiedBy': vladimir_obucina
+    'sbg:revision': 2
     'sbg:revisionNotes': Exposed ports
-  - 'sbg:revision': 3
+  - 'sbg:modifiedBy': vladimir_obucina
     'sbg:modifiedOn': 1526997206
-    'sbg:modifiedBy': vladimir_obucina
+    'sbg:revision': 3
     'sbg:revisionNotes': ''
-  - 'sbg:revision': 4
+  - 'sbg:modifiedBy': vladimir_obucina
     'sbg:modifiedOn': 1526997265
-    'sbg:modifiedBy': vladimir_obucina
+    'sbg:revision': 4
     'sbg:revisionNotes': ''
-  - 'sbg:revision': 5
+  - 'sbg:modifiedBy': vladimir_obucina
     'sbg:modifiedOn': 1527001305
-    'sbg:modifiedBy': vladimir_obucina
+    'sbg:revision': 5
     'sbg:revisionNotes': Separated bam and bai inputs for VerifyBAMId and Topmed_freeze3
-  - 'sbg:revision': 6
+  - 'sbg:modifiedBy': vladimir_obucina
     'sbg:modifiedOn': 1527007399
-    'sbg:modifiedBy': vladimir_obucina
+    'sbg:revision': 6
     'sbg:revisionNotes': Added output to VerifyBamID
-  - 'sbg:revision': 7
+  - 'sbg:modifiedBy': vladimir_obucina
     'sbg:modifiedOn': 1527060490
-    'sbg:modifiedBy': vladimir_obucina
+    'sbg:revision': 7
     'sbg:revisionNotes': 'UPDATE: Removed symlinks'
-  - 'sbg:revision': 8
+  - 'sbg:modifiedBy': vladimir_obucina
     'sbg:modifiedOn': 1527060551
-    'sbg:modifiedBy': vladimir_obucina
+    'sbg:revision': 8
     'sbg:revisionNotes': ''
-  - 'sbg:revision': 9
+  - 'sbg:modifiedBy': vladimir_obucina
     'sbg:modifiedOn': 1527071783
-    'sbg:modifiedBy': vladimir_obucina
+    'sbg:revision': 9
     'sbg:revisionNotes': >-
       UPDATE: changed VerifyBamID, error was lack od \n sign at the end of each
       output index file.
-  - 'sbg:revision': 10
+  - 'sbg:modifiedBy': vladimir_obucina
     'sbg:modifiedOn': 1527085565
-    'sbg:modifiedBy': vladimir_obucina
+    'sbg:revision': 10
     'sbg:revisionNotes': Removed index file from output
-  - 'sbg:revision': 11
+  - 'sbg:modifiedBy': vladimir_obucina
     'sbg:modifiedOn': 1527500740
-    'sbg:modifiedBy': vladimir_obucina
+    'sbg:revision': 11
     'sbg:revisionNotes': 'UPDATE: GRCh37 insted of hg19'
-$namespaces:
-  sbg: 'https://sevenbridges.com'
-'sbg:modifiedBy': vladimir_obucina
-'sbg:image_url': >-
-  https://igor.sbgenomics.com/ns/brood/images/vladimir_obucina/topmed-freeze-3a-variant-calling-pipeline/topmed-variant-calling-pipeline-cwl1/11.png
-'sbg:publisher': sbg
-'sbg:projectName': TOPMed Freeze 3a Variant Calling Pipeline
-'sbg:revisionNotes': 'UPDATE: GRCh37 insted of hg19'
-'sbg:appVersion':
-  - v1.0
-'sbg:createdBy': vladimir_obucina
-'sbg:project': vladimir_obucina/topmed-freeze-3a-variant-calling-pipeline
-'sbg:revision': 11
+  - 'sbg:modifiedBy': vladimir_obucina
+    'sbg:modifiedOn': 1527503995
+    'sbg:revision': 12
+    'sbg:revisionNotes': 'UPDATE: changed append_gcconfig.py script to recognize GRCh37'
+  - 'sbg:modifiedBy': vladimir_obucina
+    'sbg:modifiedOn': 1529918908
+    'sbg:revision': 13
+    'sbg:revisionNotes': 'UPDATE: Added vcf and vcf_index outputs'
+  - 'sbg:modifiedBy': vladimir_obucina
+    'sbg:modifiedOn': 1530622626
+    'sbg:revision': 14
+    'sbg:revisionNotes': 'UPDATE: Removed PED file as mandatory (not running steps 3a and 3b)'
+  - 'sbg:modifiedBy': vladimir_obucina
+    'sbg:modifiedOn': 1530622728
+    'sbg:revision': 15
+    'sbg:revisionNotes': ''
+  - 'sbg:modifiedBy': vladimir_obucina
+    'sbg:modifiedOn': 1530626434
+    'sbg:revision': 16
+    'sbg:revisionNotes': Fixed bug with file requirements of pedigree file
+  - 'sbg:modifiedBy': vladimir_obucina
+    'sbg:modifiedOn': 1530632680
+    'sbg:revision': 17
+    'sbg:revisionNotes': 'UPDATE: Changed variant calling so pedigree file is not mandatory anymore'
+'sbg:sbgMaintained': false
+'sbg:validationErrors': []

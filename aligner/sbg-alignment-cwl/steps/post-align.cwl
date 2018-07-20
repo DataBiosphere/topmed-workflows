@@ -61,10 +61,18 @@ requirements:
     ramMin: 8000
     coresMin: 0
   - class: DockerRequirement
-    dockerPull: images.sbgenomics.com/marko_zecevic/topmed_alignment
+    dockerPull: 'statgen/alignment:1.0.0'
   - class: InitialWorkDirRequirement
-    listing:
-      - $(inputs.alignment_files)
+    listing: |-
+        ${ 
+            var out = []
+            out.push(inputs.reference)
+            for (var i = 0; i < inputs.alignment_files.length; i++) { 
+                out.push(inputs.alignment_files[i]);
+            }
+            return out
+            
+        }
   - class: InlineJavascriptRequirement
 'sbg:appVersion':
   - v1.0

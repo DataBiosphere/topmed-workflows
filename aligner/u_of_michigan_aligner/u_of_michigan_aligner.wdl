@@ -57,19 +57,17 @@ workflow TopMedAligner {
   Float ref_extra_size = size(ref_alt, "GB") + size(ref_bwt, "GB") + size(ref_pac, "GB") + size(ref_ann, "GB") + size(ref_amb, "GB") + size(ref_sa, "GB")
   Float dbsnp_size = size(dbSNP_vcf, "GB") + size(dbSNP_vcf_index, "GB")
   Float cram_size = size(input_cram_file, "GB") + size(input_crai_file, "GB")
+  Float fastq_gz_files_size = CRAM_to_fastqgz_multiplier * cram_size
 
   call PreAlign {
      input:
       input_crai = input_crai_file,
       input_cram = input_cram_file,
-      disk_size = ref_size + (bwa_disk_multiplier * cram_size) + (sort_sam_disk_multiplier * cram_size) + cram_size + additional_disk,
+      disk_size = ref_size + (bwa_disk_multiplier * cram_size) + (sort_sam_disk_multiplier * cram_size) + cram_size + additional_disk + fastq_gz_files_size,
       docker_image = docker_image,
       ref_fasta = ref_fasta,
       ref_fasta_index = ref_fasta_index
   }
-
-
-  Float fastq_gz_files_size = CRAM_to_fastqgz_multiplier * cram_size
 
   call Align {
      input:

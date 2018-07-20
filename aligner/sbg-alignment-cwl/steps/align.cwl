@@ -7,17 +7,14 @@ baseCommand:
   - chmod
 inputs:
   - 'sbg:category': Input files
-    format: 'FASTA, FA'
     id: reference
     type: File
-  - format: 'FASTQ, FQ, FASTQ.GZ, FQ.GZ'
-    id: fastq
+  - id: fastq
     type: File
     inputBinding:
       position: 8
       shellQuote: false
   - 'sbg:category': Input files
-    format: LIST
     id: list
     type: File
     inputBinding:
@@ -37,23 +34,18 @@ outputs:
 label: Align 1.0
 arguments:
   - position: 1
-    separate: false
     shellQuote: false
     valueFrom: +x
   - position: 2
-    separate: false
     shellQuote: false
     valueFrom: align.sh
   - position: 3
-    separate: false
     shellQuote: false
     valueFrom: '&&'
   - position: 4
-    separate: false
     shellQuote: false
     valueFrom: tar
   - position: 5
-    separate: false
     shellQuote: false
     valueFrom: '-xf'
   - position: 6
@@ -69,23 +61,23 @@ arguments:
     shellQuote: false
     valueFrom: |-
       ${
-          reference_file = inputs.reference.path.split('/')[inputs.reference.path.split('/').length - 1]
-          name = reference_file.slice(0, -4) // cut .tar extension     
+          var reference_file = inputs.reference.path.split('/')[inputs.reference.path.split('/').length - 1]
+          var name = reference_file.slice(0, -4) // cut .tar extension     
           return name
       }
 requirements:
   - class: ShellCommandRequirement
   - class: ResourceRequirement
-    ramMin: 12000
+    ramMin: 9000
     coresMin: 2
   - class: DockerRequirement
-    dockerPull: images.sbgenomics.com/marko_zecevic/topmed_alignment
+    dockerPull: 'statgen/alignment:1.0.0'
   - class: InitialWorkDirRequirement
     listing:
       - entryname: align.sh
         entry: |-
           ${
-           s = '#!/bin/bash\n'
+           var s = '#!/bin/bash\n'
 
            s += 'ref_path=$1\n'
            s += 'input_path=$2\n'
@@ -195,34 +187,31 @@ requirements:
             else
                 return files.reverse();
         };
-hints:
-  - class: 'sbg:AWSInstanceType'
-    value: c4.2xlarge;ebs-gp2;64
-'sbg:latestRevision': 0
-'sbg:revisionsInfo':
-  - 'sbg:revisionNotes': Copy of marko_zecevic/topmed-align/aligner-converted-to-cwl1/2
-    'sbg:modifiedBy': marko_zecevic
-    'sbg:revision': 0
-    'sbg:modifiedOn': 1525523285
-'sbg:publisher': sbg
-'sbg:modifiedOn': 1525523285
-'sbg:id': marko_zecevic/topmed-alignment/topmed-align/0
-'sbg:validationErrors': []
-'sbg:createdBy': marko_zecevic
-'sbg:image_url': >-
-  https://igor.sbgenomics.com/ns/brood/images/marko_zecevic/topmed-alignment/topmed-align/0.png
-'sbg:copyOf': marko_zecevic/topmed-align/aligner-converted-to-cwl1/2
-'sbg:revision': 0
-'sbg:createdOn': 1525523285
-'sbg:modifiedBy': marko_zecevic
-'sbg:projectName': TOPMed alignment
-'sbg:project': marko_zecevic/topmed-alignment
 'sbg:appVersion':
   - v1.0
-'sbg:revisionNotes': Copy of marko_zecevic/topmed-align/aligner-converted-to-cwl1/2
 'sbg:cmdPreview': >-
-  chmod +x align.sh && tar -xf  /path/to/reference.fasta.tar  &&
-  ./align.sh  reference.fasta  /path/to/fastq.ext  /path/to/list.ext
+  chmod +x align.sh && tar -xf  /path/to/reference.fasta.tar  && ./align.sh 
+  reference.fasta  /path/to/fastq.ext  /path/to/list.ext
 'sbg:contributors':
   - marko_zecevic
+'sbg:copyOf': marko_zecevic/topmed-align/aligner-converted-to-cwl1/2
+'sbg:createdBy': marko_zecevic
+'sbg:createdOn': 1525523285
+'sbg:id': marko_zecevic/topmed-alignment/topmed-align/0
+'sbg:image_url': >-
+  https://igor.sbgenomics.com/ns/brood/images/marko_zecevic/topmed-alignment/topmed-align/0.png
+'sbg:latestRevision': 0
+'sbg:modifiedBy': marko_zecevic
+'sbg:modifiedOn': 1525523285
+'sbg:project': marko_zecevic/topmed-alignment
+'sbg:projectName': TOPMed alignment
+'sbg:publisher': sbg
+'sbg:revision': 0
+'sbg:revisionNotes': Copy of marko_zecevic/topmed-align/aligner-converted-to-cwl1/2
+'sbg:revisionsInfo':
+  - 'sbg:modifiedBy': marko_zecevic
+    'sbg:modifiedOn': 1525523285
+    'sbg:revision': 0
+    'sbg:revisionNotes': Copy of marko_zecevic/topmed-align/aligner-converted-to-cwl1/2
 'sbg:sbgMaintained': false
+'sbg:validationErrors': []

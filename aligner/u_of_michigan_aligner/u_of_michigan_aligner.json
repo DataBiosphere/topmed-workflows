@@ -14,5 +14,5 @@
   "TopMedAligner.dbSNP_vcf": "gs://topmed_workflow_testing/topmed_aligner/reference_files/hg38/Homo_sapiens_assembly38.dbsnp138.vcf.gz",
   "TopMedAligner.dbSNP_vcf_index": "gs://topmed_workflow_testing/topmed_aligner/reference_files/hg38/Homo_sapiens_assembly38.dbsnp138.vcf.gz.tbi",
 
-  "TopMedAligner.docker_image": "statgen/alignment"
+  "TopMedAligner.docker_image": "statgen/alignment:1.0.0"
 }
