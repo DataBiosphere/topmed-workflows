@@ -1,0 +1,10 @@
+{
+  "input_file": {
+        "class": "File",
+        "path": "md5sum.input"
+    },
+    "workflow_output_file": {
+        "class": "File",
+        "path": "/tmp/md5sum.txt"
+    }
+}

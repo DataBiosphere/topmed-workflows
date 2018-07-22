@@ -8,14 +8,16 @@ workflow CRAMMd5sumChecker {
   File referenceIndexFile
   File truthMd5sumFile
 
-  call f1.CRAM_to_md5sum as CRAMToMd5sum { 
+
+
+  call f1.CRAM_to_md5sum as CRAMToMd5sum {
       input: inputCRAMFile = inputCRAMFile,
-                    inputCRAMIndexFile = inputCRAMIndexFile, 
-                    referenceFile = referenceFile, 
+                    inputCRAMIndexFile = inputCRAMIndexFile,
+                    referenceFile = referenceFile,
                     referenceIndexFile = referenceIndexFile}
 
 
-  call f2.CRAM_to_md5sum_checker  { 
+  call f2.CRAM_to_md5sum_checker  {
       input: inputMd5sumFile = CRAMToMd5sum.md5sum_value ,truthMd5sumFile = truthMd5sumFile
   }
 }
