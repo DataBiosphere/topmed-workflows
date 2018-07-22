@@ -1,10 +1,22 @@
 {
   "input_file": {
         "class": "File",
-        "path": "md5sum.input"
+        "path": "gs://topmed_workflow_testing/topmed_aligner/input_files/NWD119836.0005.recab.cram"
     },
-    "workflow_output_file": {
+  "reference_file": {
         "class": "File",
-        "path": "/tmp/md5sum.txt"
+        "path": "gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa"
+    },
+  "reference_index_file": {
+        "class": "File",
+        "path": "gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa.fai"
+    },
+  "input_index_file": {
+        "class": "File",
+        "path": "gs://topmed_workflow_testing/topmed_aligner/input_files/NWD119836.0005.recab.cram.crai"
+    },
+  "truth_md5sum_file": {
+        "class": "File",
+        "path": "gs://topmed_workflow_testing/CRAMMd5sumChecker/iNWD119836.0005.recab.cram.md5sum.txt"
     }
 }
