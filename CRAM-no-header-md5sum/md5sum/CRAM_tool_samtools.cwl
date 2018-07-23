@@ -30,7 +30,6 @@ requirements:
   InitialWorkDirRequirement:
     listing:
       - $(inputs.input_file)
-      - $(inputs.input_index_file)
       - $(inputs.reference_file)
       - $(inputs.reference_index_file)
 
@@ -50,7 +49,7 @@ inputs:
     doc: The index file for the genome reference file.
 
   input_index_file:
-    type: File
+    type: File?
     doc: The index file for the input CRAM or BAM file.
 
   input_file:

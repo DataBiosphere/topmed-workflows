@@ -10,7 +10,7 @@ inputs:
   reference_file: File
   reference_index_file: File
   input_file: File
-  input_index_file: File
+  input_index_file: File?
 
 outputs:
   output_file:

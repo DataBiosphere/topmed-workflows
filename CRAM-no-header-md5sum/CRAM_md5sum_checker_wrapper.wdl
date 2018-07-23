@@ -3,7 +3,7 @@ import "checker/CRAM_md5sum_checker.wdl" as f2
 
 workflow CRAMMd5sumChecker {
   File inputCRAMFile
-  File inputCRAMIndexFile
+  File? inputCRAMIndexFile
   File referenceFile
   File referenceIndexFile
   File truthMd5sumFile

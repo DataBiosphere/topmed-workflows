@@ -1,6 +1,6 @@
 task md5 {
   File inputCRAMFile
-  File inputCRAMIndexFile
+  File? inputCRAMIndexFile
   String inputFileName
   File referenceFile
   File referenceIndexFile
@@ -23,7 +23,7 @@ task md5 {
 
 workflow CRAM_to_md5sum {
   File inputCRAMFile
-  File inputCRAMIndexFile
+  File? inputCRAMIndexFile
   File referenceFile
   File referenceIndexFile
 
@@ -38,10 +38,10 @@ workflow CRAM_to_md5sum {
   Float ref_size = size(referenceFile, "GB") + size(referenceIndexFile, "GB")
   Float cram_size = size(inputCRAMFile, "GB") + size(inputCRAMIndexFile, "GB")
 
-
   String inputFileName = basename("${inputCRAMFile}")
-  call md5 { input: inputCRAMFile = inputCRAMFile, inputCRAMIndexFile = inputCRAMIndexFile, 
-                    inputFileName = inputFileName, referenceFile = referenceFile , 
+  call md5 { input: inputCRAMFile = inputCRAMFile,
+                    inputCRAMIndexFile = inputCRAMIndexFile,
+                    inputFileName = inputFileName, referenceFile = referenceFile,
                     referenceIndexFile = referenceIndexFile,
                     disk_size = ref_size + cram_size + additional_disk}
   output {
