@@ -62,10 +62,15 @@ script:
    java -version
    java -jar cromwell-34.jar --version
    gsutil --version
+
    gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa .
    gsutil cp gs://topmed_workflow_testing/topmed_aligner/input_files/NWD119836.0005.recab.cram .
-   gsutil cp gs://topmed_workflow_testing/CRAMMd5sumChecker/iNWD119836.0005.recab.cram.md5sum.txt .
+   gsutil cp gs://topmed_workflow_testing/CRAMMd5sumChecker/NWD119836.0005.recab.cram.md5sum.txt .
    gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa.fai .
+
+   ls -al
+
+
 #- cwltool checker_workflow_wrapping_workflow.cwl md5sum.json
 #- cwltool checker_workflow_wrapping_tool.cwl md5sum.json
 #- java -jar cromwell-34.jar run --inputs md5sum.wdl.json checker.wdl
