@@ -1,5 +1,5 @@
-import "md5sum/CRAM_md5sum.wdl" as f1
-import "checker/CRAM_md5sum_checker.wdl" as f2
+import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/develop/CRAM-no-header-md5sum/md5sum/CRAM_md5sum.wdl" as f1
+import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/develop/CRAM-no-header-md5sum/checker/CRAM_md5sum_checker.wdl" as f2
 
 workflow CRAMMd5sumChecker {
   File inputCRAMFile
@@ -7,8 +7,6 @@ workflow CRAMMd5sumChecker {
   File referenceFile
   File referenceIndexFile
   File truthMd5sumFile
-
-
 
   call f1.CRAM_to_md5sum as CRAMToMd5sum {
       input: inputCRAMFile = inputCRAMFile,
