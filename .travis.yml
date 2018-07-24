@@ -47,6 +47,13 @@ install:
 - pip2.7 install --user cwl-runner cwltool==1.0.20170828135420 schema-salad==2.6.20170806163416 avro==1.8.1 ruamel.yaml==0.14.12 requests==2.18.4
 - wget https://github.com/broadinstitute/cromwell/releases/download/34/cromwell-34.jar
 
+   # Install crcmod for faster gsutil downloads
+   # https://cloud.google.com/storage/docs/gsutil/addlhelp/CRC32CandInstallingcrcmod
+-  sudo apt-get install gcc python-dev python-setuptools
+-  sudo easy_install -U pip
+-  sudo pip uninstall crcmod
+-  sudo pip install -U crcmod
+
 script:
 # Execute each line separately usin the literal style block scalar for yaml
 # http://yaml.org/spec/1.2/spec.html#id2795688
@@ -56,7 +63,9 @@ script:
    java -jar cromwell-34.jar --version
    gsutil --version
    gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa .
-
+   gsutil cp gs://topmed_workflow_testing/topmed_aligner/input_files/NWD119836.0005.recab.cram .
+   gsutil cp gs://topmed_workflow_testing/CRAMMd5sumChecker/iNWD119836.0005.recab.cram.md5sum.txt .
+   gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa.fai .
 #- cwltool checker_workflow_wrapping_workflow.cwl md5sum.json
 #- cwltool checker_workflow_wrapping_tool.cwl md5sum.json
 #- java -jar cromwell-34.jar run --inputs md5sum.wdl.json checker.wdl
