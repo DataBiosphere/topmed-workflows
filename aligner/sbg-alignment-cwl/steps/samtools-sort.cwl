@@ -41,7 +41,7 @@ arguments:
 requirements:
   - class: ShellCommandRequirement
   - class: ResourceRequirement
-    ramMin: 3000
+    ramMin: 7000
     coresMin: 2
   - class: DockerRequirement
     dockerPull: 'statgen/alignment:1.0.0'
@@ -89,28 +89,6 @@ requirements:
             }
             return o1;
         };
-'sbg:appVersion':
-  - v1.0
-'sbg:contributors':
-  - marko_zecevic
-'sbg:copyOf': marko_zecevic/topmed-align/samtools-sort/1
-'sbg:createdBy': marko_zecevic
-'sbg:createdOn': 1525523240
-'sbg:id': marko_zecevic/topmed-alignment/samtools-sort/0
-'sbg:image_url': >-
-  https://igor.sbgenomics.com/ns/brood/images/marko_zecevic/topmed-alignment/samtools-sort/0.png
-'sbg:latestRevision': 0
-'sbg:modifiedBy': marko_zecevic
-'sbg:modifiedOn': 1525523240
-'sbg:project': marko_zecevic/topmed-alignment
-'sbg:projectName': TOPMed alignment
-'sbg:publisher': sbg
-'sbg:revision': 0
-'sbg:revisionNotes': Copy of marko_zecevic/topmed-align/samtools-sort/1
-'sbg:revisionsInfo':
-  - 'sbg:modifiedBy': marko_zecevic
-    'sbg:modifiedOn': 1525523240
-    'sbg:revision': 0
-    'sbg:revisionNotes': Copy of marko_zecevic/topmed-align/samtools-sort/1
-'sbg:sbgMaintained': false
-'sbg:validationErrors': []
+hints:
+  - class: 'sbg:AWSInstanceType'
+    value: c4.4xlarge;ebs-gp2;512

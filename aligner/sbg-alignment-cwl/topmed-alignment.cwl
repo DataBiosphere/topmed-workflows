@@ -38,12 +38,10 @@ inputs:
     label: Reference for input CRAM decompressing
     'sbg:x': -152.35092163085938
     'sbg:y': 139.45030212402344
-  - id: output_name
-    type: string?
-    'sbg:exposed': true
 outputs:
   - id: output
-    outputSource: topmed_post_align/output
+    outputSource:
+      - topmed_post_align/output
     'sbg:fileTypes': CRAM
     type: File?
     label: Output CRAM file
@@ -54,12 +52,12 @@ steps:
     in:
       - id: input_file
         source: input_file
-      - id: output_name
-        source: output_name
       - id: decomp_ref
         source: decomp_ref
       - id: comp_ref
         source: reference_genome
+      - id: threads
+        default: 8
     out:
       - id: fastq
       - id: list
@@ -108,6 +106,8 @@ steps:
       - id: alignment_files
         source:
           - samtools_sort/output
+      - id: threads
+        default: 8
     out:
       - id: output
     run: steps/post-align.cwl
@@ -115,8 +115,8 @@ steps:
     'sbg:x': 668.5106811523438
     'sbg:y': 8.829793930053711
 hints:
-  - class: 'sbg:AWSInstanceType'
-    value: c4.4xlarge;ebs-gp2;256
+  - class: 'sbg:maxNumberOfParallelInstances'
+    value: '8'
 requirements:
   - class: ScatterFeatureRequirement
 'dct:creator':
