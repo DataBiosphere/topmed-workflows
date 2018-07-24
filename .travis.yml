@@ -48,9 +48,15 @@ install:
 - wget https://github.com/broadinstitute/cromwell/releases/download/34/cromwell-34.jar
 
 script:
+# Execute each line separately usin the literal style block scalar for yaml
+# http://yaml.org/spec/1.2/spec.html#id2795688
+ - |
    cwltool --version
    java --version
    java cromwell-34.jar --version
+   gsutil --version
+   gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa .
+
 #- cwltool checker_workflow_wrapping_workflow.cwl md5sum.json
 #- cwltool checker_workflow_wrapping_tool.cwl md5sum.json
 #- java -jar cromwell-34.jar run --inputs md5sum.wdl.json checker.wdl
