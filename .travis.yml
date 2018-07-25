@@ -63,19 +63,38 @@ script:
    java -jar cromwell-34.jar --version
    gsutil --version
 
-   cd CRAM-no-header-md5sum
-   gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa .
-   gsutil cp gs://topmed_workflow_testing/topmed_aligner/input_files/NWD119836.0005.recab.cram .
+
    gsutil cp gs://topmed_workflow_testing/CRAM_to_md5sum/NWD119836.0005.recab.cram.md5sum.txt .
+
+   gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa.alt .
+   gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa.bwt .
+   gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa.pac .
+   gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa.ann .
+   gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa.amb .
+   gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa.sa .
+   gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa .
    gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa.fai .
+
+   gsutil cp gs://topmed_workflow_testing/topmed_aligner/input_files/NWD119836.0005.recab.cram .
+   gsutil cp gs://topmed_workflow_testing/topmed_aligner/input_files/NWD119836.0005.recab.cram.crai .
+   gsutil cp gs://topmed_workflow_testing/topmed_aligner/input_files/NWD176325.0005.recab.cram .
+   gsutil cp gs://topmed_workflow_testing/topmed_aligner/input_files/NWD176325.0005.recab.cram.crai .
+
+   gsutil cp gs://topmed_workflow_testing/topmed_aligner/reference_files/hg38/Homo_sapiens_assembly38.dbsnp138.vcf.gz .
+   gsutil cp gs://topmed_workflow_testing/topmed_aligner/reference_files/hg38/Homo_sapiens_assembly38.dbsnp138.vcf.gz.tbi .
+
+   gsutil cp gs://topmed_workflow_testing/topmed_aligner_checker/truth_NWD176325.0005.recab.cram .
 
    pwd
    ls -al
 
+   cd CRAM-no-header-md5sum
+
    cwltool CRAM_md5sum_checker_wrapper.cwl CRAM_md5sum_checker_wrapper.cwl.local.json
    java -jar ../cromwell-34.jar run CRAM_md5sum_checker_wrapper.wdl -i CRAM_md5sum_checker_wrapper.wdl.local.json
-#- cwltool checker_workflow_wrapping_workflow.cwl md5sum.json
-#- cwltool checker_workflow_wrapping_tool.cwl md5sum.json
-#- java -jar cromwell-34.jar run --inputs md5sum.wdl.json checker.wdl
+
+   cd ../aligner/u_of_michigan_aligner-checker/
+
+   java -jar ../cromwell-34.jar run u_of_michigan_aligner_checker.wdl -i u_of_michigan_aligner_checker.local.json
 
 
