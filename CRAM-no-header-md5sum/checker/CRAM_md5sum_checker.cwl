@@ -5,17 +5,16 @@ id: Md5sumWorkflowChecker
 label: A tool that checks the md5sum workflow
 cwlVersion: v1.0
 
-requirements:
-- class: DockerRequirement
-  dockerPull: us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.2-1510681135
-- class: InlineJavascriptRequirement
-
 hints:
-- class: ResourceRequirement
-  # The command really requires very little resources.
-  coresMin: 1
-  ramMin: 1024
-  outdirMin: 512
+  ResourceRequirement:
+    # The command really requires very little resources.
+    coresMin: 1
+    ramMin: 1024
+    outdirMin: 512
+
+requirements:
+  DockerRequirement:
+    dockerPull: "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.2-1510681135"
 
 inputs:
   input_file_1:
