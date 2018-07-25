@@ -13,6 +13,6 @@
     },
   "truth_md5sum_file": {
         "class": "File",
-        "path": "gs://topmed_workflow_testing/CRAMMd5sumChecker/iNWD119836.0005.recab.cram.md5sum.txt"
+        "path": "gs://topmed_workflow_testing/CRAM_to_md5sum/NWD119836.0005.recab.cram.md5sum.txt"
     }
 }
