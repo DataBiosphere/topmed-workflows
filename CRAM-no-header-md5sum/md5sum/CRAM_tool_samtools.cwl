@@ -14,19 +14,16 @@ dct:creator:
   foaf:name: Walter Shands
   foaf:mbox: jshands@ucsc.edu
 
-requirements:
-- class: DockerRequirement
-  dockerPull: us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.2-1510681135
-- class: InlineJavascriptRequirement
-
 hints:
-- class: ResourceRequirement
-  # The command uses primarily one core but significant disk space.
-  coresMin: 1
-  ramMin: 1024
-  outdirMin: 100000
+  DockerRequirement:
+    dockerPull: "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.2-1510681135"
 
 requirements:
+  ResourceRequirement:
+    coresMin: 1
+    ramMin: 1024
+    outdirMin: 100000
+ 
   InitialWorkDirRequirement:
     listing:
       - $(inputs.input_file)
