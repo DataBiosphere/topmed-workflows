@@ -14,16 +14,13 @@ dct:creator:
   foaf:name: Walter Shands
   foaf:mbox: jshands@ucsc.edu
 
-hints:
+requirements:
   DockerRequirement:
     dockerPull: "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.2-1510681135"
-
-requirements:
   ResourceRequirement:
     coresMin: 1
     ramMin: 1024
     outdirMin: 100000
- 
   InitialWorkDirRequirement:
     listing:
       - $(inputs.input_file)

@@ -34,10 +34,10 @@ steps:
 
   checker:
     run: checker/CRAM_md5sum_checker.cwl
-    in: 
+    in:
       input_file_1: md5sum/output_file
       input_file_2: truth_md5sum_file
     out: [results_file]
 
-doc: | 
+doc: |
   This wraps the md5sum tool with a checker workflow that runs both the tool and a tool that performs verification of results

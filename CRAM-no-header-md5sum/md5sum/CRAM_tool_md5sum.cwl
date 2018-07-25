@@ -15,14 +15,14 @@ dct:creator:
   foaf:mbox: jshands@ucsc.edu
 
 hints:
-  DockerRequirement:
-    dockerPull: "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.2-1510681135"
-
-requirements:
   ResourceRequirement:
     coresMin: 1
     ramMin: 1024
     outdirMin: 512
+
+requirements:
+  DockerRequirement:
+    dockerPull: "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.2-1510681135"
 
 inputs:
   input_file:
