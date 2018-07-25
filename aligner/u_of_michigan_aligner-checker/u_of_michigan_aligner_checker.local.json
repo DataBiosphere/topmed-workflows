@@ -13,8 +13,8 @@
   "checkerWorkflow.ref_fasta":  "../../hs38DH.fa",
   "checkerWorkflow.ref_fasta_index":  "../../hs38DH.fa.fai",
 
-  "checkerWorkflow.dbSNP_vcf": "../../../Homo_sapiens_assembly38.dbsnp138.vcf.gz",
-  "checkerWorkflow.dbSNP_vcf_index": "../../../Homo_sapiens_assembly38.dbsnp138.vcf.gz.tbi",
+  "checkerWorkflow.dbSNP_vcf": "../../Homo_sapiens_assembly38.dbsnp138.vcf.gz",
+  "checkerWorkflow.dbSNP_vcf_index": "../../Homo_sapiens_assembly38.dbsnp138.vcf.gz.tbi",
 
   "checkerWorkflow.docker_image": "statgen/alignment:1.0.0"
 }
