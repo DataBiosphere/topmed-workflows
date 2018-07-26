@@ -54,7 +54,7 @@ install:
   #-  sudo pip uninstall crcmod
 -  sudo pip install -U crcmod
 
-script:
+script: travis_wait 45
 # Execute each line separately usin the literal style block scalar for yaml
 # http://yaml.org/spec/1.2/spec.html#id2795688
  - |
@@ -95,6 +95,6 @@ script:
 
 
    cd ../aligner/u_of_michigan_aligner-checker
-   travis_wait 45 java -jar ../../cromwell-34.jar run u_of_michigan_aligner_checker.wdl -i u_of_michigan_aligner_checker.local.json
+   java -jar ../../cromwell-34.jar run u_of_michigan_aligner_checker.wdl -i u_of_michigan_aligner_checker.local.json
 
 
