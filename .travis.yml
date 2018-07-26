@@ -95,6 +95,6 @@ script:
 
 
    cd ../aligner/u_of_michigan_aligner-checker
-   travis_wait 20 java -jar ../../cromwell-34.jar run u_of_michigan_aligner_checker.wdl -i u_of_michigan_aligner_checker.local.json
+   travis_wait 45 java -jar ../../cromwell-34.jar run u_of_michigan_aligner_checker.wdl -i u_of_michigan_aligner_checker.local.json
 
 
