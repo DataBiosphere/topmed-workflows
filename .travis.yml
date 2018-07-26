@@ -94,8 +94,7 @@ script:
    java -jar ../cromwell-34.jar run CRAM_md5sum_checker_wrapper.wdl -i CRAM_md5sum_checker_wrapper.wdl.local.json
 
 
-   # cannot run this because Travis CI times out
-   #cd ../aligner/u_of_michigan_aligner-checker/
-   #java -jar ../../cromwell-34.jar run u_of_michigan_aligner_checker.wdl -i u_of_michigan_aligner_checker.local.json
+   cd ../aligner/u_of_michigan_aligner-checker/
+   travis_wait java -jar ../../cromwell-34.jar run u_of_michigan_aligner_checker.wdl -i u_of_michigan_aligner_checker.local.json
 
 
