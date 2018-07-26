@@ -54,10 +54,11 @@ install:
   #-  sudo pip uninstall crcmod
 -  sudo pip install -U crcmod
 
-script: travis_wait 45
-# Execute each line separately usin the literal style block scalar for yaml
+script:
+# Execute each line separately using the literal style block scalar for yaml
 # http://yaml.org/spec/1.2/spec.html#id2795688
  - |
+   travis_wait 55
    cwltool --version
    java -version
    java -jar cromwell-34.jar --version
