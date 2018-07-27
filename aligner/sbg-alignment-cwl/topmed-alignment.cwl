@@ -40,8 +40,7 @@ inputs:
     'sbg:y': 139.45030212402344
 outputs:
   - id: output
-    outputSource:
-      - topmed_post_align/output
+    outputSource: topmed_post_align/output
     'sbg:fileTypes': CRAM
     type: File?
     label: Output CRAM file
