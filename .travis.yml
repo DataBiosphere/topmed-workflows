@@ -49,10 +49,10 @@ install:
 
    # Install crcmod for faster gsutil downloads
    # https://cloud.google.com/storage/docs/gsutil/addlhelp/CRC32CandInstallingcrcmod
--  sudo apt-get install gcc python-dev python-setuptools
--  sudo easy_install -U pip
+-  sudo -H apt-get install gcc python-dev python-setuptools
+-  sudo -H easy_install -U pip
   #-  sudo pip uninstall crcmod
--  sudo pip install -U crcmod
+-  sudo -H pip install -U crcmod
 
 script:
 # Execute each line separately using the literal style block scalar for yaml
