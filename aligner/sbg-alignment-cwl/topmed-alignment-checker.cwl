@@ -40,22 +40,19 @@ inputs:
     'sbg:y': 6
 outputs:
   - id: aligned_out
-    outputSource:
-      - topmed_alignment/output
+    outputSource: topmed_alignment/output
     'sbg:fileTypes': CRAM
     type: File?
     label: CRAM output
     'sbg:x': 29
     'sbg:y': 125
   - id: stdout
-    outputSource:
-      - alignment_validation/stdout
+    outputSource: alignment_validation/stdout
     type: File?
     'sbg:x': 189
     'sbg:y': -201
   - id: stderr
-    outputSource:
-      - alignment_validation/stderr
+    outputSource: alignment_validation/stderr
     type: File?
     'sbg:x': 179
     'sbg:y': 48
