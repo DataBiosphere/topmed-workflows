@@ -58,7 +58,6 @@ script:
 # Execute each line separately using the literal style block scalar for yaml
 # http://yaml.org/spec/1.2/spec.html#id2795688
  - |
-   travis_wait 55
    cwltool --version
    java -version
    java -jar cromwell-34.jar --version
@@ -96,6 +95,6 @@ script:
 
 
    cd ../aligner/u_of_michigan_aligner-checker
-   java -jar ../../cromwell-34.jar run u_of_michigan_aligner_checker.wdl -i u_of_michigan_aligner_checker.local.json
+   travis_wait 55 java -jar ../../cromwell-34.jar run u_of_michigan_aligner_checker.wdl -i u_of_michigan_aligner_checker.local.json
 
 
