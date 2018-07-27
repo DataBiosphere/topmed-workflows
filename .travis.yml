@@ -51,7 +51,7 @@ install:
    # https://cloud.google.com/storage/docs/gsutil/addlhelp/CRC32CandInstallingcrcmod
 -  sudo -H apt-get install gcc python-dev python-setuptools
 -  sudo -H easy_install -U pip
--  sudo -H pip uninstall crcmod
+  #-  sudo -H pip uninstall crcmod
 -  sudo -H pip install -U crcmod
 
 script:
