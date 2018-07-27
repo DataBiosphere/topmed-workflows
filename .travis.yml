@@ -93,7 +93,12 @@ script:
    cwltool CRAM_md5sum_checker_wrapper.cwl CRAM_md5sum_checker_wrapper.cwl.local.json
    java -jar ../cromwell-34.jar run CRAM_md5sum_checker_wrapper.wdl -i CRAM_md5sum_checker_wrapper.wdl.local.json
 
+   # remove directory to restore some disk space
+   rm -rf CRAM-no-header-md5sum/
+
    df -h
+   sudo du -hsx ./* | sort -n | head -100
+
    cd ../aligner/u_of_michigan_aligner-checker
    travis_wait 55 java -jar ../../cromwell-34.jar run u_of_michigan_aligner_checker.wdl -i u_of_michigan_aligner_checker.local.json
 
