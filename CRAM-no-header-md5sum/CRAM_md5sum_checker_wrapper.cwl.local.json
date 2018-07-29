@@ -1,18 +1,18 @@
 {
   "input_file": {
         "class": "File",
-        "path": "gNWD119836.0005.recab.cram"
+        "path": "NWD119836.0005.recab.cram"
     },
   "reference_file": {
         "class": "File",
-        "path": "ghs38DH.fa"
+        "path": "hs38DH.fa"
     },
   "reference_index_file": {
         "class": "File",
-        "path": "ghs38DH.fa.fai"
+        "path": "hs38DH.fa.fai"
     },
   "truth_md5sum_file": {
         "class": "File",
-        "path": "gNWD119836.0005.recab.cram.md5sum.txt"
+        "path": "NWD119836.0005.recab.cram.md5sum.txt"
     }
 }
