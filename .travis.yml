@@ -85,23 +85,23 @@ script:
 
    gsutil cp gs://topmed_workflow_testing/topmed_aligner_checker/truth_NWD176325.0005.recab.cram .
 
+   gsutil cp gs://topmed_workflow_testing/topmed_variant_caller_checker/truth_topmed_variant_caller_1_14_NWD176325_output.tar.gz .
+
+
    pwd
    ls -al
    df -h
    sudo du -hsx ./* | sort -n | head -100
-
-   cd CRAM-no-header-md5sum
+   java -XX:+PrintCommandLineFlags
 
    cwltool CRAM_md5sum_checker_wrapper.cwl CRAM_md5sum_checker_wrapper.cwl.local.json
-   java -jar ../cromwell-34.jar run CRAM_md5sum_checker_wrapper.wdl -i CRAM_md5sum_checker_wrapper.wdl.local.json
+   java -jar cromwell-34.jar run CRAM-no-header-md5sum/CRAM_md5sum_checker_wrapper.wdl -i CRAM-no-header-md5sum/CRAM_md5sum_checker_wrapper.wdl.local.json
 
-   cd ..
    # remove directory to restore some disk space
    rm -rf CRAM-no-header-md5sum/
 
    sudo du -hsx ./* | sort -n | head -100
 
-   cd aligner/u_of_michigan_aligner-checker
-   travis_wait 55 java -jar ../../cromwell-34.jar run u_of_michigan_aligner_checker.wdl -i u_of_michigan_aligner_checker.local.json
+   travis_wait 20 java -jar cromwell-34.jar run aligner/u_of_michigan_aligner-checker/u_of_michigan_aligner_checker.wdl -i aligner/u_of_michigan_aligner-checker/u_of_michigan_aligner_checker.local.json
 
 
