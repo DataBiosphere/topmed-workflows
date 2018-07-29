@@ -98,7 +98,7 @@ script:
    java -jar cromwell-34.jar run CRAM-no-header-md5sum/CRAM_md5sum_checker_wrapper.wdl -i CRAM-no-header-md5sum/CRAM_md5sum_checker_wrapper.wdl.local.json
 
    # remove directory to restore some disk space
-   rm -rf CRAM-no-header-md5sum/
+   rm -rf ./cromwell-executions
 
    sudo du -hsx ./* | sort -n | head -100
 
