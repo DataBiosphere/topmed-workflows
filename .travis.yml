@@ -14,6 +14,8 @@ cache:
 
 env:
       - PATH=$PATH:$HOME/gcloud/google-cloud-sdk/bin GOOGLE_APPLICATION_CREDENTIALS=$TRAVIS_BUILD_DIR/client_secrets.json #Other environment variables on same line
+      - TEST_SUITE=CRAM_to_md5sum_tests.sh
+      - TEST_SUITE=aligner_tests.sh
 
 before_install:
         #ENCRYPT YOUR PRIVATE KEY (If you need authentication)
@@ -41,18 +43,23 @@ before_install:
                 gcloud -q auth activate-service-account --key-file client_secrets.json;
           fi
 
-install:
-- docker version
-- pip2.7 install --user setuptools==36.5.0
-- pip2.7 install --user cwl-runner cwltool==1.0.20170828135420 schema-salad==2.6.20170806163416 avro==1.8.1 ruamel.yaml==0.14.12 requests==2.18.4
-- wget https://github.com/broadinstitute/cromwell/releases/download/34/cromwell-34.jar
-
    # Install crcmod for faster gsutil downloads
    # https://cloud.google.com/storage/docs/gsutil/addlhelp/CRC32CandInstallingcrcmod
 -  sudo -H apt-get install gcc python-dev python-setuptools
 -  sudo -H easy_install -U pip
   #-  sudo -H pip uninstall crcmod
 -  sudo -H pip install -U crcmod
+
+install:
+- docker version
+
+- pip2.7 install --user setuptools==36.5.0
+- pip2.7 install --user cwl-runner cwltool==1.0.20170828135420 schema-salad==2.6.20170806163416 avro==1.8.1 ruamel.yaml==0.14.12 requests==2.18.4
+
+- wget https://github.com/broadinstitute/cromwell/releases/download/34/cromwell-34.jar
+
+  gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa .
+  gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa.fai .
 
 script:
 # Execute each line separately using the literal style block scalar for yaml
@@ -64,28 +71,29 @@ script:
    gsutil --version
 
 
-   gsutil cp gs://topmed_workflow_testing/CRAM_to_md5sum/NWD119836.0005.recab.cram.md5sum.txt .
+   #gsutil cp gs://topmed_workflow_testing/CRAM_to_md5sum/NWD119836.0005.recab.cram.md5sum.txt .
 
-   gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa.alt .
-   gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa.bwt .
-   gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa.pac .
-   gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa.ann .
-   gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa.amb .
-   gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa.sa .
-   gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa .
-   gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa.fai .
+   #gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa.alt .
+   #gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa.bwt .
+   #gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa.pac .
+   #gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa.ann .
+   #gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa.amb .
+   #gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa.sa .
 
-   gsutil cp gs://topmed_workflow_testing/topmed_aligner/input_files/NWD119836.0005.recab.cram .
-   gsutil cp gs://topmed_workflow_testing/topmed_aligner/input_files/NWD119836.0005.recab.cram.crai .
-   gsutil cp gs://topmed_workflow_testing/topmed_aligner/input_files/NWD176325.0005.recab.cram .
-   gsutil cp gs://topmed_workflow_testing/topmed_aligner/input_files/NWD176325.0005.recab.cram.crai .
+   #   gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa .
+   #gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa.fai .
 
-   gsutil cp gs://topmed_workflow_testing/topmed_aligner/reference_files/hg38/Homo_sapiens_assembly38.dbsnp138.vcf.gz .
-   gsutil cp gs://topmed_workflow_testing/topmed_aligner/reference_files/hg38/Homo_sapiens_assembly38.dbsnp138.vcf.gz.tbi .
+   #gsutil cp gs://topmed_workflow_testing/topmed_aligner/input_files/NWD119836.0005.recab.cram .
+   #gsutil cp gs://topmed_workflow_testing/topmed_aligner/input_files/NWD119836.0005.recab.cram.crai .
+   #gsutil cp gs://topmed_workflow_testing/topmed_aligner/input_files/NWD176325.0005.recab.cram .
+   #gsutil cp gs://topmed_workflow_testing/topmed_aligner/input_files/NWD176325.0005.recab.cram.crai .
 
-   gsutil cp gs://topmed_workflow_testing/topmed_aligner_checker/truth_NWD176325.0005.recab.cram .
+   #gsutil cp gs://topmed_workflow_testing/topmed_aligner/reference_files/hg38/Homo_sapiens_assembly38.dbsnp138.vcf.gz .
+   #gsutil cp gs://topmed_workflow_testing/topmed_aligner/reference_files/hg38/Homo_sapiens_assembly38.dbsnp138.vcf.gz.tbi .
 
-   gsutil cp gs://topmed_workflow_testing/topmed_variant_caller_checker/truth_topmed_variant_caller_1_14_NWD176325_output.tar.gz .
+   #gsutil cp gs://topmed_workflow_testing/topmed_aligner_checker/truth_NWD176325.0005.recab.cram .
+
+   #gsutil cp gs://topmed_workflow_testing/topmed_variant_caller_checker/truth_topmed_variant_caller_1_14_NWD176325_output.tar.gz .
 
 
    pwd
@@ -94,14 +102,15 @@ script:
    sudo du -hsx ./* | sort -n | head -100
    java -XX:+PrintCommandLineFlags
 
-   cwltool CRAM_md5sum_checker_wrapper.cwl CRAM_md5sum_checker_wrapper.cwl.local.json
-   java -jar cromwell-34.jar run CRAM-no-header-md5sum/CRAM_md5sum_checker_wrapper.wdl -i CRAM-no-header-md5sum/CRAM_md5sum_checker_wrapper.wdl.local.json
+   "./tests/$TEST_SUITE"
+   #cwltool CRAM_md5sum_checker_wrapper.cwl CRAM_md5sum_checker_wrapper.cwl.local.json
+   #java -jar cromwell-34.jar run CRAM-no-header-md5sum/CRAM_md5sum_checker_wrapper.wdl -i CRAM-no-header-md5sum/CRAM_md5sum_checker_wrapper.wdl.local.json
 
    # remove directory to restore some disk space
-   rm -rf ./cromwell-executions
+   #rm -rf ./cromwell-executions
 
-   sudo du -hsx ./* | sort -n | head -100
+   #sudo du -hsx ./* | sort -n | head -100
 
-   travis_wait 55 java -Xms3G -Xmx5G -jar cromwell-34.jar run aligner/u_of_michigan_aligner-checker/u_of_michigan_aligner_checker.wdl -i aligner/u_of_michigan_aligner-checker/u_of_michigan_aligner_checker.local.json
+   #travis_wait 55 java -Xms3G -Xmx5G -jar cromwell-34.jar run aligner/u_of_michigan_aligner-checker/u_of_michigan_aligner_checker.wdl -i aligner/u_of_michigan_aligner-checker/u_of_michigan_aligner_checker.local.json
 
 
