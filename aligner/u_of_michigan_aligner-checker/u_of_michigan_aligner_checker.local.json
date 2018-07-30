@@ -1,20 +1,20 @@
 {
-  "checkerWorkflow.input_cram_file": "NWD176325.0005.recab.cram",
-  "checkerWorkflow.input_crai_file": "NWD176325.0005.recab.cram.crai",
+  "checkerWorkflow.input_cram_file": "../../tests/inputs/NWD176325.0005.recab.cram",
+  "checkerWorkflow.input_crai_file": "../../tests/inputs/NWD176325.0005.recab.cram.crai",
 
-  "checkerWorkflow.inputTruthCRAMFile": "truth_NWD176325.0005.recab.cram",
+  "checkerWorkflow.inputTruthCRAMFile": "../../tests/inputs/truth_NWD176325.0005.recab.cram",
 
-  "checkerWorkflow.ref_alt":  "hs38DH.fa.alt",
-  "checkerWorkflow.ref_bwt":  "hs38DH.fa.bwt",
-  "checkerWorkflow.ref_pac":  "hs38DH.fa.pac",
-  "checkerWorkflow.ref_ann":  "hs38DH.fa.ann",
-  "checkerWorkflow.ref_amb":  "hs38DH.fa.amb",
-  "checkerWorkflow.ref_sa":  "hs38DH.fa.sa",
-  "checkerWorkflow.ref_fasta":  "hs38DH.fa",
-  "checkerWorkflow.ref_fasta_index":  "hs38DH.fa.fai",
+  "checkerWorkflow.ref_alt": "../../tests/inputs/hs38DH.fa.alt",
+  "checkerWorkflow.ref_bwt": "../../tests/inputs/hs38DH.fa.bwt",
+  "checkerWorkflow.ref_pac": "../../tests/inputs/hs38DH.fa.pac",
+  "checkerWorkflow.ref_ann": "../../tests/inputs/hs38DH.fa.ann",
+  "checkerWorkflow.ref_amb": "../../tests/inputs/hs38DH.fa.amb",
+  "checkerWorkflow.ref_sa": "../../tests/inputs/hs38DH.fa.sa",
+  "checkerWorkflow.ref_fasta": "../../tests/inputs/hs38DH.fa",
+  "checkerWorkflow.ref_fasta_index": "../../tests/inputs/hs38DH.fa.fai",
 
-  "checkerWorkflow.dbSNP_vcf": "Homo_sapiens_assembly38.dbsnp138.vcf.gz",
-  "checkerWorkflow.dbSNP_vcf_index": "Homo_sapiens_assembly38.dbsnp138.vcf.gz.tbi",
+  "checkerWorkflow.dbSNP_vcf": "../../tests/inputs/Homo_sapiens_assembly38.dbsnp138.vcf.gz",
+  "checkerWorkflow.dbSNP_vcf_index": "../../tests/inputs/Homo_sapiens_assembly38.dbsnp138.vcf.gz.tbi",
 
   "checkerWorkflow.docker_image": "statgen/alignment:1.0.0"
 }

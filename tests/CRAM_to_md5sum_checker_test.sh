@@ -14,30 +14,32 @@ set -o xtrace
    docker version
    cwltool --version
    java -version
-   java -jar cromwell-34.jar --version
+   #java -jar cromwell-34.jar --version
    gsutil --version
 
-   gsutil cp gs://topmed_workflow_testing/CRAM_to_md5sum/NWD119836.0005.recab.cram.md5sum.txt .
+   INPUT_DIR=inputs
+
+   mkdir "$INPUT_DIR"
+
 
    # if the reference genome file is not present then download it
-   if [ ! -f hs38DH.fa ]; then
-     gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa .
-   fi
+   [[ ! -f "$INPUT_DIR/hs38DH.fa" ]] && gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa ./"$INPUT_DIR"
+   [[ ! -f "$INPUT_DIR/hs38DH.fa.fai" ]] && gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa.fai ./"$INPUT_DIR"
 
-   if [ ! -f hs38DH.fa.fai ]; then
-     gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa.fai .
-   fi
+   [[ ! -f "cromwell-34.jar" ]] && wget https://github.com/broadinstitute/cromwell/releases/download/34/cromwell-34.jar .
 
-   gsutil cp gs://topmed_workflow_testing/topmed_aligner/input_files/NWD119836.0005.recab.cram .
-   gsutil cp gs://topmed_workflow_testing/topmed_aligner/input_files/NWD119836.0005.recab.cram.crai .
+   [[ ! -f "$INPUT_DIR/NWD119836.0005.recab.cram" ]] && gsutil cp gs://topmed_workflow_testing/topmed_aligner/input_files/NWD119836.0005.recab.cram ./"$INPUT_DIR"
+   [[ ! -f "$INPUT_DIR/NWD119836.0005.recab.cram" ]] && gsutil cp gs://topmed_workflow_testing/topmed_aligner/input_files/NWD119836.0005.recab.cram.crai ./"$INPUT_DIR"
+
+   [[ ! -f "$INPUT_DIR/NWD119836.0005.recab.cram.md5sum.txt" ]] && gsutil cp gs://topmed_workflow_testing/CRAM_to_md5sum/NWD119836.0005.recab.cram.md5sum.txt ./"$INPUT_DIR"
 
    pwd
    ls -al
    df -h
-   sudo du -hsx ./* | sort -n | head -100
+   #sudo du -hsx ./* | sort -n | head -100
    java -XX:+PrintCommandLineFlags
 
    cwltool CRAM_md5sum_checker_wrapper.cwl CRAM_md5sum_checker_wrapper.cwl.local.json
-   java -jar cromwell-34.jar run CRAM-no-header-md5sum/CRAM_md5sum_checker_wrapper.wdl -i CRAM-no-header-md5sum/CRAM_md5sum_checker_wrapper.wdl.local.json
+   java -jar cromwell-34.jar run ../CRAM-no-header-md5sum/CRAM_md5sum_checker_wrapper.wdl -i ../CRAM-no-header-md5sum/CRAM_md5sum_checker_wrapper.wdl.local.json
 
 

@@ -56,10 +56,11 @@ install:
 - pip2.7 install --user setuptools==36.5.0
 - pip2.7 install --user cwl-runner cwltool==1.0.20170828135420 schema-salad==2.6.20170806163416 avro==1.8.1 ruamel.yaml==0.14.12 requests==2.18.4
 
-- wget https://github.com/broadinstitute/cromwell/releases/download/34/cromwell-34.jar
+- wget https://github.com/broadinstitute/cromwell/releases/download/34/cromwell-34.jar ./tests
 
-  gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa .
-  gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa.fai .
+  mkdir -p ./tests/inputs
+  gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa ./tests/inputs
+  gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa.fai ./tests/inputs
 
 script:
 # Execute each line separately using the literal style block scalar for yaml
