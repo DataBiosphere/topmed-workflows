@@ -102,6 +102,6 @@ script:
 
    sudo du -hsx ./* | sort -n | head -100
 
-   travis_wait 20 java -Xms3G -Xmx5G -jar cromwell-34.jar run aligner/u_of_michigan_aligner-checker/u_of_michigan_aligner_checker.wdl -i aligner/u_of_michigan_aligner-checker/u_of_michigan_aligner_checker.local.json
+   travis_wait 55 java -Xms3G -Xmx5G -jar cromwell-34.jar run aligner/u_of_michigan_aligner-checker/u_of_michigan_aligner_checker.wdl -i aligner/u_of_michigan_aligner-checker/u_of_michigan_aligner_checker.local.json
 
 
