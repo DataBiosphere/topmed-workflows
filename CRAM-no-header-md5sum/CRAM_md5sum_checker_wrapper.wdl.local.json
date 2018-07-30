@@ -1,6 +1,6 @@
 {
- "CRAMMd5sumChecker.inputCRAMFile": "NWD119836.0005.recab.cram",
- "CRAMMd5sumChecker.referenceFile": "hs38DH.fa",
- "CRAMMd5sumChecker.referenceIndexFile": "hs38DH.fa.fai",
- "CRAMMd5sumChecker.truthMd5sumFile": "NWD119836.0005.recab.cram.md5sum.txt"
+ "CRAMMd5sumChecker.inputCRAMFile": "./tests/inputs/NWD119836.0005.recab.cram",
+ "CRAMMd5sumChecker.referenceFile": "./tests/inputs/hs38DH.fa",
+ "CRAMMd5sumChecker.referenceIndexFile": "./tests/inputs/hs38DH.fa.fai",
+ "CRAMMd5sumChecker.truthMd5sumFile": "./tests/inputs/NWD119836.0005.recab.cram.md5sum.txt"
 }
