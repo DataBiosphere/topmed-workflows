@@ -12,8 +12,8 @@ inputs:
     'sbg:fileTypes': CRAM
     type: File
     label: Input CRAM file
-    'sbg:x': -233.1334991455078
-    'sbg:y': -43.2740478515625
+    'sbg:x': -253.4855499267578
+    'sbg:y': 25.186986923217773
   - id: bwa_index
     'sbg:fileTypes': TAR
     type: File
@@ -57,7 +57,7 @@ steps:
       - id: comp_ref
         source: reference_genome
       - id: threads
-        default: 8
+        default: 1
     out:
       - id: fastq
       - id: list
@@ -107,7 +107,9 @@ steps:
         source:
           - samtools_sort/output
       - id: threads
-        default: 8
+        default: 1
+      - id: input_cram
+        source: input_file
     out:
       - id: output
     run: steps/post-align.cwl

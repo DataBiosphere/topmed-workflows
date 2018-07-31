@@ -1,6 +1,7 @@
 class: Workflow
 cwlVersion: v1.0
 id: topmed_alignment_checker
+doc: Checker for the TopMed alignment workflow.
 label: TOPMed Alignment - checker
 $namespaces:
   sbg: 'https://sevenbridges.com'
@@ -101,3 +102,4 @@ requirements:
 'dct:creator':
   'foaf:mbox': 'mailto:support@sbgenomics.com'
   'foaf:name': Seven Bridges
+'sbg:wrapperAuthor': Marko Zecevic (marko.zecevic@sbgenomics.com)
