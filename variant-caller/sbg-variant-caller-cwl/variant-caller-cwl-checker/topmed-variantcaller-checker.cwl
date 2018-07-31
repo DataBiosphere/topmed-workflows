@@ -6,10 +6,8 @@ baseCommand: []
 inputs:
   - id: inputTruthVCFFile
     type: File
-    'sbg:fileTypes': TAR.GZ
   - id: inputTestVCFFile
     type: File
-    'sbg:fileTypes': TAR.GZ
 outputs: []
 label: topmed-variantcaller-checker
 arguments:
@@ -176,82 +174,5 @@ requirements:
 
           read_and_compare_vcfs_from_tar_gz(test_vcf, truth_vcf)
   - class: InlineJavascriptRequirement
-'sbg:publisher': sbg
-'sbg:modifiedOn': 1530273640
-'sbg:image_url': >-
-  https://igor.sbgenomics.com/ns/brood/images/vladimir_obucina/topmed-freeze-3a-variant-calling-pipeline/topmed-variantcaller-checker/13.png
-'sbg:sbgMaintained': false
-'sbg:contributors':
-  - vladimir_obucina
-'sbg:appVersion':
-  - v1.0
 $namespaces:
   sbg: 'https://sevenbridges.com'
-'sbg:revision': 13
-'sbg:revisionsInfo':
-  - 'sbg:revision': 0
-    'sbg:modifiedOn': 1530203817
-    'sbg:modifiedBy': vladimir_obucina
-    'sbg:revisionNotes': null
-  - 'sbg:revision': 1
-    'sbg:modifiedOn': 1530204445
-    'sbg:modifiedBy': vladimir_obucina
-    'sbg:revisionNotes': First Version
-  - 'sbg:revision': 2
-    'sbg:modifiedOn': 1530210065
-    'sbg:modifiedBy': vladimir_obucina
-    'sbg:revisionNotes': ''
-  - 'sbg:revision': 3
-    'sbg:modifiedOn': 1530211155
-    'sbg:modifiedBy': vladimir_obucina
-    'sbg:revisionNotes': ''
-  - 'sbg:revision': 4
-    'sbg:modifiedOn': 1530251348
-    'sbg:modifiedBy': vladimir_obucina
-    'sbg:revisionNotes': ''
-  - 'sbg:revision': 5
-    'sbg:modifiedOn': 1530252504
-    'sbg:modifiedBy': vladimir_obucina
-    'sbg:revisionNotes': ''
-  - 'sbg:revision': 6
-    'sbg:modifiedOn': 1530252964
-    'sbg:modifiedBy': vladimir_obucina
-    'sbg:revisionNotes': ''
-  - 'sbg:revision': 7
-    'sbg:modifiedOn': 1530253567
-    'sbg:modifiedBy': vladimir_obucina
-    'sbg:revisionNotes': ''
-  - 'sbg:revision': 8
-    'sbg:modifiedOn': 1530265804
-    'sbg:modifiedBy': vladimir_obucina
-    'sbg:revisionNotes': ''
-  - 'sbg:revision': 9
-    'sbg:modifiedOn': 1530266264
-    'sbg:modifiedBy': vladimir_obucina
-    'sbg:revisionNotes': ''
-  - 'sbg:revision': 10
-    'sbg:modifiedOn': 1530266668
-    'sbg:modifiedBy': vladimir_obucina
-    'sbg:revisionNotes': ''
-  - 'sbg:revision': 11
-    'sbg:modifiedOn': 1530268778
-    'sbg:modifiedBy': vladimir_obucina
-    'sbg:revisionNotes': ''
-  - 'sbg:revision': 12
-    'sbg:modifiedOn': 1530268870
-    'sbg:modifiedBy': vladimir_obucina
-    'sbg:revisionNotes': ''
-  - 'sbg:revision': 13
-    'sbg:modifiedOn': 1530273640
-    'sbg:modifiedBy': vladimir_obucina
-    'sbg:revisionNotes': ''
-'sbg:latestRevision': 13
-'sbg:createdOn': 1530203817
-'sbg:projectName': TOPMed Freeze 3a Variant Calling Pipeline
-'sbg:validationErrors': []
-'sbg:createdBy': vladimir_obucina
-'sbg:modifiedBy': vladimir_obucina
-'sbg:revisionNotes': ''
-'sbg:id': >-
-  vladimir_obucina/topmed-freeze-3a-variant-calling-pipeline/topmed-variantcaller-checker/13
-'sbg:project': vladimir_obucina/topmed-freeze-3a-variant-calling-pipeline
