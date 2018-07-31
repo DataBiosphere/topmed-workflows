@@ -1,18 +1,18 @@
 {
     "bwa_index": {
         "class": "File",
-        "path": "~/Documents/examplefiles/example_human_reference.fasta.tar"
+        "path": "gs://topmed_workflow_testing/topmed_aligner/small_test_files_sbg/example_human_reference.fasta.tar"
     },
     "dbsnp": {
         "class": "File",
-        "path": "~/Documents/examplefiles/example_human_known_snp.vcf"
+        "path": "gs://topmed_workflow_testing/topmed_aligner/small_test_files_sbg/example_human_known_snp.vcf"
     },
     "input_file": {
         "class": "File",
-        "path": "~/Documents/examplefiles/example.cram"
+        "path": "gs://topmed_workflow_testing/topmed_aligner/small_test_files_sbg/example.cram"
     },
     "reference_genome": {
         "class": "File",
-        "path": "~/Documents/examplefiles/example_human_reference.fasta "
+        "path": "gs://topmed_workflow_testing/topmed_aligner/small_test_files_sbg/example_human_reference.fasta "
     }
 }
