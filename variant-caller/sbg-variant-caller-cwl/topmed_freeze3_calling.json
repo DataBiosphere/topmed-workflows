@@ -1,5 +1,4 @@
 {
-
     "bam_cram_file": {
       "class": "File",
       "path": "gs://storage.googleapis.com/topmed_workflow_testing/topmed_variant_caller/input_files/NWD176325.recab.cram",
@@ -27,6 +26,6 @@
     "num_of_jobs": 4,
     "reference_file":{
       "class": "File",
-      "path": "gs://storage.googleapis.com/topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH-db142-v1.tgz"
+      "path": "gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH-db142-v1.tgz"
     }
 }

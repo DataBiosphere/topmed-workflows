@@ -1,0 +1,6 @@
+{
+ "CRAMMd5sumChecker.inputCRAMFile": "gs://topmed_workflow_testing/topmed_aligner/input_files/NWD119836.0005.recab.cram",
+ "CRAMMd5sumChecker.referenceFile": "gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa",
+ "CRAMMd5sumChecker.referenceIndexFile": "gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa.fai",
+ "CRAMMd5sumChecker.truthMd5sumFile": "gs://topmed_workflow_testing/CRAM_to_md5sum/NWD119836.0005.recab.cram.md5sum.txt"
+}

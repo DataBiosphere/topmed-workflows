@@ -2,7 +2,7 @@ class: CommandLineTool
 cwlVersion: v1.0
 $namespaces:
   sbg: 'https://sevenbridges.com'
-id: marko_zecevic/topmed-alignment/samtools-sort/0
+id: marko_zecevic_topmed_alignment_samtools_sort_0
 baseCommand:
   - samtools
   - sort
@@ -35,16 +35,19 @@ arguments:
     shellQuote: false
     valueFrom: |-
       ${
-          input_filename = inputs.input_file.path.split('/').pop()
+          var input_filename = inputs.input_file.path.split('/').pop()
           return input_filename.slice(0,input_filename.lastIndexOf('.')) + '.sorted.bam'
       }
 requirements:
   - class: ShellCommandRequirement
   - class: ResourceRequirement
-    ramMin: 2000
-    coresMin: 1
+    ramMin: 7000
+    coresMin: 2
   - class: DockerRequirement
-    dockerPull: images.sbgenomics.com/marko_zecevic/topmed_alignment
+    dockerPull: 'statgen/alignment:1.0.0'
+  - class: InitialWorkDirRequirement
+    listing:
+      - $(inputs.reference)
   - class: InlineJavascriptRequirement
     expressionLib:
       - |-
@@ -86,28 +89,6 @@ requirements:
             }
             return o1;
         };
-'sbg:latestRevision': 0
-'sbg:revisionsInfo':
-  - 'sbg:revisionNotes': Copy of marko_zecevic/topmed-align/samtools-sort/1
-    'sbg:modifiedBy': marko_zecevic
-    'sbg:revision': 0
-    'sbg:modifiedOn': 1525523240
-'sbg:publisher': sbg
-'sbg:modifiedOn': 1525523240
-'sbg:id': marko_zecevic/topmed-alignment/samtools-sort/0
-'sbg:createdBy': marko_zecevic
-'sbg:image_url': >-
-  https://igor.sbgenomics.com/ns/brood/images/marko_zecevic/topmed-alignment/samtools-sort/0.png
-'sbg:copyOf': marko_zecevic/topmed-align/samtools-sort/1
-'sbg:validationErrors': []
-'sbg:revision': 0
-'sbg:createdOn': 1525523240
-'sbg:modifiedBy': marko_zecevic
-'sbg:projectName': TOPMed alignment
-'sbg:project': marko_zecevic/topmed-alignment
-'sbg:appVersion':
-  - v1.0
-'sbg:revisionNotes': Copy of marko_zecevic/topmed-align/samtools-sort/1
-'sbg:contributors':
-  - marko_zecevic
-'sbg:sbgMaintained': false
+hints:
+  - class: 'sbg:AWSInstanceType'
+    value: c5.4xlarge;ebs-gp2;512

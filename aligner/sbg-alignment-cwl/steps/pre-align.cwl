@@ -2,21 +2,32 @@ class: CommandLineTool
 cwlVersion: v1.0
 $namespaces:
   sbg: 'https://sevenbridges.com'
-id: marko_zecevic/topmed-alignment/topmed-pre-align/1
+id: marko_zecevic_validation_app_topmed_alignment_topmed_pre_align_7
 baseCommand:
   - samtools
   - view
-  - '-uh'
-  - '-F'
-  - '0x900'
 inputs:
   - id: input_file
     type: File
     inputBinding:
-      position: 0
+      position: 2
       shellQuote: false
-  - id: out_name
-    type: string?
+    label: Input CRAM file
+    'sbg:fileTypes': CRAM
+  - 'sbg:category': Input file
+    id: decomp_ref
+    type: File?
+    label: Reference for input CRAM decompressing
+    'sbg:fileTypes': 'FASTA, FA'
+  - 'sbg:category': Input file
+    id: comp_ref
+    type: File
+    label: Reference for output CRAM compressing
+    'sbg:fileTypes': 'FASTA, FA'
+  - 'sbg:toolDefaultValue': '1'
+    id: threads
+    type: int?
+    label: Number of threads
 outputs:
   - id: fastq
     type: 'File[]?'
@@ -30,50 +41,73 @@ outputs:
       outputEval: '$(inheritMetadata(self, inputs.input_file))'
 label: Pre-align 1.0
 arguments:
-  - position: 1
-    prefix: ''
-    shellQuote: false
-    valueFrom: >-
+  - position: 3
+    prefix: >-
       | bam-ext-mem-sort-manager squeeze --in -.ubam --keepDups --rmTags
       AS:i,BD:Z,BI:Z,XS:i,MC:Z,MD:Z,NM:i,MQ:i --out -.ubam | samtools sort -l 1
-      -@ 1 -n
-  - position: 2
-    prefix: '-T'
+      -@
     shellQuote: false
     valueFrom: |-
       ${
-       if (inputs.out_name) {
-           return inputs.out_name + '.samtools_sort_tmp'  
+       if (inputs.threads) {
+           return inputs.threads
        } else {
-           return inputs.input_file.nameroot + '.samtools_sort_tmp'
+           return 1
        }
       }
-  - position: 3
-    prefix: ''
-    shellQuote: false
-    valueFrom: '- | samtools fixmate - - | bam-ext-mem-sort-manager bam2fastq --in -.bam'
   - position: 4
-    prefix: '--outBase'
+    prefix: '-n -T'
     shellQuote: false
     valueFrom: |-
       ${
-       if (inputs.out_name) {
-           return inputs.out_name
-       } else {
-           return inputs.input_file.nameroot
-       }
+          return inputs.input_file.nameroot + '.samtools_sort_tmp'
       }
   - position: 5
     prefix: ''
     shellQuote: false
+    valueFrom: '- | samtools fixmate - - | bam-ext-mem-sort-manager bam2fastq --in -.bam'
+  - position: 6
+    prefix: '--outBase'
+    shellQuote: false
+    valueFrom: |-
+      ${
+          return inputs.input_file.nameroot
+      }
+  - position: 7
+    prefix: ''
+    shellQuote: false
     valueFrom: '--maxRecordLimitPerFq 20000000 --sortByReadNameOnTheFly --readname --gzip'
+  - position: 1
+    prefix: '-uh -F 0x900 --threads'
+    shellQuote: false
+    valueFrom: |-
+      ${
+       if (inputs.threads) {
+           return inputs.threads
+       } else {
+           return 1
+       }
+      }
+  - position: 2
+    prefix: '-T'
+    valueFrom: |-
+      ${
+       if (inputs.decomp_ref) {
+           return inputs.decomp_ref.path
+       } else {
+           return inputs.comp_ref.path
+       }
+      }
 requirements:
   - class: ShellCommandRequirement
   - class: ResourceRequirement
-    ramMin: 7000
-    coresMin: 4
+    ramMin: 7500
+    coresMin: 2
   - class: DockerRequirement
-    dockerPull: images.sbgenomics.com/marko_zecevic/topmed_alignment
+    dockerPull: 'statgen/alignment:1.0.0'
+  - class: InitialWorkDirRequirement
+    listing:
+      - $(inputs.comp_ref)
   - class: InlineJavascriptRequirement
     expressionLib:
       - |-
@@ -117,32 +151,4 @@ requirements:
         };
 hints:
   - class: 'sbg:AWSInstanceType'
-    value: c4.2xlarge;ebs-gp2;512
-'sbg:appVersion':
-  - v1.0
-'sbg:contributors':
-  - marko_zecevic
-'sbg:createdBy': marko_zecevic
-'sbg:createdOn': 1525523318
-'sbg:id': marko_zecevic/topmed-alignment/topmed-pre-align/1
-'sbg:image_url': >-
-  https://igor.sbgenomics.com/ns/brood/images/marko_zecevic/topmed-alignment/topmed-pre-align/1.png
-'sbg:latestRevision': 1
-'sbg:modifiedBy': marko_zecevic
-'sbg:modifiedOn': 1525548148
-'sbg:project': marko_zecevic/topmed-alignment
-'sbg:projectName': TOPMed alignment
-'sbg:publisher': sbg
-'sbg:revision': 1
-'sbg:revisionNotes': back to default instance
-'sbg:revisionsInfo':
-  - 'sbg:modifiedBy': marko_zecevic
-    'sbg:modifiedOn': 1525523318
-    'sbg:revision': 0
-    'sbg:revisionNotes': Copy of marko_zecevic/topmed-align/align/9
-  - 'sbg:modifiedBy': marko_zecevic
-    'sbg:modifiedOn': 1525548148
-    'sbg:revision': 1
-    'sbg:revisionNotes': back to default instance
-'sbg:sbgMaintained': false
-'sbg:validationErrors': []
+    value: m5.large;ebs-gp2;512
