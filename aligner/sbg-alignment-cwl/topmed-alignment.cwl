@@ -103,10 +103,11 @@ steps:
       - id: dbsnp
         source: dbsnp
       - id: alignment_files
-        source:
-          - samtools_sort/output
+        source: samtools_sort/output
       - id: threads
         default: 8
+      - id: input_cram
+        source: input_file
     out:
       - id: output
     run: steps/post-align.cwl
@@ -118,6 +119,7 @@ hints:
     value: '8'
 requirements:
   - class: ScatterFeatureRequirement
+  - class: MultipleInputFeatureRequirement
 'dct:creator':
   'foaf:mbox': 'mailto:support@sbgenomics.com'
   'foaf:name': Seven Bridges
