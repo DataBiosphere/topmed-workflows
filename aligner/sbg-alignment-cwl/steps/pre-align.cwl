@@ -102,7 +102,7 @@ requirements:
   - class: ShellCommandRequirement
   - class: ResourceRequirement
     ramMin: 7500
-    coresMin: 8
+    coresMin: 2
   - class: DockerRequirement
     dockerPull: 'statgen/alignment:1.0.0'
   - class: InitialWorkDirRequirement
@@ -151,4 +151,4 @@ requirements:
         };
 hints:
   - class: 'sbg:AWSInstanceType'
-    value: c4.4xlarge;ebs-gp2;512
+    value: m5.large;ebs-gp2;512

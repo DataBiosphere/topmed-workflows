@@ -2,7 +2,7 @@ class: CommandLineTool
 cwlVersion: v1.0
 $namespaces:
   sbg: 'https://sevenbridges.com'
-id: marko_zecevic/topmed-alignment/samtools-sort/0
+id: marko_zecevic_topmed_alignment_samtools_sort_0
 baseCommand:
   - samtools
   - sort
@@ -91,4 +91,4 @@ requirements:
         };
 hints:
   - class: 'sbg:AWSInstanceType'
-    value: c4.4xlarge;ebs-gp2;512
+    value: c5.4xlarge;ebs-gp2;512
