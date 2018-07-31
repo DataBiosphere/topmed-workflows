@@ -43,12 +43,6 @@ before_install:
                 gcloud -q auth activate-service-account --key-file client_secrets.json;
           fi
 
-   # Install crcmod for faster gsutil downloads
-   # https://cloud.google.com/storage/docs/gsutil/addlhelp/CRC32CandInstallingcrcmod
--  sudo -H apt-get install gcc python-dev python-setuptools
--  sudo -H easy_install -U pip
-  #-  sudo -H pip uninstall crcmod
--  sudo -H pip install -U crcmod
 
 install:
 - docker version
@@ -56,11 +50,19 @@ install:
 - pip2.7 install --user setuptools==36.5.0
 - pip2.7 install --user cwl-runner cwltool==1.0.20170828135420 schema-salad==2.6.20170806163416 avro==1.8.1 ruamel.yaml==0.14.12 requests==2.18.4
 
+   # Install crcmod for faster gsutil downloads
+   # https://cloud.google.com/storage/docs/gsutil/addlhelp/CRC32CandInstallingcrcmod
+-  sudo -H apt-get install gcc python-dev python-setuptools
+-  sudo -H easy_install -U pip
+  #-  sudo -H pip uninstall crcmod
+-  sudo -H pip install -U crcmod
+
+
 - wget https://github.com/broadinstitute/cromwell/releases/download/34/cromwell-34.jar ./tests
 
-  mkdir -p ./tests/inputs
-  gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa ./tests/inputs
-  gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa.fai ./tests/inputs
+-  mkdir -p ./tests/inputs
+-  gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa ./tests/inputs
+-  gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa.fai ./tests/inputs
 
 script:
 # Execute each line separately using the literal style block scalar for yaml
@@ -103,7 +105,7 @@ script:
    sudo du -hsx ./* | sort -n | head -100
    java -XX:+PrintCommandLineFlags
 
-   "./tests/$TEST_SUITE"
+   ./tests/$TEST_SUITE
    #cwltool CRAM_md5sum_checker_wrapper.cwl CRAM_md5sum_checker_wrapper.cwl.local.json
    #java -jar cromwell-34.jar run CRAM-no-header-md5sum/CRAM_md5sum_checker_wrapper.wdl -i CRAM-no-header-md5sum/CRAM_md5sum_checker_wrapper.wdl.local.json
 
