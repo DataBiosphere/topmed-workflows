@@ -19,7 +19,7 @@ set -o xtrace
 
    INPUT_DIR=inputs
 
-   mkdir "$INPUT_DIR"
+   mkdir -p "$INPUT_DIR"
 
 
    # if the reference genome file is not present then download it
@@ -37,9 +37,9 @@ set -o xtrace
    ls -al
    df -h
    #sudo du -hsx ./* | sort -n | head -100
-   java -XX:+PrintCommandLineFlags
+   #java -XX:+PrintCommandLineFlags
 
-   cwltool CRAM_md5sum_checker_wrapper.cwl CRAM_md5sum_checker_wrapper.cwl.local.json
+   cwltool ../CRAM-no-header-md5sum/CRAM_md5sum_checker_wrapper.cwl ../CRAM-no-header-md5sum/CRAM_md5sum_checker_wrapper.cwl.local.json
    java -jar cromwell-34.jar run ../CRAM-no-header-md5sum/CRAM_md5sum_checker_wrapper.wdl -i ../CRAM-no-header-md5sum/CRAM_md5sum_checker_wrapper.wdl.local.json
 
 

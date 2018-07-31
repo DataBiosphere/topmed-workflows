@@ -1,6 +1,8 @@
 import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/feature/test-script/aligner/u_of_michigan_aligner/u_of_michigan_aligner.wdl" as TopMed_aligner
 import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/feature/test-script/aligner/u_of_michigan_aligner-checker/u_of_michigan_aligner_checker_calculation.wdl" as checker
 
+
+
 workflow checkerWorkflow {
   String docker_image
 
