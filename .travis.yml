@@ -90,5 +90,5 @@ script:
    pwd
    ls -al
 
-   ./$TEST_SUITE
+   travis_wait 55 ./$TEST_SUITE
 
