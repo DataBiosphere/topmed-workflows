@@ -19,6 +19,7 @@ env:
     matrix:
       - TEST_SUITE=CRAM_to_md5sum_checker_test.sh
       - TEST_SUITE=aligner_checker_test.sh
+      - TEST_SUITE=aligner_CWL_checker_test.sh
 
 before_install:
         #ENCRYPT YOUR PRIVATE KEY (If you need authentication)
@@ -60,13 +61,6 @@ install:
   #-  sudo -H pip uninstall crcmod
 -  sudo -H pip install -U crcmod
 
-
-#- [[ ! -f "cromwell-34.jar" ]] && wget https://github.com/broadinstitute/cromwell/releases/download/34/cromwell-34.jar  --directory-prefix=$HOME/tests
-
--  mkdir -p ./tests/inputs
-  #-  gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa --directory-prefix=$HOME/tests/inputs
-  #-  gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa.fai --directory-prefix=$HOME/tests/inputs
-
 script:
 # Execute each line separately using the literal style block scalar for yaml
 # http://yaml.org/spec/1.2/spec.html#id2795688
@@ -75,8 +69,6 @@ script:
    java -version
    java -jar cromwell-34.jar --version
    gsutil --version
-
-
 
    pwd
    ls -al
