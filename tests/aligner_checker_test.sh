@@ -19,7 +19,7 @@ set -o xtrace
 
    INPUT_DIR=inputs
 
-   mkdir "$INPUT_DIR"
+   mkdir -p "$INPUT_DIR"
 
    # if the reference genome file is not present then download it
    [[ ! -f "$INPUT_DIR/hs38DH.fa" ]] && gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa ./"$INPUT_DIR"
