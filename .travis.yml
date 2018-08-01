@@ -16,8 +16,8 @@ env:
     global:
       - PATH=$PATH:$HOME/gcloud/google-cloud-sdk/bin GOOGLE_APPLICATION_CREDENTIALS=$TRAVIS_BUILD_DIR/client_secrets.json #Other environment variables on same line
     matrix:
-      - TEST_SUITE=CRAM_to_md5sum_tests.sh
-      - TEST_SUITE=aligner_tests.sh
+      - TEST_SUITE=CRAM_to_md5sum_checker_test.sh
+      - TEST_SUITE=aligner_checker_test.sh
 
 before_install:
         #ENCRYPT YOUR PRIVATE KEY (If you need authentication)
@@ -107,7 +107,7 @@ script:
    sudo du -hsx ./* | sort -n | head -100
    java -XX:+PrintCommandLineFlags
 
-   ./tests/$TEST_SUITE
+   $HOME/tests/$TEST_SUITE
    #cwltool CRAM_md5sum_checker_wrapper.cwl CRAM_md5sum_checker_wrapper.cwl.local.json
    #java -jar cromwell-34.jar run CRAM-no-header-md5sum/CRAM_md5sum_checker_wrapper.wdl -i CRAM-no-header-md5sum/CRAM_md5sum_checker_wrapper.wdl.local.json
 
