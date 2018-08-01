@@ -26,7 +26,7 @@ set -o xtrace
    [[ ! -f "$INPUT_DIR/hs38DH.fa" ]] && gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa ./"$INPUT_DIR"
    [[ ! -f "$INPUT_DIR/hs38DH.fa.fai" ]] && gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa.fai ./"$INPUT_DIR"
 
-   [[ ! -f "cromwell-34.jar" ]] && wget https://github.com/broadinstitute/cromwell/releases/download/34/cromwell-34.jar .
+   [[ ! -f "cromwell-34.jar" ]] && wget https://github.com/broadinstitute/cromwell/releases/download/34/cromwell-34.jar
 
    [[ ! -f "$INPUT_DIR/NWD119836.0005.recab.cram" ]] && gsutil cp gs://topmed_workflow_testing/topmed_aligner/input_files/NWD119836.0005.recab.cram ./"$INPUT_DIR"
    [[ ! -f "$INPUT_DIR/NWD119836.0005.recab.cram" ]] && gsutil cp gs://topmed_workflow_testing/topmed_aligner/input_files/NWD119836.0005.recab.cram.crai ./"$INPUT_DIR"
