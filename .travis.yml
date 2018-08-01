@@ -60,11 +60,11 @@ install:
 -  sudo -H pip install -U crcmod
 
 
-- wget https://github.com/broadinstitute/cromwell/releases/download/34/cromwell-34.jar  --directory-prefix=$TRAVIS_BUILD_DIR/tests
+- wget https://github.com/broadinstitute/cromwell/releases/download/34/cromwell-34.jar  --directory-prefix=$HOME/tests
 
 -  mkdir -p ./tests/inputs
--  gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa --directory-prefix=$TRAVIS_BUILD_DIR/tests/inputs
--  gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa.fai --directory-prefix=$TRAVIS_BUILD_DIR/tests/inputs
+-  gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa --directory-prefix=$HOME/tests/inputs
+-  gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa.fai --directory-prefix=$HOME/tests/inputs
 
 script:
 # Execute each line separately using the literal style block scalar for yaml
