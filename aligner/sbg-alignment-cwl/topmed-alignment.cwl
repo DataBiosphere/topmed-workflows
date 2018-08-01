@@ -103,8 +103,7 @@ steps:
       - id: dbsnp
         source: dbsnp
       - id: alignment_files
-        source:
-          - samtools_sort/output
+        source: samtools_sort/output
       - id: threads
         default: 1
       - id: input_cram
@@ -120,6 +119,7 @@ hints:
     value: '8'
 requirements:
   - class: ScatterFeatureRequirement
+  - class: MultipleInputFeatureRequirement
 'dct:creator':
   'foaf:mbox': 'mailto:support@sbgenomics.com'
   'foaf:name': Seven Bridges
