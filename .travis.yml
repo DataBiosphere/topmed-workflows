@@ -15,6 +15,7 @@ cache:
 env:
     global:
       - PATH=$PATH:$HOME/gcloud/google-cloud-sdk/bin GOOGLE_APPLICATION_CREDENTIALS=$TRAVIS_BUILD_DIR/client_secrets.json #Other environment variables on same line
+      - wget https://github.com/broadinstitute/cromwell/releases/download/34/cromwell-34.jar  --directory-prefix=$HOME/tests
     matrix:
       - TEST_SUITE=CRAM_to_md5sum_checker_test.sh
       - TEST_SUITE=aligner_checker_test.sh
@@ -60,11 +61,11 @@ install:
 -  sudo -H pip install -U crcmod
 
 
-- wget https://github.com/broadinstitute/cromwell/releases/download/34/cromwell-34.jar  --directory-prefix=$HOME/tests
+  #- [[ ! -f "cromwell-34.jar" ]] && wget https://github.com/broadinstitute/cromwell/releases/download/34/cromwell-34.jar  --directory-prefix=$HOME/tests
 
 -  mkdir -p ./tests/inputs
--  gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa --directory-prefix=$HOME/tests/inputs
--  gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa.fai --directory-prefix=$HOME/tests/inputs
+  #-  gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa --directory-prefix=$HOME/tests/inputs
+  #-  gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa.fai --directory-prefix=$HOME/tests/inputs
 
 script:
 # Execute each line separately using the literal style block scalar for yaml
@@ -113,7 +114,7 @@ script:
    pwd
    ls -al
 
-   $TEST_SUITE
+   ./$TEST_SUITE
    #cwltool CRAM_md5sum_checker_wrapper.cwl CRAM_md5sum_checker_wrapper.cwl.local.json
    #java -jar cromwell-34.jar run CRAM-no-header-md5sum/CRAM_md5sum_checker_wrapper.wdl -i CRAM-no-header-md5sum/CRAM_md5sum_checker_wrapper.wdl.local.json
 
