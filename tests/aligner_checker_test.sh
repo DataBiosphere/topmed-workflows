@@ -46,7 +46,6 @@ set -o xtrace
    ls -al
    df -h
    #sudo du -hsx ./* | sort -n | head -100
+
    java -XX:+PrintCommandLineFlags
-
    java -Xms3G -Xmx7G -jar cromwell-34.jar run ../aligner/u_of_michigan_aligner-checker/u_of_michigan_aligner_checker.wdl -i ../aligner/u_of_michigan_aligner-checker/u_of_michigan_aligner_checker.local.json
-
