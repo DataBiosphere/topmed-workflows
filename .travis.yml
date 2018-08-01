@@ -13,7 +13,9 @@ cache:
       - $HOME/gcloud/
 
 env:
+    global:
       - PATH=$PATH:$HOME/gcloud/google-cloud-sdk/bin GOOGLE_APPLICATION_CREDENTIALS=$TRAVIS_BUILD_DIR/client_secrets.json #Other environment variables on same line
+    matrix:
       - TEST_SUITE=CRAM_to_md5sum_tests.sh
       - TEST_SUITE=aligner_tests.sh
 
@@ -58,11 +60,11 @@ install:
 -  sudo -H pip install -U crcmod
 
 
-- wget https://github.com/broadinstitute/cromwell/releases/download/34/cromwell-34.jar ./tests
+- wget https://github.com/broadinstitute/cromwell/releases/download/34/cromwell-34.jar -P tests
 
 -  mkdir -p ./tests/inputs
--  gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa ./tests/inputs
--  gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa.fai ./tests/inputs
+-  gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa -P tests/inputs
+-  gsutil cp gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa.fai -P tests/inputs
 
 script:
 # Execute each line separately using the literal style block scalar for yaml
