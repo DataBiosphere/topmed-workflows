@@ -49,3 +49,4 @@ set -o xtrace
 
    java -XX:+PrintCommandLineFlags
    java -Xms3G -Xmx7G -jar cromwell-34.jar run ../aligner/u_of_michigan_aligner-checker/u_of_michigan_aligner_checker.wdl -i ../aligner/u_of_michigan_aligner-checker/u_of_michigan_aligner_checker.local.json
+   rm -rf cromwell-executions
