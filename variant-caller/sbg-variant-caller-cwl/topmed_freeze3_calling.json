@@ -1,20 +1,20 @@
 {
     "bam_cram_file": {
       "class": "File",
-      "path": "gs://storage.googleapis.com/topmed_workflow_testing/topmed_variant_caller/input_files/NWD176325.recab.cram",
+      "path": "gs://topmed_workflow_testing/topmed_variant_caller/input_files/NWD176325.recab.cram",
       "secondaryFiles": [
         {
           "class": "File",
-          "path": "gs://storage.googleapis.com/topmed_workflow_testing/topmed_variant_caller/input_files/NWD176325.recab.cram.crai"
+          "path": "gs://topmed_workflow_testing/topmed_variant_caller/input_files/NWD176325.recab.cram.crai"
         }
       ]
     },
     "reference": {
       "class": "File",
-      "path": "gs://storage.googleapis.com/topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa",
+      "path": "gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa",
       "secondaryFiles" : [
        {
-          "path" : "gs://storage.googleapis.com/topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa.fai",
+          "path" : "gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa.fai",
           "class" : "File"
        }
      ]
