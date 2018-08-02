@@ -15,3 +15,4 @@ set -o xtrace
 ./test_aligner_CWL_checker.sh
 ./test_aligner_WDL_checker.sh
 ./test_variant_caller_WDL_checker.sh
+./test_variant_caller_CWL_checker.sh
