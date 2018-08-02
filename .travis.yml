@@ -22,8 +22,10 @@ env:
        # We need to do this because the aligner and variant caller pipelines take
        # a relatively long time to execute
        - TEST_SUITE=test_CRAM_to_md5sum_checker.sh
-#      - TEST_SUITE=test_WDL_aligner_checker.sh
+#      - TEST_SUITE=test_aligner_WDL_checker.sh
 #      - TEST_SUITE=test_aligner_CWL_checker.sh
+#      - TEST_SUITE=test_variant_caller_WDL_checker.sh
+#      - TEST_SUITE=test_variant_caller_CWL_checker.sh
 
 before_install:
         #ENCRYPT YOUR PRIVATE KEY (If you need authentication)
