@@ -18,8 +18,8 @@ env:
       - wget https://github.com/broadinstitute/cromwell/releases/download/34/cromwell-34.jar  --directory-prefix=$TRAVIS_BUILD_DIR/tests
     matrix:
       - TEST_SUITE=CRAM_to_md5sum_checker_test.sh
-      - TEST_SUITE=aligner_checker_test.sh
-      - TEST_SUITE=aligner_CWL_checker_test.sh
+#      - TEST_SUITE=aligner_checker_test.sh
+#      - TEST_SUITE=aligner_CWL_checker_test.sh
 
 before_install:
         #ENCRYPT YOUR PRIVATE KEY (If you need authentication)
