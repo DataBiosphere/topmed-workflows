@@ -1,20 +1,20 @@
 { 
   "bam_cram_file": {
     "class": "File",
-    "path": "../../tests/NWD176325.recab.cram",
+    "path": "../../../tests/NWD176325.recab.cram",
     "secondaryFiles": [
       { 
         "class": "File",
-        "path": "../../tests/NWD176325.recab.cram.crai"
+        "path": "../../../tests/NWD176325.recab.cram.crai"
       }
     ]
   },
   "reference": {
     "class": "File",
-    "path": "../../tests/hg38/hs38DH.fa",
+    "path": "../../../tests/hg38/hs38DH.fa",
     "secondaryFiles" : [
      {  
-        "path" : "../../tests/hs38DH.fa.fai",
+        "path" : "../../../tests/hs38DH.fa.fai",
         "class" : "File"
      }
    ]
@@ -26,10 +26,10 @@
   "num_of_jobs": 4,
   "reference_file":{
     "class": "File",
-    "path": "../../tests/hs38DH-db142-v1.tgz"
+    "path": "../../../tests/hs38DH-db142-v1.tgz"
   },
     "inputTruthVCFFile":{
       "class": "File",
-      "path": "../../tests//NWD176325_genotypes.tar.gz"
+      "path": "../../../tests//NWD176325_genotypes.tar.gz"
     }
 }
