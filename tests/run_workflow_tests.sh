@@ -11,7 +11,7 @@ set -u
 set -o xtrace
 #to turn off echo do 'set +o xtrace'
 
-./CRAM_to_md5sum_checker_test.sh
-./aligner_CWL_checker_test.sh
-./aligner_checker_test.sh
-./variant_caller_checker_test.sh
+./test_CRAM_to_md5sum_checker.sh
+./test_aligner_CWL_checker.sh
+./test_aligner_WDL_checker.sh
+./test_variant_caller_WDL_checker.sh

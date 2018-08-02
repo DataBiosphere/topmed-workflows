@@ -14,12 +14,16 @@ cache:
 
 env:
     global:
+    # These environment variables are set up for all the parallel jobs to use
       - PATH=$PATH:$HOME/gcloud/google-cloud-sdk/bin GOOGLE_APPLICATION_CREDENTIALS=$TRAVIS_BUILD_DIR/client_secrets.json #Other environment variables on same line
       - wget https://github.com/broadinstitute/cromwell/releases/download/34/cromwell-34.jar  --directory-prefix=$TRAVIS_BUILD_DIR/tests
     matrix:
-      - TEST_SUITE=CRAM_to_md5sum_checker_test.sh
-#      - TEST_SUITE=aligner_checker_test.sh
-#      - TEST_SUITE=aligner_CWL_checker_test.sh
+       # These environment variables specify that these tests will run in parallel
+       # We need to do this because the aligner and variant caller pipelines take
+       # a relatively long time to execute
+       - TEST_SUITE=test_CRAM_to_md5sum_checker.sh
+#      - TEST_SUITE=test_WDL_aligner_checker.sh
+#      - TEST_SUITE=test_aligner_CWL_checker.sh
 
 before_install:
         #ENCRYPT YOUR PRIVATE KEY (If you need authentication)
@@ -82,5 +86,7 @@ script:
    pwd
    ls -al
 
+   # Have Travis CI wait for a set time even if the workflows do not provide output
+   # for 30 seconds
    travis_wait 55 ./$TEST_SUITE
 
