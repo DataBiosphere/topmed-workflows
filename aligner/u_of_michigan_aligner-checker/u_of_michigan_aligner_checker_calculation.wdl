@@ -10,7 +10,7 @@ task checkerTask {
 
   # Some tasks need wiggle room, and we also need to add a small amount of disk to prevent getting a
   # Cromwell error from asking for 0 disk when the input is less than 1GB
-  Int additional_disk = select_first([increase_disk_size, 100])
+  Int additional_disk = select_first([increase_disk_size, 200])
 
    Float disk_size = additional_disk
    # The size function causes an error when a relative path is provided as input in the JSON
