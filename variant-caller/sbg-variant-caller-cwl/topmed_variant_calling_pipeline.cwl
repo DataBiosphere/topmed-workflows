@@ -5,46 +5,21 @@ id: >-
 label: TOPMed Variant Calling Pipeline CWL1
 inputs:
   - id: reference
-    'sbg:fileTypes': FA
     type: File
-    'sbg:x': -460
-    'sbg:y': -266.8571472167969
-  - id: bam_cram_file
-    'sbg:fileTypes': 'BAM, CRAM'
-    type: 'File[]'
-    'sbg:x': -457.8571472167969
-    'sbg:y': -143.42857360839844
-  - id: bai_crai_file
-    'sbg:fileTypes': 'BAI, CRAI'
-    type: 'File[]'
-    'sbg:x': -456.4285888671875
-    'sbg:y': -17.285715103149414
+    secondaryFiles:
+      - .fai
   - id: reference_file
-    'sbg:fileTypes': TGZ
     type: File
-    'sbg:x': -119
-    'sbg:y': -629.1428833007812
   - id: pedigree_file
-    'sbg:fileTypes': PED
     type: File?
-    'sbg:x': -119.71428680419922
-    'sbg:y': -515.8571166992188
   - id: num_of_jobs
     type: int?
-    'sbg:x': -121.57142639160156
-    'sbg:y': -401.71429443359375
   - id: genotype_unit
     type: int
-    'sbg:x': -127
-    'sbg:y': -50.85714340209961
   - id: discover_unit
     type: int
-    'sbg:x': -133
-    'sbg:y': 73
   - id: chromosomes
     type: 'string[]'
-    'sbg:x': -128.14285278320312
-    'sbg:y': 198.2857208251953
   - id: reference_genome
     type:
       type: enum
@@ -52,47 +27,37 @@ inputs:
         - hg38
         - GRCh37
       name: reference_genome
-    'sbg:x': -459.2857360839844
-    'sbg:y': -385.71429443359375
+  - id: bam_cram_file
+    type: File
+    secondaryFiles:
+      - |-
+        ${
+            return (self.basename + self.nameext.replace('m','i'))
+        }
 outputs:
   - id: called_variant_sites
     outputSource:
       - topmed_freeze3_calling/called_variant_sites
     type: File
-    'sbg:x': 418.68548583984375
-    'sbg:y': -43.3526725769043
   - id: genotypes
     outputSource:
       - topmed_freeze3_calling/genotypes
     type: File
-    'sbg:x': 418.1114501953125
-    'sbg:y': -197.72366333007812
   - id: makefile_log
     outputSource:
       - topmed_freeze3_calling/makefile_log
     type: File?
-    'sbg:x': 423.53741455078125
-    'sbg:y': -332.6839599609375
   - id: vcf_output
     outputSource:
       - topmed_freeze3_calling/vcf_output
-    'sbg:fileTypes': GZ
     type: 'File[]?'
-    'sbg:x': 421.19287109375
-    'sbg:y': -622.8525390625
   - id: vcf_index_output
     outputSource:
       - topmed_freeze3_calling/vcf_index_output
-    'sbg:fileTypes': TBI
     type: 'File[]?'
-    'sbg:x': 424.314697265625
-    'sbg:y': -474.9278869628906
 steps:
   - id: verifybamid_cwl1
     in:
-      - id: bai_crai_file
-        source:
-          - bai_crai_file
       - id: bam_cram_file
         source:
           - bam_cram_file
@@ -104,151 +69,232 @@ steps:
           - reference_genome
     out:
       - id: output_index_file
-    run: steps/verifybamid/verifybamid.cwl
-    label: VerifyBamID_CWL1
-    scatter:
-      - bam_cram_file
-    'sbg:x': -233.57144165039062
-    'sbg:y': -197.14285278320312
-  - id: topmed_freeze3_calling
-    in:
-      - id: bai_crai_files
-        source:
-          - bai_crai_file
-      - id: bam_cram_files
-        source:
-          - bam_cram_file
-      - id: chromosomes
-        default: []
-        source:
-          - chromosomes
-      - id: discover_unit
-        source:
-          - discover_unit
-      - id: genotype_unit
-        source:
-          - genotype_unit
-      - id: index_files
-        source:
-          - verifybamid_cwl1/output_index_file
-      - id: num_of_jobs
-        source:
-          - num_of_jobs
-      - id: pedigree_file
-        source:
-          - pedigree_file
-      - id: reference_file
-        source:
-          - reference_file
-      - id: reference_genome
-        source:
-          - reference_genome
-    out:
-      - id: called_variant_sites
-      - id: genotypes
-      - id: makefile_log
-      - id: vcf_output
-      - id: vcf_index_output
-    run: steps/topmed_freeze3_calling/topmed_freeze3_calling.cwl
-    label: Topmed_freeze3_CWL1
-    'sbg:x': 157.14285278320312
-    'sbg:y': -198
-requirements:
-  - class: ScatterFeatureRequirement
-$namespaces:
-  sbg: 'https://sevenbridges.com'
-'sbg:appVersion':
-  - v1.0
-'sbg:contributors':
-  - vladimir_obucina
-'sbg:createdBy': vladimir_obucina
-'sbg:createdOn': 1526996458
-'sbg:id': >-
-  vladimir_obucina/topmed-freeze-3a-variant-calling-pipeline/topmed-variant-calling-pipeline-cwl1/17
-'sbg:image_url': >-
-  https://igor.sbgenomics.com/ns/brood/images/vladimir_obucina/topmed-freeze-3a-variant-calling-pipeline/topmed-variant-calling-pipeline-cwl1/17.png
-'sbg:latestRevision': 17
-'sbg:modifiedBy': vladimir_obucina
-'sbg:modifiedOn': 1530632680
-'sbg:project': vladimir_obucina/topmed-freeze-3a-variant-calling-pipeline
-'sbg:projectName': TOPMed Freeze 3a Variant Calling Pipeline
-'sbg:publisher': sbg
-'sbg:revision': 17
-'sbg:revisionNotes': 'UPDATE: Changed variant calling so pedigree file is not mandatory anymore'
-'sbg:revisionsInfo':
-  - 'sbg:modifiedBy': vladimir_obucina
-    'sbg:modifiedOn': 1526996458
-    'sbg:revision': 0
-    'sbg:revisionNotes': null
-  - 'sbg:modifiedBy': vladimir_obucina
-    'sbg:modifiedOn': 1526996882
-    'sbg:revision': 1
-    'sbg:revisionNotes': 'Firste Version with CWL1 tools, scatter on VerifyBAMId is of type none'
-  - 'sbg:modifiedBy': vladimir_obucina
-    'sbg:modifiedOn': 1526997137
-    'sbg:revision': 2
-    'sbg:revisionNotes': Exposed ports
-  - 'sbg:modifiedBy': vladimir_obucina
-    'sbg:modifiedOn': 1526997206
-    'sbg:revision': 3
-    'sbg:revisionNotes': ''
-  - 'sbg:modifiedBy': vladimir_obucina
-    'sbg:modifiedOn': 1526997265
-    'sbg:revision': 4
-    'sbg:revisionNotes': ''
-  - 'sbg:modifiedBy': vladimir_obucina
-    'sbg:modifiedOn': 1527001305
-    'sbg:revision': 5
-    'sbg:revisionNotes': Separated bam and bai inputs for VerifyBAMId and Topmed_freeze3
-  - 'sbg:modifiedBy': vladimir_obucina
-    'sbg:modifiedOn': 1527007399
-    'sbg:revision': 6
-    'sbg:revisionNotes': Added output to VerifyBamID
-  - 'sbg:modifiedBy': vladimir_obucina
-    'sbg:modifiedOn': 1527060490
-    'sbg:revision': 7
-    'sbg:revisionNotes': 'UPDATE: Removed symlinks'
-  - 'sbg:modifiedBy': vladimir_obucina
-    'sbg:modifiedOn': 1527060551
-    'sbg:revision': 8
-    'sbg:revisionNotes': ''
-  - 'sbg:modifiedBy': vladimir_obucina
-    'sbg:modifiedOn': 1527071783
-    'sbg:revision': 9
-    'sbg:revisionNotes': >-
-      UPDATE: changed VerifyBamID, error was lack od \n sign at the end of each
-      output index file.
-  - 'sbg:modifiedBy': vladimir_obucina
-    'sbg:modifiedOn': 1527085565
-    'sbg:revision': 10
-    'sbg:revisionNotes': Removed index file from output
-  - 'sbg:modifiedBy': vladimir_obucina
-    'sbg:modifiedOn': 1527500740
-    'sbg:revision': 11
-    'sbg:revisionNotes': 'UPDATE: GRCh37 insted of hg19'
-  - 'sbg:modifiedBy': vladimir_obucina
-    'sbg:modifiedOn': 1527503995
-    'sbg:revision': 12
-    'sbg:revisionNotes': 'UPDATE: changed append_gcconfig.py script to recognize GRCh37'
-  - 'sbg:modifiedBy': vladimir_obucina
-    'sbg:modifiedOn': 1529918908
-    'sbg:revision': 13
-    'sbg:revisionNotes': 'UPDATE: Added vcf and vcf_index outputs'
-  - 'sbg:modifiedBy': vladimir_obucina
-    'sbg:modifiedOn': 1530622626
-    'sbg:revision': 14
-    'sbg:revisionNotes': 'UPDATE: Removed PED file as mandatory (not running steps 3a and 3b)'
-  - 'sbg:modifiedBy': vladimir_obucina
-    'sbg:modifiedOn': 1530622728
-    'sbg:revision': 15
-    'sbg:revisionNotes': ''
-  - 'sbg:modifiedBy': vladimir_obucina
-    'sbg:modifiedOn': 1530626434
-    'sbg:revision': 16
-    'sbg:revisionNotes': Fixed bug with file requirements of pedigree file
-  - 'sbg:modifiedBy': vladimir_obucina
-    'sbg:modifiedOn': 1530632680
-    'sbg:revision': 17
-    'sbg:revisionNotes': 'UPDATE: Changed variant calling so pedigree file is not mandatory anymore'
-'sbg:sbgMaintained': false
-'sbg:validationErrors': []
+    run:
+      class: CommandLineTool
+      cwlVersion: v1.0
+      id: >-
+        vladimir_obucina/topmed-freeze-3a-variant-calling-pipeline/verifybamid_cwl1/10
+      baseCommand: []
+      inputs:
+        - format: 'BAM,CRAM'
+          id: bam_cram_file
+          type: File
+          inputBinding:
+            position: 1
+            valueFrom: |-
+              ${
+                  return ''
+              }
+          label: BAM/CRAM Files
+          doc: Bam or Cram file for the sample
+          secondaryFiles:
+            - |-
+              ${
+                  return (self.basename + self.nameext.replace('m','i'))
+              }
+        - format: FA
+          id: reference
+          type: File
+          inputBinding:
+            position: 1
+            shellQuote: false
+            valueFrom: |-
+              ${
+
+                  return ""
+
+              }
+          label: Reference
+          doc: Reference file
+          secondaryFiles:
+            - .fai
+        - id: reference_genome
+          type:
+            type: enum
+            symbols:
+              - hg38
+              - GRCh37
+            name: reference_genome
+          label: Reference genome
+      outputs:
+        - id: output_index_file
+          doc: Output for topmed freeze3 pipeline
+          label: Output Index File
+          type: File?
+          outputBinding:
+            glob: |-
+              ${
+                  return inputs.bam_cram_file.path.split("/").pop().split(".").shift() + ".index"
+
+              }
+          format: INDEX
+      label: VerifyBamID_CWL1
+      arguments:
+        - position: 0
+          prefix: ''
+          separate: false
+          shellQuote: false
+          valueFrom: |-
+            ${
+                if (inputs.reference_genome == 'GRCh37') {
+                    var UDPath = "/VerifyBamID/resource/1000g.phase3.100k.b37.vcf.gz.dat.UD"
+                    var BedPath = "/VerifyBamID/resource/1000g.phase3.100k.b37.vcf.gz.dat.bed"
+                    var MeanPath = "/VerifyBamID/resource/1000g.phase3.100k.b37.vcf.gz.dat.mu"
+                } else if (inputs.reference_genome == 'hg38') {
+                    var UDPath = "/VerifyBamID/resource/1000g.phase3.100k.b38.vcf.gz.dat.UD"
+                    var BedPath = "/VerifyBamID/resource/1000g.phase3.100k.b38.vcf.gz.dat.bed"
+                    var MeanPath = "/VerifyBamID/resource/1000g.phase3.100k.b38.vcf.gz.dat.mu"
+                }
+
+                var comm = "export PATH=$PATH:/VerifyBamID/bin/ && VerifyBamID \
+             --UDPath " + UDPath + " \
+             --BedPath " + BedPath + " \
+             --MeanPath " + MeanPath + " \
+             --Reference " + inputs.reference.path + " --BamFile " + inputs.bam_cram_file.basename
+                comm += " && python make_index.py --file "
+                comm += inputs.bam_cram_file.path.split("/").pop().split(".").shift()
+                comm += " --path " + inputs.bam_cram_file.path + " --result result.out"
+
+                return comm
+            }
+      requirements:
+        - class: ShellCommandRequirement
+        - class: ResourceRequirement
+          ramMin: 1000
+          coresMin: 1
+        - class: DockerRequirement
+          dockerPull: 'images.sbgenomics.com/vladimir_obucina/topmed:VerifyBamID'
+        - class: InitialWorkDirRequirement
+          listing:
+            - entryname: make_index.py
+              entry: >-
+                import sys
+
+                import glob, os
+
+                import argparse
+
+
+                parser = argparse.ArgumentParser()
+
+
+
+                parser.add_argument("--file", help="File name.", type=str)
+
+                parser.add_argument("--path", help="Path to file.", type=str)
+
+                parser.add_argument("--result", help="Result from ", type=str)
+
+
+                args = parser.parse_args()
+
+
+                with open(args.result, 'rt') as in_file:
+                    contents = in_file.read()
+                    broj = contents.split("Alpha:",4)
+                    contamination = broj[1].rstrip()
+
+
+
+                output_file = args.file + ".index"
+
+                f = open (output_file, "w+")
+
+
+                f.write(args.file + '\t' + args.path + '\t' + contamination +
+                '\n')
+
+
+                f.close()
+        - class: InlineJavascriptRequirement
+          expressionLib:
+            - |-
+              var updateMetadata = function(file, key, value) {
+                  file['metadata'][key] = value;
+                  return file;
+              };
+
+
+              var setMetadata = function(file, metadata) {
+                  if (!('metadata' in file))
+                      file['metadata'] = metadata;
+                  else {
+                      for (var key in metadata) {
+                          file['metadata'][key] = metadata[key];
+                      }
+                  }
+                  return file
+              };
+
+              var inheritMetadata = function(o1, o2) {
+                  var commonMetadata = {};
+                  if (!Array.isArray(o2)) {
+                      o2 = [o2]
+                  }
+                  for (var i = 0; i < o2.length; i++) {
+                      var example = o2[i]['metadata'];
+                      for (var key in example) {
+                          if (i == 0)
+                              commonMetadata[key] = example[key];
+                          else {
+                              if (!(commonMetadata[key] == example[key])) {
+                                  delete commonMetadata[key]
+                              }
+                          }
+                      }
+                  }
+                  if (!Array.isArray(o1)) {
+                      o1 = setMetadata(o1, commonMetadata)
+                  } else {
+                      for (var i = 0; i < o1.length; i++) {
+                          o1[i] = setMetadata(o1[i], commonMetadata)
+                      }
+                  }
+                  return o1;
+              };
+
+              var toArray = function(file) {
+                  return [].concat(file);
+              };
+
+              var groupBy = function(files, key) {
+                  var groupedFiles = [];
+                  var tempDict = {};
+                  for (var i = 0; i < files.length; i++) {
+                      var value = files[i]['metadata'][key];
+                      if (value in tempDict)
+                          tempDict[value].push(files[i]);
+                      else tempDict[value] = [files[i]];
+                  }
+                  for (var key in tempDict) {
+                      groupedFiles.push(tempDict[key]);
+                  }
+                  return groupedFiles;
+              };
+
+              var orderBy = function(files, key, order) {
+                  var compareFunction = function(a, b) {
+                      if (a['metadata'][key].constructor === Number) {
+                          return a['metadata'][key] - b['metadata'][key];
+                      } else {
+                          var nameA = a['metadata'][key].toUpperCase();
+                          var nameB = b['metadata'][key].toUpperCase();
+                          if (nameA < nameB) {
+                              return -1;
+                          }
+                          if (nameA > nameB) {
+                              return 1;
+                          }
+                          return 0;
+                      }
+                  };
+
+                  files = files.sort(compareFunction);
+                  if (order == undefined || order == "asc")
+                      return files;
+                  else
+                      return files.reverse();
+              };
+      $namespaces:
+        sbg: 'https://sevenbridges.com'
+      
