@@ -13,7 +13,7 @@ inputs:
         ${
             return ''
         }
-    label: BAM/CRAM File
+    label: BAM/CRAM Files
     secondaryFiles:
       - |-
         ${
@@ -22,26 +22,35 @@ inputs:
   - id: chromosomes
     type: 'string[]'
     label: Chromosome
-  - id: discover_unit
+  - 'sbg:category': Input parameter
+    id: discover_unit
     type: int
     label: DiscoverUnit
-  - id: genotype_unit
+  - 'sbg:category': Input parameter
+    id: genotype_unit
     type: int
     label: GenotypeUnit
-  - id: index_files
+  - 'sbg:category': Input Files
+    id: index_files
     type: File?
     label: Index files
     doc: Index files with contamination values
-  - id: num_of_jobs
+    'sbg:fileTypes': INDEX
+  - 'sbg:toolDefaultValue': '4'
+    id: num_of_jobs
     type: int?
     label: Number of jobs
-  - id: pedigree_file
+  - 'sbg:category': Input Files
+    id: pedigree_file
     type: File?
     label: Pedigree File
-  - id: reference_file
+    'sbg:fileTypes': PED
+  - 'sbg:category': Input Files
+    id: reference_file
     type: File
     label: Reference File
     doc: Reference genome
+    'sbg:fileTypes': TGZ
   - id: reference_genome
     type:
       type: enum
@@ -73,12 +82,14 @@ outputs:
     type: 'File[]?'
     outputBinding:
       glob: '*vcf.gz'
+    'sbg:fileTypes': GZ
   - id: vcf_index_output
     doc: VCF index output file
     label: Output Index
     type: 'File[]?'
     outputBinding:
       glob: '*.tbi'
+    'sbg:fileTypes': TBI
 label: Topmed_freeze3_CWL1
 arguments:
   - position: 0
@@ -373,4 +384,3 @@ requirements:
         };
 $namespaces:
   sbg: 'https://sevenbridges.com'
-
