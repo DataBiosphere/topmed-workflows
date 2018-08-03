@@ -92,4 +92,4 @@ set -o xtrace
 
    java -XX:+PrintCommandLineFlags
    java -Xms3G -Xmx7G -jar cromwell-34.jar run ../variant-caller/variant-caller-wdl-checker/topmed_freeze3_calling_checker.wdl -i ../variant-caller/variant-caller-wdl-checker/topmed_freeze3_calling_checker.wdl.local.json
-   rm -rf cromwell-executions
+   sudo rm -rf cromwell-executions

@@ -42,6 +42,6 @@ set -o xtrace
    cwltool ../CRAM-no-header-md5sum/CRAM_md5sum_checker_wrapper.cwl ../CRAM-no-header-md5sum/CRAM_md5sum_checker_wrapper.cwl.local.json
 
    java -jar cromwell-34.jar run ../CRAM-no-header-md5sum/CRAM_md5sum_checker_wrapper.wdl -i ../CRAM-no-header-md5sum/CRAM_md5sum_checker_wrapper.wdl.local.json
-   rm -rf cromwell-executions
+   sudo rm -rf cromwell-executions
 
 
