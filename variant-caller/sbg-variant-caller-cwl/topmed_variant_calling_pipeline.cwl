@@ -9,16 +9,8 @@ inputs:
     type: File
     'sbg:x': -460
     'sbg:y': -266.8571472167969
-  - id: bam_cram_file
-    'sbg:fileTypes': 'BAM, CRAM'
-    type: 'File[]'
-    'sbg:x': -457.8571472167969
-    'sbg:y': -143.42857360839844
-  - id: bai_crai_file
-    'sbg:fileTypes': 'BAI, CRAI'
-    type: 'File[]'
-    'sbg:x': -456.4285888671875
-    'sbg:y': -17.285715103149414
+    secondaryFiles:
+      - .fai
   - id: reference_file
     'sbg:fileTypes': TGZ
     type: File
@@ -54,6 +46,15 @@ inputs:
       name: reference_genome
     'sbg:x': -459.2857360839844
     'sbg:y': -385.71429443359375
+  - id: bam_cram_file
+    type: File
+    'sbg:x': -548.7529296875
+    'sbg:y': -25.529401779174805
+    secondaryFiles:
+      - |-
+        ${
+            return (self.basename + self.nameext.replace('m','i'))
+        }
 outputs:
   - id: called_variant_sites
     outputSource:
@@ -90,9 +91,6 @@ outputs:
 steps:
   - id: verifybamid_cwl1
     in:
-      - id: bai_crai_file
-        source:
-          - bai_crai_file
       - id: bam_cram_file
         source:
           - bam_cram_file
@@ -106,16 +104,11 @@ steps:
       - id: output_index_file
     run: steps/verifybamid/verifybamid.cwl
     label: VerifyBamID_CWL1
-    scatter:
-      - bam_cram_file
     'sbg:x': -233.57144165039062
     'sbg:y': -197.14285278320312
   - id: topmed_freeze3_calling
     in:
-      - id: bai_crai_files
-        source:
-          - bai_crai_file
-      - id: bam_cram_files
+      - id: bam_cram_file
         source:
           - bam_cram_file
       - id: chromosomes
@@ -153,102 +146,8 @@ steps:
     label: Topmed_freeze3_CWL1
     'sbg:x': 157.14285278320312
     'sbg:y': -198
-requirements:
-  - class: ScatterFeatureRequirement
+requirements: 
+    - class: InlineJavascriptRequirement
 $namespaces:
   sbg: 'https://sevenbridges.com'
-'sbg:appVersion':
-  - v1.0
-'sbg:contributors':
-  - vladimir_obucina
-'sbg:createdBy': vladimir_obucina
-'sbg:createdOn': 1526996458
-'sbg:id': >-
-  vladimir_obucina/topmed-freeze-3a-variant-calling-pipeline/topmed-variant-calling-pipeline-cwl1/17
-'sbg:image_url': >-
-  https://igor.sbgenomics.com/ns/brood/images/vladimir_obucina/topmed-freeze-3a-variant-calling-pipeline/topmed-variant-calling-pipeline-cwl1/17.png
-'sbg:latestRevision': 17
-'sbg:modifiedBy': vladimir_obucina
-'sbg:modifiedOn': 1530632680
-'sbg:project': vladimir_obucina/topmed-freeze-3a-variant-calling-pipeline
-'sbg:projectName': TOPMed Freeze 3a Variant Calling Pipeline
-'sbg:publisher': sbg
-'sbg:revision': 17
-'sbg:revisionNotes': 'UPDATE: Changed variant calling so pedigree file is not mandatory anymore'
-'sbg:revisionsInfo':
-  - 'sbg:modifiedBy': vladimir_obucina
-    'sbg:modifiedOn': 1526996458
-    'sbg:revision': 0
-    'sbg:revisionNotes': null
-  - 'sbg:modifiedBy': vladimir_obucina
-    'sbg:modifiedOn': 1526996882
-    'sbg:revision': 1
-    'sbg:revisionNotes': 'Firste Version with CWL1 tools, scatter on VerifyBAMId is of type none'
-  - 'sbg:modifiedBy': vladimir_obucina
-    'sbg:modifiedOn': 1526997137
-    'sbg:revision': 2
-    'sbg:revisionNotes': Exposed ports
-  - 'sbg:modifiedBy': vladimir_obucina
-    'sbg:modifiedOn': 1526997206
-    'sbg:revision': 3
-    'sbg:revisionNotes': ''
-  - 'sbg:modifiedBy': vladimir_obucina
-    'sbg:modifiedOn': 1526997265
-    'sbg:revision': 4
-    'sbg:revisionNotes': ''
-  - 'sbg:modifiedBy': vladimir_obucina
-    'sbg:modifiedOn': 1527001305
-    'sbg:revision': 5
-    'sbg:revisionNotes': Separated bam and bai inputs for VerifyBAMId and Topmed_freeze3
-  - 'sbg:modifiedBy': vladimir_obucina
-    'sbg:modifiedOn': 1527007399
-    'sbg:revision': 6
-    'sbg:revisionNotes': Added output to VerifyBamID
-  - 'sbg:modifiedBy': vladimir_obucina
-    'sbg:modifiedOn': 1527060490
-    'sbg:revision': 7
-    'sbg:revisionNotes': 'UPDATE: Removed symlinks'
-  - 'sbg:modifiedBy': vladimir_obucina
-    'sbg:modifiedOn': 1527060551
-    'sbg:revision': 8
-    'sbg:revisionNotes': ''
-  - 'sbg:modifiedBy': vladimir_obucina
-    'sbg:modifiedOn': 1527071783
-    'sbg:revision': 9
-    'sbg:revisionNotes': >-
-      UPDATE: changed VerifyBamID, error was lack od \n sign at the end of each
-      output index file.
-  - 'sbg:modifiedBy': vladimir_obucina
-    'sbg:modifiedOn': 1527085565
-    'sbg:revision': 10
-    'sbg:revisionNotes': Removed index file from output
-  - 'sbg:modifiedBy': vladimir_obucina
-    'sbg:modifiedOn': 1527500740
-    'sbg:revision': 11
-    'sbg:revisionNotes': 'UPDATE: GRCh37 insted of hg19'
-  - 'sbg:modifiedBy': vladimir_obucina
-    'sbg:modifiedOn': 1527503995
-    'sbg:revision': 12
-    'sbg:revisionNotes': 'UPDATE: changed append_gcconfig.py script to recognize GRCh37'
-  - 'sbg:modifiedBy': vladimir_obucina
-    'sbg:modifiedOn': 1529918908
-    'sbg:revision': 13
-    'sbg:revisionNotes': 'UPDATE: Added vcf and vcf_index outputs'
-  - 'sbg:modifiedBy': vladimir_obucina
-    'sbg:modifiedOn': 1530622626
-    'sbg:revision': 14
-    'sbg:revisionNotes': 'UPDATE: Removed PED file as mandatory (not running steps 3a and 3b)'
-  - 'sbg:modifiedBy': vladimir_obucina
-    'sbg:modifiedOn': 1530622728
-    'sbg:revision': 15
-    'sbg:revisionNotes': ''
-  - 'sbg:modifiedBy': vladimir_obucina
-    'sbg:modifiedOn': 1530626434
-    'sbg:revision': 16
-    'sbg:revisionNotes': Fixed bug with file requirements of pedigree file
-  - 'sbg:modifiedBy': vladimir_obucina
-    'sbg:modifiedOn': 1530632680
-    'sbg:revision': 17
-    'sbg:revisionNotes': 'UPDATE: Changed variant calling so pedigree file is not mandatory anymore'
-'sbg:sbgMaintained': false
-'sbg:validationErrors': []
+

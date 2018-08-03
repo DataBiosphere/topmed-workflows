@@ -1,25 +1,24 @@
 class: CommandLineTool
 cwlVersion: v1.0
-id: vladimir_obucina/topmed-freeze-3a-variant-calling-pipeline/verifybamid_cwl1/7
+id: vladimir_obucina/topmed-freeze-3a-variant-calling-pipeline/verifybamid_cwl1/10
 baseCommand: []
 inputs:
-  - format: 'BAI,CRAI'
-    'sbg:category': Input Files
-    id: bai_crai_file
-    type: 'File[]'
-    label: BAI/CRAI File
-    doc: Index file for BAM/CRAM
-    'sbg:fileTypes': 'BAI, CRAI'
-  - format: 'BAM,CRAM'
-    'sbg:category': Input Files
-    id: bam_cram_file
+  - id: bam_cram_file
     type: File
-    label: BAM/CRAM File
+    inputBinding:
+      position: 1
+      valueFrom: |-
+        ${
+            return ''
+        }
+    label: BAM/CRAM Files
     doc: Bam or Cram file for the sample
-    'sbg:fileTypes': 'BAM, CRAM'
-  - format: FA
-    'sbg:category': Input Files
-    id: reference
+    secondaryFiles:
+      - |-
+        ${
+            return (self.basename + self.nameext.replace('m','i'))
+        }
+  - id: reference
     type: File
     inputBinding:
       position: 1
@@ -32,11 +31,9 @@ inputs:
         }
     label: Reference
     doc: Reference file
-    'sbg:fileTypes': FA
     secondaryFiles:
       - .fai
-  - 'sbg:category': Input file
-    id: reference_genome
+  - id: reference_genome
     type:
       type: enum
       symbols:
@@ -211,65 +208,6 @@ requirements:
             else
                 return files.reverse();
         };
-'sbg:modifiedOn': 1527500604
-'sbg:latestRevision': 7
-'sbg:sbgMaintained': false
-'sbg:validationErrors': []
-'sbg:id': vladimir_obucina/topmed-freeze-3a-variant-calling-pipeline/verifybamid_cwl1/7
-'sbg:createdOn': 1526995337
-'sbg:contributors':
-  - vladimir_obucina
-'sbg:revisionsInfo':
-  - 'sbg:revision': 0
-    'sbg:modifiedOn': 1526995337
-    'sbg:modifiedBy': vladimir_obucina
-    'sbg:revisionNotes': null
-  - 'sbg:revision': 1
-    'sbg:modifiedOn': 1526995452
-    'sbg:modifiedBy': vladimir_obucina
-    'sbg:revisionNotes': First version
-  - 'sbg:revision': 2
-    'sbg:modifiedOn': 1526995574
-    'sbg:modifiedBy': vladimir_obucina
-    'sbg:revisionNotes': After conversion there weren't fyle types in the input ports. Added it
-  - 'sbg:revision': 3
-    'sbg:modifiedOn': 1526996077
-    'sbg:modifiedBy': vladimir_obucina
-    'sbg:revisionNotes': ''
-  - 'sbg:revision': 4
-    'sbg:modifiedOn': 1527013794
-    'sbg:modifiedBy': vladimir_obucina
-    'sbg:revisionNotes': Removed /topmed_freeze3/   from path in middle column
-  - 'sbg:revision': 5
-    'sbg:modifiedOn': 1527069678
-    'sbg:modifiedBy': vladimir_obucina
-    'sbg:revisionNotes': ''
-  - 'sbg:revision': 6
-    'sbg:modifiedOn': 1527071592
-    'sbg:modifiedBy': vladimir_obucina
-    'sbg:revisionNotes': 'UPDATE: changed generating index file, \n was missing at the end of file.'
-  - 'sbg:revision': 7
-    'sbg:modifiedOn': 1527500604
-    'sbg:modifiedBy': vladimir_obucina
-    'sbg:revisionNotes': 'UPDATE: GRCh37 instead of hg19'
 $namespaces:
   sbg: 'https://sevenbridges.com'
-'sbg:cmdPreview': >-
-  export PATH=$PATH:/VerifyBamID/bin/ && VerifyBamID  --UDPath
-  /VerifyBamID/resource/1000g.phase3.100k.b37.vcf.gz.dat.UD  --BedPath
-  /VerifyBamID/resource/1000g.phase3.100k.b37.vcf.gz.dat.bed  --MeanPath
-  /VerifyBamID/resource/1000g.phase3.100k.b37.vcf.gz.dat.mu  --Reference
-  /path/to/reference.ext --BamFile /path/to/bam_file.ext && python make_index.py
-  --file bam_file --path /root/topmed_freeze3_calling/bam_file.ext --result
-  result.out
-'sbg:modifiedBy': vladimir_obucina
-'sbg:image_url': >-
-  https://igor.sbgenomics.com/ns/brood/images/vladimir_obucina/topmed-freeze-3a-variant-calling-pipeline/verifybamid_cwl1/7.png
-'sbg:publisher': sbg
-'sbg:projectName': TOPMed Freeze 3a Variant Calling Pipeline
-'sbg:revisionNotes': 'UPDATE: GRCh37 instead of hg19'
-'sbg:appVersion':
-  - v1.0
-'sbg:createdBy': vladimir_obucina
-'sbg:project': vladimir_obucina/topmed-freeze-3a-variant-calling-pipeline
-'sbg:revision': 7
+
