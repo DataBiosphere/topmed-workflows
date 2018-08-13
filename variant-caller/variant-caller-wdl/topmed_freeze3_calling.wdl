@@ -181,7 +181,7 @@ workflow TopMedVariantCaller {
               ref_fasta = ref_hs38DH_fa,
               ref_fasta_index = ref_hs38DH_fa_fai,
         
-              CalcContamination_CPUs_default = CalcContamination_CPUs_default 
+              CalcContamination_CPUs = CalcContamination_CPUs_default 
         }
     }
 
