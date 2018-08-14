@@ -1,18 +1,11 @@
 class: CommandLineTool
 cwlVersion: v1.0
 id: >-
-  vladimir_obucina/topmed-freeze-3a-variant-calling-pipeline/topmed_freeze3_calling/29
+  vladimir_obucina_topmed_freeze_3a_variant_calling_pipeline_topmed_freeze3_calling_29
 baseCommand: []
 inputs:
   - id: bam_cram_file
     type: File
-    inputBinding:
-      position: 1
-      shellQuote: false
-      valueFrom: |-
-        ${
-            return ''
-        }
     label: BAM/CRAM Files
     secondaryFiles:
       - |-
