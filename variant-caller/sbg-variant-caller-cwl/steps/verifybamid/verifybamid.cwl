@@ -1,16 +1,10 @@
 class: CommandLineTool
 cwlVersion: v1.0
-id: vladimir_obucina/topmed-freeze-3a-variant-calling-pipeline/verifybamid_cwl1/10
+id: vladimir_obucina_topmed_freeze_3a_variant_calling_pipeline_verifybamid_cwl1_10
 baseCommand: []
 inputs:
   - id: bam_cram_file
     type: File
-    inputBinding:
-      position: 1
-      valueFrom: |-
-        ${
-            return ''
-        }
     label: BAM/CRAM Files
     doc: Bam or Cram file for the sample
     secondaryFiles:
@@ -20,15 +14,6 @@ inputs:
         }
   - id: reference
     type: File
-    inputBinding:
-      position: 1
-      shellQuote: false
-      valueFrom: |-
-        ${
-
-            return ""
-
-        }
     label: Reference
     doc: Reference file
     secondaryFiles:
@@ -210,4 +195,3 @@ requirements:
         };
 $namespaces:
   sbg: 'https://sevenbridges.com'
-

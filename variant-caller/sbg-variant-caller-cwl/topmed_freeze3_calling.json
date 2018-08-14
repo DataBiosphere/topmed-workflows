@@ -1,21 +1,22 @@
 {
+
     "bam_cram_file": {
       "class": "File",
-      "path": "gs://topmed_workflow_testing/topmed_variant_caller/input_files/NWD176325.recab.cram",
-      "secondaryFiles": [
-        {
-          "class": "File",
-          "path": "gs://topmed_workflow_testing/topmed_variant_caller/input_files/NWD176325.recab.cram.crai"
-        }
-      ]
+      "path": "/Users/vladimir_obucina/Documents/TOPMed/TESTsbg-variant-caller-cwl/testdata/NWD119836.recab.cram",
+      "secondaryFiles" : [
+       {
+          "path" : "/Users/vladimir_obucina/Documents/TOPMed/TESTsbg-variant-caller-cwl/testdata/NWD119836.recab.cram.crai",
+          "class" : "File"
+       }
+     ]
     },
     "reference": {
       "class": "File",
-      "path": "gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa",
+      "path": "/Users/vladimir_obucina/Documents/TOPMed/TESTsbg-variant-caller-cwl/testdata/hs38DH.fa",
       "secondaryFiles" : [
        {
-          "path" : "gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa.fai",
-          "class" : "File"
+          "path" : "/Users/vladimir_obucina/Documents/TOPMed/TESTsbg-variant-caller-cwl/testdata/hs38DH.fa.fai",
+          "class" : "File",
        }
      ]
     },
@@ -26,6 +27,6 @@
     "num_of_jobs": 4,
     "reference_file":{
       "class": "File",
-      "path": "gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH-db142-v1.tgz"
+      "path": "/Users/vladimir_obucina/Documents/TOPMed/TESTsbg-variant-caller-cwl/testdata/hs38DH-db142-v1.tgz"
     }
 }
