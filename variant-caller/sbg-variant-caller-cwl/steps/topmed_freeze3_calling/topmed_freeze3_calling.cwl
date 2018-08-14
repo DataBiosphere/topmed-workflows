@@ -25,7 +25,7 @@ inputs:
     label: GenotypeUnit
   - 'sbg:category': Input Files
     id: index_files
-    type: File?
+    type: 'File[]?'
     label: Index files
     doc: Index files with contamination values
     'sbg:fileTypes': INDEX
