@@ -30,6 +30,15 @@ workflow TopMedAligner {
   File dbSNP_vcf
   File dbSNP_vcf_index
 
+  Int? PreAlign_CPUs
+  Int PreAlign_CPUs_default = select_first([PreAlign_CPUs, 2])
+
+  Int? Align_CPUs
+  Int Align_CPUs_default = select_first([Align_CPUs, 32])
+
+  Int? PostAlign_CPUs
+  Int PostAlign_CPUs_default = select_first([PostAlign_CPUs, 2])
+
   # Optional input to increase all disk sizes in case of outlier sample with strange size behavior
   Int? increase_disk_size
 
@@ -66,7 +75,8 @@ workflow TopMedAligner {
       disk_size = ref_size + (bwa_disk_multiplier * cram_size) + (sort_sam_disk_multiplier * cram_size) + cram_size + additional_disk + fastq_gz_files_size,
       docker_image = docker_image,
       ref_fasta = ref_fasta,
-      ref_fasta_index = ref_fasta_index
+      ref_fasta_index = ref_fasta_index,
+      PreAlign_CPUs_default = PreAlign_CPUs_default
   }
 
   call Align {
@@ -84,7 +94,9 @@ workflow TopMedAligner {
       ref_amb = ref_amb,
       ref_sa = ref_sa,
       ref_fasta = ref_fasta,
-      ref_fasta_index = ref_fasta_index
+      ref_fasta_index = ref_fasta_index,
+      Align_CPUs_default = Align_CPUs_default
+
   }
 
   Float CRAMS_files_size = fastq_gz_to_CRAM_multiplier * cram_size
@@ -102,7 +114,8 @@ workflow TopMedAligner {
       ref_fasta_index = ref_fasta_index,
 
       dbSNP_vcf = dbSNP_vcf,
-      dbSNP_vcf_index = dbSNP_vcf_index
+      dbSNP_vcf_index = dbSNP_vcf_index,
+      PostAlign_CPUs_default = PostAlign_CPUs_default
   }
 
   output {
@@ -119,6 +132,8 @@ workflow TopMedAligner {
 
      File ref_fasta
      File ref_fasta_index
+
+     Int PreAlign_CPUs_default
 
      # Assign a basename to the intermediate files
      String pre_output_base = "pre_output_base"
@@ -153,7 +168,7 @@ workflow TopMedAligner {
     }
    runtime {
       memory: "10 GB"
-      cpu: "32"
+      cpu: sub(PreAlign_CPUs_default, "\\..*", "")
       disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
       zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"
       docker: docker_image
@@ -177,6 +192,8 @@ workflow TopMedAligner {
 
      File ref_fasta
      File ref_fasta_index
+
+     Int Align_CPUs_default
 
      # We have to use a trick to make Cromwell
      # skip substitution when using the bash ${<variable} syntax
@@ -231,7 +248,7 @@ workflow TopMedAligner {
     }
    runtime {
       memory: "10 GB"
-      cpu: "32"
+      cpu: sub(Align_CPUs_default, "\\..*", "")
       disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
       zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"
       docker: docker_image
@@ -249,6 +266,8 @@ task PostAlign {
      File dbSNP_vcf_index
 
      Array[File] input_cram_files
+
+     Int PostAlign_CPUs_default
 
      # We have to use a trick to make Cromwell
      # skip substitution when using the bash ${<variable} syntax
@@ -307,7 +326,7 @@ task PostAlign {
     }
    runtime {
       memory: "10 GB"
-      cpu: "32"
+      cpu: sub(PostAlign_CPUs_default, "\\..*", "")
       disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
       zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"
       docker: docker_image
