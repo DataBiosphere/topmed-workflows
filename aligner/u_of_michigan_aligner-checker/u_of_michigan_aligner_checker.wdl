@@ -1,6 +1,6 @@
-import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.23.0/aligner/u_of_michigan_aligner/u_of_michigan_aligner.wdl" as TopMed_aligner
+import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/feature/sample-name-output/aligner/u_of_michigan_aligner/u_of_michigan_aligner.wdl" as TopMed_aligner
+#import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.23.0/aligner/u_of_michigan_aligner/u_of_michigan_aligner.wdl" as TopMed_aligner
 import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.23.0/aligner/u_of_michigan_aligner-checker/u_of_michigan_aligner_checker_calculation.wdl" as checker
-
 
 
 workflow checkerWorkflow {
