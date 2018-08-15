@@ -25,7 +25,7 @@ inputs:
     label: GenotypeUnit
   - 'sbg:category': Input Files
     id: index_files
-    type: 'File[]?'
+    type: File?
     label: Index files
     doc: Index files with contamination values
     'sbg:fileTypes': INDEX
@@ -102,9 +102,7 @@ arguments:
           }
           var comm = "cat "
 
-          for (var i = 0; i < inputs.index_files.length; i++) {
-              comm += inputs.index_files[i].path + " ";
-          }
+          comm += inputs.index_files.path + " ";
           comm += "> trio_data.index && "
           /*
           for (var i = 0; i < inputs.bam_cram_files.length; i++) {
