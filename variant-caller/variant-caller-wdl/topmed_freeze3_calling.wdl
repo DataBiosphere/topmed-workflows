@@ -1,4 +1,4 @@
-import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.22.0/variant-caller/variant-caller-wdl/calculate_contamination.wdl" as getDNAContamination
+import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.23.0/variant-caller/variant-caller-wdl/calculate_contamination.wdl" as getDNAContamination
 
 ## This is the U of Michigan variant caller workflow WDL for the workflow code located here:
 ## https://github.com/statgen/topmed_freeze3_calling
@@ -17,6 +17,14 @@ workflow TopMedVariantCaller {
   Boolean? calculate_DNA_contamination
   Boolean calculate_contamination = select_first([calculate_DNA_contamination, true])
 
+  Int? SumCRAMs_CPUs
+  Int SumCRAMs_CPUs_default = select_first([SumCRAMs_CPUs, 2])
+
+  Int? CalcContamination_CPUs
+  Int CalcContamination_CPUs_default = select_first([CalcContamination_CPUs, 2])
+
+  Int? VariantCaller_CPUs
+  Int VariantCaller_CPUs_default = select_first([VariantCaller_CPUs, 32])
 
   Array[File] input_crai_files
   Array[File] input_cram_files
@@ -157,6 +165,7 @@ workflow TopMedVariantCaller {
       input_crams = input_cram_files,
       input_crais = input_crai_files,
       disk_size = reference_size + additional_disk,
+      SumCRAMs_CPUs_default = SumCRAMs_CPUs_default,
       docker_image = docker_image
   }
 
@@ -169,7 +178,9 @@ workflow TopMedVariantCaller {
               input_crai_file = cram_or_crai_file.right,
   
               ref_fasta = ref_hs38DH_fa,
-              ref_fasta_index = ref_hs38DH_fa_fai
+              ref_fasta_index = ref_hs38DH_fa_fai,
+        
+              CalcContamination_CPUs = CalcContamination_CPUs_default 
         }
     }
 
@@ -187,6 +198,7 @@ workflow TopMedVariantCaller {
       input_crais = input_crai_files,
       input_crams = input_cram_files,
       disk_size = sumCRAMSizes.total_size + reference_size + additional_disk,
+      VariantCaller_CPUs_default = VariantCaller_CPUs_default,
       docker_image = docker_image,
 
       ref_1000G_omni2_5_b38_sites_PASS_vcf_gz = ref_1000G_omni2_5_b38_sites_PASS_vcf_gz,
@@ -259,6 +271,7 @@ workflow TopMedVariantCaller {
   task sumCRAMSizes {
     Array[File] input_crams
     Array[File] input_crais
+    Int SumCRAMs_CPUs_default
     Float disk_size
     String docker_image
 
@@ -290,7 +303,7 @@ workflow TopMedVariantCaller {
     }
     runtime {
       memory: "10 GB"
-      cpu: "16"
+      cpu: sub(SumCRAMs_CPUs_default, "\\..*", "")
       disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
       zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"
       docker: docker_image
@@ -320,6 +333,7 @@ workflow TopMedVariantCaller {
      Array[File] input_crams
 
      Float disk_size
+     Int VariantCaller_CPUs_default
      String docker_image
 
      File ref_1000G_omni2_5_b38_sites_PASS_vcf_gz
@@ -634,7 +648,7 @@ workflow TopMedVariantCaller {
     }
    runtime {
       memory: "10 GB"
-      cpu: "16"
+      cpu: sub(VariantCaller_CPUs_default, "\\..*", "")
       disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
       zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"
       docker: docker_image

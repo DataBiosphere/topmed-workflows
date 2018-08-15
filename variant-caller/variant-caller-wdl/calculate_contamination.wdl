@@ -10,6 +10,10 @@ workflow calulateDNAContamination {
   File ref_fasta
   File ref_fasta_index
 
+  Int? CalcContamination_CPUs
+  Int CalcContamination_CPUs_default = select_first([CalcContamination_CPUs, 2])
+
+
   # Optional input to increase all disk sizes in case of outlier sample with strange size behavior
   Int? increase_disk_size
 
@@ -35,6 +39,7 @@ workflow calulateDNAContamination {
 
       reference_genome = reference_genome,
 
+      CalcContamination_CPUs_default = CalcContamination_CPUs_default,
       disk_size = cram_size + reference_size +  + additional_disk,
       docker_image = docker_image
  
@@ -56,6 +61,7 @@ workflow calulateDNAContamination {
 
      String reference_genome
 
+     Int CalcContamination_CPUs_default
      Float disk_size
      String docker_image
 
@@ -107,7 +113,7 @@ workflow calulateDNAContamination {
     }
    runtime {
       memory: "10 GB"
-      cpu: "32"
+      cpu: sub(CalcContamination_CPUs_default, "\\..*", "")
       disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
       zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"
       docker: docker_image

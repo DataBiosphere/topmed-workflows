@@ -78,7 +78,7 @@ outputs:
     outputSource:
       - topmed_freeze3_calling/vcf_output
     'sbg:fileTypes': GZ
-    type: 'File[]?'
+    type: File?
     'sbg:x': 421.19287109375
     'sbg:y': -622.8525390625
   - id: vcf_index_output
