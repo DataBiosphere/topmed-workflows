@@ -39,6 +39,9 @@ workflow TopMedAligner {
   Int? PostAlign_CPUs
   Int PostAlign_CPUs_default = select_first([PostAlign_CPUs, 2])
 
+  # Get the file name only with no path and no .cram suffix
+  String input_cram_name = basename("${input_cram_file}", ".cram")
+
   # Optional input to increase all disk sizes in case of outlier sample with strange size behavior
   Int? increase_disk_size
 
@@ -115,7 +118,9 @@ workflow TopMedAligner {
 
       dbSNP_vcf = dbSNP_vcf,
       dbSNP_vcf_index = dbSNP_vcf_index,
-      PostAlign_CPUs_default = PostAlign_CPUs_default
+      PostAlign_CPUs_default = PostAlign_CPUs_default,
+
+      input_cram_name = input_cram_name
   }
 
   output {
@@ -269,6 +274,9 @@ task PostAlign {
 
      Int PostAlign_CPUs_default
 
+     String input_cram_name
+     String output_file_name = "${input_cram_name}_realigned.cram"
+
      # We have to use a trick to make Cromwell
      # skip substitution when using the bash ${<variable} syntax
      # This is necessary to get the <var>=$(<command>) sub shell 
@@ -317,12 +325,12 @@ task PostAlign {
         samtools merge --threads 1 -c merged.bam *.sorted.bam \
           && rm ./*.sorted.bam \
           && bam-non-primary-dedup dedup_LowMem --allReadNames --binCustom --binQualS 0:2,3:3,4:4,5:5,6:6,7:10,13:20,23:30 --log dedup_lowmem.metrics --recab --in merged.bam --out -.ubam --refFile ${ref_fasta} --dbsnp ${dbSNP_vcf} \
-          | samtools view -h -C -T ${ref_fasta} -o output_file.cram --threads 1
+          | samtools view -h -C -T ${ref_fasta} -o ${output_file_name} --threads 1
         rc=$?
       fi
     >>>
      output {
-      File output_cram_file = "output_file.cram"
+      File output_cram_file = "${output_file_name}"
     }
    runtime {
       memory: "10 GB"
