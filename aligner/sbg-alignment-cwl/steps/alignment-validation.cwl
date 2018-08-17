@@ -62,9 +62,9 @@ arguments:
     shellQuote: false
     valueFrom: |
       ${
-          input_filename = inputs.cram.path.split('/').pop()
-          input_name_base = input_filename.split('.').slice(0,-1).join('.')
-          aux = "--output-fmt SAM -o " + input_name_base + ".sam"
+          var input_filename = inputs.cram.path.split('/').pop()
+          var input_name_base = input_filename.split('.').slice(0,-1).join('.')
+          var aux = "--output-fmt SAM -o " + input_name_base + ".sam"
           return aux
       }
   - position: 4
@@ -72,9 +72,9 @@ arguments:
     shellQuote: false
     valueFrom: |-
       ${
-          ret = "&& md5=$(md5sum "
-          input_filename = inputs.cram.path.split('/').pop()
-          input_name_base = input_filename.split('.').slice(0,-1).join('.')
+          var ret = "&& md5=$(md5sum "
+          var input_filename = inputs.cram.path.split('/').pop()
+          var input_name_base = input_filename.split('.').slice(0,-1).join('.')
           return ret + input_name_base + ".sam | awk '{ print $1 }') && if [ $md5 = " 
       }
   - position: 11
@@ -93,3 +93,8 @@ requirements:
   - class: DockerRequirement
     dockerPull: 'statgen/alignment:1.0.0'
   - class: InlineJavascriptRequirement
+  - class: InitialWorkDirRequirement
+    listing:
+      - $(inputs.cram)
+      - $(inputs.reference)
+

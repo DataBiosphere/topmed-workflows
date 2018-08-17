@@ -12,8 +12,8 @@ inputs:
     'sbg:fileTypes': CRAM
     type: File
     label: Input CRAM file
-    'sbg:x': -233.1334991455078
-    'sbg:y': -43.2740478515625
+    'sbg:x': -253.4855499267578
+    'sbg:y': 25.186986923217773
   - id: bwa_index
     'sbg:fileTypes': TAR
     type: File
@@ -139,7 +139,7 @@ steps:
         source: input_file
       - id: threads
         source: threads
-        default: 8
+        default: 1
       - id: ram_min
         source: ram_min
         default: 7500
@@ -157,6 +157,7 @@ hints:
     value: '8'
 requirements:
   - class: ScatterFeatureRequirement
+  - class: MultipleInputFeatureRequirement
 'dct:creator':
   'foaf:mbox': 'mailto:support@sbgenomics.com'
   'foaf:name': Seven Bridges

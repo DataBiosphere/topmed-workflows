@@ -162,4 +162,4 @@ requirements:
         };
 hints:
   - class: 'sbg:AWSInstanceType'
-    value: c4.4xlarge;ebs-gp2;512
+    value: m5.large;ebs-gp2;512

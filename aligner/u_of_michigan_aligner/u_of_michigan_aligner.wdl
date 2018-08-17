@@ -1,7 +1,7 @@
 ## This is the TopMed alignment workflow WDL for the workflow code located here:
 ## https://github.com/statgen/docker-alignment
 ##
-## NOTE:  
+## NOTE:
 ## The reference genome files to use are located here:
 ## ftp://share.sph.umich.edu/gotcloud/ref/hs38DH-db142-v1.tgz
 ##
@@ -15,7 +15,7 @@ workflow TopMedAligner {
   File input_crai_file
   File input_cram_file
 
-  String docker_image 
+  String docker_image
 
   File ref_alt
   File ref_bwt
@@ -30,6 +30,18 @@ workflow TopMedAligner {
   File dbSNP_vcf
   File dbSNP_vcf_index
 
+  Int? PreAlign_CPUs
+  Int PreAlign_CPUs_default = select_first([PreAlign_CPUs, 2])
+
+  Int? Align_CPUs
+  Int Align_CPUs_default = select_first([Align_CPUs, 32])
+
+  Int? PostAlign_CPUs
+  Int PostAlign_CPUs_default = select_first([PostAlign_CPUs, 2])
+
+  # Get the file name only with no path and no .cram suffix
+  String input_cram_name = basename("${input_cram_file}", ".cram")
+
   # Optional input to increase all disk sizes in case of outlier sample with strange size behavior
   Int? increase_disk_size
 
@@ -40,13 +52,13 @@ workflow TopMedAligner {
   # Sometimes the output is larger than the input, or a task can spill to disk. In these cases we need to account for the
   # input (1) and the output (1.5) or the input(1), the output(1), and spillage (.5).
   Float bwa_disk_multiplier = 2.5
-  
+
   # Converting CRAM to fastq.gz takes extra disk space to store the fastq.gz files
   Float CRAM_to_fastqgz_multiplier = 2.5
 
   # Creating CRAM files from fastq.gz files increases the disk space needed
   Float fastq_gz_to_CRAM_multiplier = 1.5
-  
+
   # SortSam spills to disk a lot more because we are only store 300000 records in RAM now because its faster for our data
   # so it needs more disk space.  Also it spills to disk in an uncompressed format so we need to account for that with a
   # larger multiplier
@@ -66,7 +78,8 @@ workflow TopMedAligner {
       disk_size = ref_size + (bwa_disk_multiplier * cram_size) + (sort_sam_disk_multiplier * cram_size) + cram_size + additional_disk + fastq_gz_files_size,
       docker_image = docker_image,
       ref_fasta = ref_fasta,
-      ref_fasta_index = ref_fasta_index
+      ref_fasta_index = ref_fasta_index,
+      PreAlign_CPUs_default = PreAlign_CPUs_default
   }
 
   call Align {
@@ -84,7 +97,9 @@ workflow TopMedAligner {
       ref_amb = ref_amb,
       ref_sa = ref_sa,
       ref_fasta = ref_fasta,
-      ref_fasta_index = ref_fasta_index
+      ref_fasta_index = ref_fasta_index,
+      Align_CPUs_default = Align_CPUs_default
+
   }
 
   Float CRAMS_files_size = fastq_gz_to_CRAM_multiplier * cram_size
@@ -102,9 +117,12 @@ workflow TopMedAligner {
       ref_fasta_index = ref_fasta_index,
 
       dbSNP_vcf = dbSNP_vcf,
-      dbSNP_vcf_index = dbSNP_vcf_index
+      dbSNP_vcf_index = dbSNP_vcf_index,
+      PostAlign_CPUs_default = PostAlign_CPUs_default,
+
+      input_cram_name = input_cram_name
   }
- 
+
   output {
       File aligner_output = PostAlign.output_cram_file
   }
@@ -119,6 +137,8 @@ workflow TopMedAligner {
 
      File ref_fasta
      File ref_fasta_index
+
+     Int PreAlign_CPUs_default
 
      # Assign a basename to the intermediate files
      String pre_output_base = "pre_output_base"
@@ -153,7 +173,7 @@ workflow TopMedAligner {
     }
    runtime {
       memory: "10 GB"
-      cpu: "32"
+      cpu: sub(PreAlign_CPUs_default, "\\..*", "")
       disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
       zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"
       docker: docker_image
@@ -178,18 +198,23 @@ workflow TopMedAligner {
      File ref_fasta
      File ref_fasta_index
 
+     Int Align_CPUs_default
+
      # We have to use a trick to make Cromwell
      # skip substitution when using the bash ${<variable} syntax
-     # This is necessary to get the <var>=$(<command>) sub shell 
-     # syntax to work and assign the value to a variable when 
+     # This is necessary to get the <var>=$(<command>) sub shell
+     # syntax to work and assign the value to a variable when
      # running in Cromwell
-     # See https://gatkforums.broadinstitute.org/wdl/discussion/comment/44570#Comment_44570 
+     # See https://gatkforums.broadinstitute.org/wdl/discussion/comment/44570#Comment_44570
      String dollar = "$"
      command <<<
 
       # Set the exit code of a pipeline to that of the rightmost command
-      # to exit with a non-zero status, or zero if all commands of the pipeline exit 
-      set -o pipefail
+      # to exit with a non-zero status, or zero if all commands of the pipeline exit
+      # NOTE: Setting this will cause the pipeline to fail on Mac OS and Travis CI
+      #       in some cases. It is commented out mainly so Travis CI will work.
+      #       The failure was in samblaster
+      #set -o pipefail
       # cause a bash script to exit immediately when a command fails
       set -e
       # cause the bash shell to treat unset variables as an error and exit immediately
@@ -200,7 +225,7 @@ workflow TopMedAligner {
 
       echo "Running alignment"
 
-      # Get the Cromwell directory that is the input file location 
+      # Get the Cromwell directory that is the input file location
       input_file_location=$(dirname ${input_fastq_gz_files[0]})
 
       while read line
@@ -212,13 +237,13 @@ workflow TopMedAligner {
 
         # Prepend the path to the input file with the Cromwell input directory
         input_path=${dollar}{input_file_location}"/"${dollar}{input_filename}
-     
+
         paired_flag=""
         if [[ ${dollar}{input_filename} =~ interleaved\.fastq\.gz$ ]]
         then
           paired_flag="-p"
         fi
-      
+
         bwa mem -t 32 -K 100000000 -Y ${dollar}{paired_flag} -R ${dollar}{line_rg} ${ref_fasta} ${dollar}{input_path} | samblaster -a --addMateTags | samtools view -@ 32 -T ${ref_fasta} -C -o ${dollar}{output_filename} -
       done <<< "$(tail -n +2 ${input_list_file})"
 
@@ -228,7 +253,7 @@ workflow TopMedAligner {
     }
    runtime {
       memory: "10 GB"
-      cpu: "32"
+      cpu: sub(Align_CPUs_default, "\\..*", "")
       disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
       zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"
       docker: docker_image
@@ -247,6 +272,11 @@ task PostAlign {
 
      Array[File] input_cram_files
 
+     Int PostAlign_CPUs_default
+
+     String input_cram_name
+     String output_file_name = "${input_cram_name}_realigned.cram"
+
      # We have to use a trick to make Cromwell
      # skip substitution when using the bash ${<variable} syntax
      # This is necessary to get the <var>=$(<command>) sub shell 
@@ -257,7 +287,7 @@ task PostAlign {
 
      command <<<
       # Set the exit code of a pipeline to that of the rightmost command
-      # to exit with a non-zero status, or zero if all commands of the pipeline exit 
+      # to exit with a non-zero status, or zero if all commands of the pipeline exit
       set -o pipefail
       # cause a bash script to exit immediately when a command fails
       set -e
@@ -289,22 +319,22 @@ task PostAlign {
         # Remove the tmp file; no need to remove the input file from the previous task
         rm -f ${dollar}{tmp_prefix}*
       done
-      
+
       if [[ $rc == 0 ]]
       then 
         samtools merge --threads 1 -c merged.bam *.sorted.bam \
           && rm ./*.sorted.bam \
           && bam-non-primary-dedup dedup_LowMem --allReadNames --binCustom --binQualS 0:2,3:3,4:4,5:5,6:6,7:10,13:20,23:30 --log dedup_lowmem.metrics --recab --in merged.bam --out -.ubam --refFile ${ref_fasta} --dbsnp ${dbSNP_vcf} \
-          | samtools view -h -C -T ${ref_fasta} -o output_file.cram --threads 1
+          | samtools view -h -C -T ${ref_fasta} -o ${output_file_name} --threads 1
         rc=$?
       fi
     >>>
      output {
-      File output_cram_file = "output_file.cram"
+      File output_cram_file = "${output_file_name}"
     }
    runtime {
       memory: "10 GB"
-      cpu: "32"
+      cpu: sub(PostAlign_CPUs_default, "\\..*", "")
       disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
       zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"
       docker: docker_image

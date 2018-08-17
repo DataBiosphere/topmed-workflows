@@ -1,26 +1,17 @@
 class: CommandLineTool
 cwlVersion: v1.0
 id: >-
-  vladimir_obucina/topmed-freeze-3a-variant-calling-pipeline/topmed_freeze3_calling/25
+  vladimir_obucina_topmed_freeze_3a_variant_calling_pipeline_topmed_freeze3_calling_29
 baseCommand: []
 inputs:
-  - format: 'BAI,CRAI'
-    id: bai_crai_files
-    type: 'File[]'
-    label: BAI/CRAI files
-    'sbg:fileTypes': 'BAI, CRAI'
-  - format: 'BAM, CRAM'
-    id: bam_cram_files
-    type: 'File[]'
-    inputBinding:
-      position: 1
-      shellQuote: false
-      valueFrom: |-
-        ${
-            return ''
-        }
+  - id: bam_cram_file
+    type: File
     label: BAM/CRAM Files
-    'sbg:fileTypes': 'BAM, CRAM'
+    secondaryFiles:
+      - |-
+        ${
+            return (self.basename + self.nameext.replace('m','i'))
+        }
   - id: chromosomes
     type: 'string[]'
     label: Chromosome
@@ -32,10 +23,9 @@ inputs:
     id: genotype_unit
     type: int
     label: GenotypeUnit
-  - format: INDEX
-    'sbg:category': Input Files
+  - 'sbg:category': Input Files
     id: index_files
-    type: 'File[]?'
+    type: File?
     label: Index files
     doc: Index files with contamination values
     'sbg:fileTypes': INDEX
@@ -43,21 +33,18 @@ inputs:
     id: num_of_jobs
     type: int?
     label: Number of jobs
-  - format: PED
-    'sbg:category': Input Files
+  - 'sbg:category': Input Files
     id: pedigree_file
     type: File?
     label: Pedigree File
     'sbg:fileTypes': PED
-  - format: TGZ
-    'sbg:category': Input Files
+  - 'sbg:category': Input Files
     id: reference_file
     type: File
     label: Reference File
     doc: Reference genome
     'sbg:fileTypes': TGZ
-  - 'sbg:category': Input file
-    id: reference_genome
+  - id: reference_genome
     type:
       type: enum
       symbols:
@@ -115,9 +102,7 @@ arguments:
           }
           var comm = "cat "
 
-          for (var i = 0; i < inputs.index_files.length; i++) {
-              comm += inputs.index_files[i].path + " ";
-          }
+          comm += inputs.index_files.path + " ";
           comm += "> trio_data.index && "
           /*
           for (var i = 0; i < inputs.bam_cram_files.length; i++) {
@@ -388,161 +373,5 @@ requirements:
             else
                 return files.reverse();
         };
-hints:
-  - class: 'sbg:useSbgFS'
-    value: 'true'
-'sbg:publisher': sbg
-'sbg:image_url': >-
-  https://igor.sbgenomics.com/ns/brood/images/vladimir_obucina/topmed-freeze-3a-variant-calling-pipeline/topmed_freeze3_calling/25.png
-'sbg:cmdPreview': >-
-  cat /path/to/index_files-1.ext /path/to/index_files-2.ext > trio_data.index &&
-  ln -sf /path/to/bam_cram_files-1.ext
-  /root/topmed_freeze3_calling/bam_cram_files-1.ext &&  ln -sf
-  /path/to/bam_cram_files-2.ext
-  /root/topmed_freeze3_calling/bam_cram_files-2.ext &&  ln -sf
-  /path/to/bai_crai_files-1.ext
-  /root/topmed_freeze3_calling/bai_crai_files-1.ext &&  ln -sf
-  /path/to/bai_crai_files-1.ext
-  /root/topmed_freeze3_calling/bai_crai_files-1.ext && python
-  /root/topmed_freeze3_calling/scripts/append_gcconfig.py -du 4 -gu 7 -gen hg38
-  && cp trio_data.index /path/to/PedigreeFile.ext
-  /root/topmed_freeze3_calling/data/ &&  cwd="$PWD"  && cd
-  /root/topmed_freeze3_calling/ && tar -xzvf /path/to/ReferenceFile.ext -C
-  /root/topmed_freeze3_calling/ && perl
-  scripts/step1-detect-and-merge-variants.pl chrchromosome-string-value-1
-  chrchromosome-string-value-2 && sed -i '1s/^/SHELL:=\/bin\/bash\n/'
-  out/aux/Makefile && make -f out/aux/Makefile >> makefile.log && perl
-  scripts/step2-joint-genotyping.pl chrchromosome-string-value-1
-  chrchromosome-string-value-2 && make -f out/paste/*.Makefile >> makefile.log
-  && perl scripts/step3a-compute-milk-score.pl chrchromosome-string-value-1
-  chrchromosome-string-value-2 && make -f out/aux/milk/*.Makefile >>
-  makefile.log && perl scripts/step3b-run-svm-milk-filter.pl
-  chrchromosome-string-value-1 chrchromosome-string-value-2 >> makefile.log &&
-  cd out && tar -zcvf genotypes.tar.gz paste && tar -zcvf
-  called_variant_sites.tar.gz svm && mv ../makefile.log genotypes.tar.gz
-  called_variant_sites.tar.gz "$cwd"
-'sbg:contributors':
-  - mikojicic
-  - vladimir_obucina
-'sbg:sbgMaintained': false
-'sbg:project': vladimir_obucina/topmed-freeze-3a-variant-calling-pipeline
-'sbg:revisionsInfo':
-  - 'sbg:revision': 0
-    'sbg:modifiedOn': 1525956103
-    'sbg:modifiedBy': mikojicic
-    'sbg:revisionNotes': null
-  - 'sbg:revision': 1
-    'sbg:modifiedOn': 1525956286
-    'sbg:modifiedBy': mikojicic
-    'sbg:revisionNotes': init
-  - 'sbg:revision': 2
-    'sbg:modifiedOn': 1525956409
-    'sbg:modifiedBy': mikojicic
-    'sbg:revisionNotes': name changed
-  - 'sbg:revision': 3
-    'sbg:modifiedOn': 1525957728
-    'sbg:modifiedBy': mikojicic
-    'sbg:revisionNotes': rev 71
-  - 'sbg:revision': 4
-    'sbg:modifiedOn': 1525957765
-    'sbg:modifiedBy': mikojicic
-    'sbg:revisionNotes': delete input
-  - 'sbg:revision': 5
-    'sbg:modifiedOn': 1525959177
-    'sbg:modifiedBy': mikojicic
-    'sbg:revisionNotes': javascript save
-  - 'sbg:revision': 6
-    'sbg:modifiedOn': 1525962377
-    'sbg:modifiedBy': mikojicic
-    'sbg:revisionNotes': use sbgfs
-  - 'sbg:revision': 7
-    'sbg:modifiedOn': 1525963786
-    'sbg:modifiedBy': mikojicic
-    'sbg:revisionNotes': default number of jobs fixed
-  - 'sbg:revision': 8
-    'sbg:modifiedOn': 1526053632
-    'sbg:modifiedBy': vladimir_obucina
-    'sbg:revisionNotes': Removed file requirements
-  - 'sbg:revision': 9
-    'sbg:modifiedOn': 1526995956
-    'sbg:modifiedBy': vladimir_obucina
-    'sbg:revisionNotes': Draft2 revision 98
-  - 'sbg:revision': 10
-    'sbg:modifiedOn': 1526996080
-    'sbg:modifiedBy': vladimir_obucina
-    'sbg:revisionNotes': ''
-  - 'sbg:revision': 11
-    'sbg:modifiedOn': 1527013723
-    'sbg:modifiedBy': vladimir_obucina
-    'sbg:revisionNotes': Removed making symlinks
-  - 'sbg:revision': 12
-    'sbg:modifiedOn': 1527068264
-    'sbg:modifiedBy': vladimir_obucina
-    'sbg:revisionNotes': Added append_gcconfig.py script to create files
-  - 'sbg:revision': 13
-    'sbg:modifiedOn': 1527069675
-    'sbg:modifiedBy': vladimir_obucina
-    'sbg:revisionNotes': ''
-  - 'sbg:revision': 14
-    'sbg:modifiedOn': 1527085513
-    'sbg:modifiedBy': vladimir_obucina
-    'sbg:revisionNotes': Removed Index file from outputs.
-  - 'sbg:revision': 15
-    'sbg:modifiedOn': 1527500690
-    'sbg:modifiedBy': vladimir_obucina
-    'sbg:revisionNotes': 'UPDATE: GRCh37 insted of hg19'
-  - 'sbg:revision': 16
-    'sbg:modifiedOn': 1527503975
-    'sbg:modifiedBy': vladimir_obucina
-    'sbg:revisionNotes': 'UPDATE: changed append_gcconfig.py script to recognize GRCh37'
-  - 'sbg:revision': 17
-    'sbg:modifiedOn': 1529858460
-    'sbg:modifiedBy': vladimir_obucina
-    'sbg:revisionNotes': 'UPDATE: Added vcf and vcf_index output.'
-  - 'sbg:revision': 18
-    'sbg:modifiedOn': 1529872391
-    'sbg:modifiedBy': vladimir_obucina
-    'sbg:revisionNotes': ''
-  - 'sbg:revision': 19
-    'sbg:modifiedOn': 1530622544
-    'sbg:modifiedBy': vladimir_obucina
-    'sbg:revisionNotes': 'UPDATE: Removed PED file as mandatory (not running steps 3a and 3b)'
-  - 'sbg:revision': 20
-    'sbg:modifiedOn': 1530626397
-    'sbg:modifiedBy': vladimir_obucina
-    'sbg:revisionNotes': Fixed bug with file requirements of pedigree file
-  - 'sbg:revision': 21
-    'sbg:modifiedOn': 1530626919
-    'sbg:modifiedBy': vladimir_obucina
-    'sbg:revisionNotes': ''
-  - 'sbg:revision': 22
-    'sbg:modifiedOn': 1530627291
-    'sbg:modifiedBy': vladimir_obucina
-    'sbg:revisionNotes': ''
-  - 'sbg:revision': 23
-    'sbg:modifiedOn': 1530627554
-    'sbg:modifiedBy': vladimir_obucina
-    'sbg:revisionNotes': ''
-  - 'sbg:revision': 24
-    'sbg:modifiedOn': 1530628150
-    'sbg:modifiedBy': vladimir_obucina
-    'sbg:revisionNotes': ''
-  - 'sbg:revision': 25
-    'sbg:modifiedOn': 1530630624
-    'sbg:modifiedBy': vladimir_obucina
-    'sbg:revisionNotes': ''
-'sbg:createdOn': 1525956103
-'sbg:revisionNotes': ''
-'sbg:id': >-
-  vladimir_obucina/topmed-freeze-3a-variant-calling-pipeline/topmed_freeze3_calling/25
-'sbg:modifiedOn': 1530630624
-'sbg:appVersion':
-  - v1.0
 $namespaces:
   sbg: 'https://sevenbridges.com'
-'sbg:revision': 25
-'sbg:latestRevision': 25
-'sbg:projectName': TOPMed Freeze 3a Variant Calling Pipeline
-'sbg:createdBy': mikojicic
-'sbg:modifiedBy': vladimir_obucina
-'sbg:validationErrors': []
