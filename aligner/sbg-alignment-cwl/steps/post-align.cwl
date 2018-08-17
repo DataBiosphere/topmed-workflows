@@ -10,7 +10,7 @@ inputs:
   - id: reference
     type: File
   - id: dbsnp
-    type: File
+    type: File?
     inputBinding:
       position: 3
       prefix: '--dbsnp'
@@ -22,6 +22,11 @@ inputs:
     type: int?
     label: Number of threads
     default: 1
+  - id: input_cram
+    type: File
+    label: Input CRAM
+    doc: Input CRAM is passed to Post-align for output naming.
+    'sbg:fileTypes': CRAM
   - id: ram_min
     type: int?
     label: Minimum amount of RAM
@@ -34,7 +39,13 @@ outputs:
   - id: output
     type: File?
     outputBinding:
-      glob: '*cram'
+      glob: |-
+        ${
+          var outname = inputs.input_cram.path.split('/').slice(-1)[0]
+          outname = outname.split('.').slice(0, -1).join('.')
+          outname = outname.concat(".recab.cram")
+          return outname
+        }
 label: Post-align
 arguments:
   - position: 1
@@ -67,20 +78,10 @@ arguments:
     shellQuote: false
     valueFrom: |-
       ${
-        function sharedStart(array){
-          var A= array.concat().sort(), 
-          a1= A[0], a2= A[A.length-1], L= a1.length, i= 0;
-          while(i<L && a1.charAt(i)=== a2.charAt(i)) i++;
-          return a1.substring(0, i);
-        }
-        path_list = []
-        inputs.alignment_files.forEach(function(f){return path_list.push(f.path.replace(/\\/g,'/').replace( /.*\//, '' ))})
-        common_prefix = sharedStart(path_list)
-        if (common_prefix.length >0){
-          return common_prefix.concat(".recab.cram")
-        } else {
-          return "recab.cram"
-        }    
+        var outname = inputs.input_cram.path.split('/').slice(-1)[0]
+        outname = outname.split('.').slice(0, -1).join('.')
+        outname = outname.concat(".recab.cram")
+        return outname
       }
   - position: 0
     prefix: '--threads'
@@ -112,11 +113,11 @@ requirements:
   - class: DockerRequirement
     dockerPull: 'statgen/alignment:1.0.0'
   - class: InitialWorkDirRequirement
-    listing:
-      - |-
+    listing: |-
         ${ 
             var out = []
             out.push(inputs.reference)
+            out.push(inputs.input_cram)
             for (var i = 0; i < inputs.alignment_files.length; i++) { 
                 out.push(inputs.alignment_files[i]);
             }
@@ -126,4 +127,4 @@ requirements:
   - class: InlineJavascriptRequirement
 hints:
   - class: 'sbg:AWSInstanceType'
-    value: c4.4xlarge;ebs-gp2;512
+    value: m5.large;ebs-gp2;700

@@ -134,8 +134,9 @@ steps:
       - id: dbsnp
         source: dbsnp
       - id: alignment_files
-        source:
-          - samtools_sort/output
+        source: samtools_sort/output
+      - id: input_cram
+        source: input_file
       - id: threads
         source: threads
         default: 8
