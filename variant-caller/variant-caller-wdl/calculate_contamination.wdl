@@ -4,7 +4,7 @@
 
 workflow calulateDNAContamination {
 
-  File input_crai_file
+  File? input_crai_file
   File input_cram_file
 
   File ref_fasta
@@ -22,12 +22,16 @@ workflow calulateDNAContamination {
   Int additional_disk = select_first([increase_disk_size, 20])
 
   Float reference_size = size(ref_fasta, "GB") + size(ref_fasta_index, "GB")
-  Float cram_size = size(input_cram_file, "GB") + size(input_crai_file, "GB")
+  # Account for size of generated CRAM index file
+  Float cram_size = size(input_cram_file, "GB") * 1.25
+  Float crai_size = if (defined(input_crai_file)) then size(input_crai_file, "GB") else (cram_size * 1.25)
+#  Float cram_size = size(input_cram_file, "GB") + size(input_crai_file, "GB")
 
   String? reference_genome_version
   String reference_genome = select_first([reference_genome_version, 'hg38'])
 
-  String? docker_image = "images.sbgenomics.com/vladimir_obucina/topmed:VerifyBamID"
+#  String? docker_image = "images.sbgenomics.com/vladimir_obucina/topmed:VerifyBamID"
+  String? docker_image = "walts-verify-bamid:latest"
 
   call VerifyBamID {
      input:
@@ -40,7 +44,7 @@ workflow calulateDNAContamination {
       reference_genome = reference_genome,
 
       CalcContamination_CPUs_default = CalcContamination_CPUs_default,
-      disk_size = cram_size + reference_size +  + additional_disk,
+      disk_size = cram_size + crai_size + reference_size + additional_disk,
       docker_image = docker_image
  
       
@@ -53,7 +57,7 @@ workflow calulateDNAContamination {
 }
 
   task VerifyBamID {
-     File input_crai
+     File? input_crai
      File input_cram
 
      File ref_fasta
@@ -84,18 +88,25 @@ workflow calulateDNAContamination {
 
       echo "Running VerifyBamID"
 
+      # If there is no CRAM index file generate it
+      if [[ -z "${input_crai}" ]]
+      then 
+          printf "Creating index for ${input_cram}"
+          samtools index ${input_cram}
+      fi
+
       if [[ ${reference_genome} == 'hg37' ]]
       then
              printf "VerifyBamID: Using hg37 genome\n"
-             UDPath="/VerifyBamID/resource/1000g.phase3.100k.b37.vcf.gz.dat.UD"
-             BedPath="/VerifyBamID/resource/1000g.phase3.100k.b37.vcf.gz.dat.bed"
-             MeanPath="/VerifyBamID/resource/1000g.phase3.100k.b37.vcf.gz.dat.mu"
+             UDPath="/opt/verifybamid/VerifyBamID/resource/1000g.phase3.100k.b37.vcf.gz.dat.UD"
+             BedPath="/opt/verifybamid/VerifyBamID/resource/1000g.phase3.100k.b37.vcf.gz.dat.bed"
+             MeanPath="/opt/verifybamid/VerifyBamID/resource/1000g.phase3.100k.b37.vcf.gz.dat.mu"
       elif [[ ${reference_genome} == 'hg38' ]]
       then
              printf "VerifyBamID: Using hg38 genome\n"
-             UDPath="/VerifyBamID/resource/1000g.phase3.100k.b38.vcf.gz.dat.UD"
-             BedPath="/VerifyBamID/resource/1000g.phase3.100k.b38.vcf.gz.dat.bed"
-             MeanPath="/VerifyBamID/resource/1000g.phase3.100k.b38.vcf.gz.dat.mu"
+             UDPath="/opt/verifybamid/VerifyBamID/resource/1000g.phase3.100k.b38.vcf.gz.dat.UD"
+             BedPath="/opt/verifybamid/VerifyBamID/resource/1000g.phase3.100k.b38.vcf.gz.dat.bed"
+             MeanPath="/opt/verifybamid/VerifyBamID/resource/1000g.phase3.100k.b38.vcf.gz.dat.mu"
       else
           printf "ERROR: Invalid reference genome version string: %s. It should be hg37 or hg38\n" ${reference_genome}
           exit 1

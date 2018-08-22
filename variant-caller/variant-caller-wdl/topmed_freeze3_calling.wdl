@@ -1,4 +1,5 @@
-import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.23.0/variant-caller/variant-caller-wdl/calculate_contamination.wdl" as getDNAContamination
+#import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.23.0/variant-caller/variant-caller-wdl/calculate_contamination.wdl" as getDNAContamination
+import "/Users/waltershands/Documents/UCSC/gitroot/topmed-workflows/variant-caller/variant-caller-wdl/calculate_contamination.wdl" as getDNAContamination
 
 ## This is the U of Michigan variant caller workflow WDL for the workflow code located here:
 ## https://github.com/statgen/topmed_freeze3_calling
@@ -26,7 +27,7 @@ workflow TopMedVariantCaller {
   Int? VariantCaller_CPUs
   Int VariantCaller_CPUs_default = select_first([VariantCaller_CPUs, 32])
 
-  Array[File] input_crai_files
+  Array[File]? input_crai_files
   Array[File] input_cram_files
 
   String docker_image
@@ -170,22 +171,53 @@ workflow TopMedVariantCaller {
   }
 
   if (calculate_contamination) {
-    Array[Pair[File, File]] cram_and_crai_files = zip(input_cram_files, input_crai_files)
-    scatter(cram_or_crai_file in cram_and_crai_files) {
-        call getDNAContamination.calulateDNAContamination as scatter_getContamination {
-          input:
-              input_cram_file = cram_or_crai_file.left,
-              input_crai_file = cram_or_crai_file.right,
-  
-              ref_fasta = ref_hs38DH_fa,
-              ref_fasta_index = ref_hs38DH_fa_fai,
-        
-              CalcContamination_CPUs = CalcContamination_CPUs_default 
-        }
-    }
 
-    Array[Array[File]] optional_contamination_scatter_output_files = scatter_getContamination.calculate_DNA_contamination_output
-    Array[File] contamination_output_files = flatten(optional_contamination_scatter_output_files)     
+#      Array[Array[File]] optional_contamination_scatter_output_files
+      if (defined(input_crai_files)) {
+          # Create an empty array to use to get around zip's requirement that
+          # the input arrays not be optional
+          Array[File] no_crai_files = []
+          Array[File] crai_files = select_first([input_crai_files, no_crai_files])
+          Array[Pair[File, File]] cram_and_crai_files = zip(input_cram_files, crai_files)
+  
+          scatter(cram_or_crai_file in cram_and_crai_files) {
+              call getDNAContamination.calulateDNAContamination as scatter_getContamination {
+                input:
+                    input_cram_file = cram_or_crai_file.left,
+                    input_crai_file = cram_or_crai_file.right,
+        
+                    ref_fasta = ref_hs38DH_fa,
+                    ref_fasta_index = ref_hs38DH_fa_fai,
+              
+                    CalcContamination_CPUs = CalcContamination_CPUs_default 
+              }
+          }
+#          Array[Array[File]] optional_contamination_scatter_output_files = scatter_getContamination.calculate_DNA_contamination_output
+      } 
+
+      if (!defined(input_crai_files)) {
+          scatter(cram_file in input_cram_files) {
+              call getDNAContamination.calulateDNAContamination as scatter_getContamination_no_crai {
+                input:
+                    input_cram_file = cram_file,
+        
+                    ref_fasta = ref_hs38DH_fa,
+                    ref_fasta_index = ref_hs38DH_fa_fai,
+              
+                    CalcContamination_CPUs = CalcContamination_CPUs_default 
+              }
+          }
+#          Array[Array[File]] optional_contamination_no_crai_scatter_output_files = scatter_getContamination_no_crai.calculate_DNA_contamination_output
+      }
+
+     Array[Array[File]] optional_contamination_scatter_output_files = select_first([scatter_getContamination.calculate_DNA_contamination_output, scatter_getContamination_no_crai.calculate_DNA_contamination_output])
+#     if (defined(input_crai_files)) {   
+#         optional_contamination_scatter_output_files = scatter_getContamination.calculate_DNA_contamination_output
+#     }
+#     if (!defined(input_crai_files)) {   
+#         optional_contamination_scatter_output_files = scatter_getContamination_no_crai.calculate_DNA_contamination_output
+#     }
+     Array[File] contamination_output_files = flatten(optional_contamination_scatter_output_files)     
   }
 
   Array[File]? optional_contamination_output_files = contamination_output_files
@@ -270,12 +302,18 @@ workflow TopMedVariantCaller {
 
   task sumCRAMSizes {
     Array[File] input_crams
-    Array[File] input_crais
+    Array[File]? input_crais
     Int SumCRAMs_CPUs_default
     Float disk_size
     String docker_image
 
-    command {
+    # Create empty array to get around requirement for non optional array in length function
+    Array[File] no_input_crais = []
+    Array[File] optional_input_crais = select_first([input_crais, no_input_crais])
+#    Int crai_array_len = if (defined(input_crais)) then length(optional_input_crais) else 0
+    Int crai_array_len = length(optional_input_crais)
+
+    command <<<
       python <<CODE
       import os
       import functools
@@ -287,12 +325,14 @@ workflow TopMedVariantCaller {
       for cram_file in cram_list:
           crams_size = crams_size + os.stat(cram_file).st_size
 
-      crai_string = "${ sep=',' input_crais }"
-      crai_list = crai_string.split(',')
 
       crais_size = 0
-      for crai_file in crai_list:
-          crais_size = crais_size + os.stat(crai_file).st_size
+      if ${crai_array_len} > 0:
+          crai_string = "${ sep=',' input_crais }"
+          crai_list = crai_string.split(',')
+
+          for crai_file in crai_list:
+              crais_size = crais_size + os.stat(crai_file).st_size
 
       total_size = crams_size + crais_size
       # Shift right by 30 bits to get Gigabyte size of files
@@ -300,7 +340,7 @@ workflow TopMedVariantCaller {
       # Bump the size up 1 GB in case the total size is less than 1 GB
       print total_size + 1
       CODE
-    }
+    >>>
     runtime {
       memory: "10 GB"
       cpu: sub(SumCRAMs_CPUs_default, "\\..*", "")
@@ -329,7 +369,7 @@ workflow TopMedVariantCaller {
      # The CRAM index files are listed as an input because they are required
      # by various tools, e.g. Samtools. They should be in the same location
      # as the CRAM files when specified in the input JSON
-     Array[File] input_crais
+     Array[File]? input_crais
      Array[File] input_crams
 
      Float disk_size
