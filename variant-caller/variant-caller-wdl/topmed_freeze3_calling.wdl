@@ -189,7 +189,7 @@ workflow TopMedVariantCaller {
       Array[File] generated_crai_files = scatter_createCRAMIndex.output_crai_file
   }
 
-  Array[File]? optional_crai_files = if (defined(input_crai_files)) then input_crai_files else generated_crai_files 
+  Array[File]? crai_files = if (defined(input_crai_files)) then input_crai_files else generated_crai_files 
 
   if (calculate_contamination) {
       scatter(cram_file in input_cram_files) {
@@ -213,7 +213,7 @@ workflow TopMedVariantCaller {
      input:
       contamination_output_files = optional_contamination_output_files,
 
-      input_crais = optional_crai_files,
+      input_crais = crai_files,
       input_crams = input_cram_files,
       disk_size = sumCRAMSizes.total_size + reference_size + additional_disk,
       VariantCaller_CPUs_default = VariantCaller_CPUs_default,
@@ -343,7 +343,6 @@ workflow TopMedVariantCaller {
     # Create empty array to get around requirement for non optional array in length function
     Array[File] no_input_crais = []
     Array[File] optional_input_crais = select_first([input_crais, no_input_crais])
-#    Int crai_array_len = if (defined(input_crais)) then length(optional_input_crais) else 0
     Int crai_array_len = length(optional_input_crais)
 
     command <<<

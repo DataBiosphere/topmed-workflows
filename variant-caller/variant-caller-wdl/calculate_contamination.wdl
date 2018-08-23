@@ -1,5 +1,5 @@
 ## Calculates DNA contamination by using the Docker image built from the Dockerfile
-## https://github.com/sbg/sbg_dockstore_tools/blob/master/topmed-workflows/variant-caller/verifybamid/Dockerfile
+# at https://github.com/DataBiosphere/topmed-workflows/blob/<version>/variant-caller/variant-caller-wdl/verifybamid/Dockerfile
 ## which is based on the VerifyBamID tool at https://github.com/griffan/VerifyBamID
 
 workflow calulateDNAContamination {
@@ -25,12 +25,10 @@ workflow calulateDNAContamination {
   # Account for size of generated CRAM index file
   Float cram_size = size(input_cram_file, "GB") * 1.25
   Float crai_size = if (defined(input_crai_file)) then size(input_crai_file, "GB") else (cram_size * 1.25)
-#  Float cram_size = size(input_cram_file, "GB") + size(input_crai_file, "GB")
 
   String? reference_genome_version
   String reference_genome = select_first([reference_genome_version, 'hg38'])
 
-#  String? docker_image = "images.sbgenomics.com/vladimir_obucina/topmed:VerifyBamID"
   String? docker_image = "quay.io/ucsc_cgl/verifybamid:1.25.0"
 
   call VerifyBamID {
