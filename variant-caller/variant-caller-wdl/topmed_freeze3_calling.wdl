@@ -1,5 +1,5 @@
 #import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.23.0/variant-caller/variant-caller-wdl/calculate_contamination.wdl" as getDNAContamination
-import "/Users/waltershands/Documents/UCSC/gitroot/topmed-workflows/variant-caller/variant-caller-wdl/calculate_contamination.wdl" as getDNAContamination
+import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/feature/TLP-511-optional-crai/variant-caller/variant-caller-wdl/calculate_contamination.wdl" as getDNAContamination
 
 ## This is the U of Michigan variant caller workflow WDL for the workflow code located here:
 ## https://github.com/statgen/topmed_freeze3_calling
@@ -18,6 +18,9 @@ workflow TopMedVariantCaller {
   Boolean? calculate_DNA_contamination
   Boolean calculate_contamination = select_first([calculate_DNA_contamination, true])
 
+  Int? createIndex_CPUs
+  Int createIndex_CPUs_default = select_first([createIndex_CPUs, 2])
+
   Int? SumCRAMs_CPUs
   Int SumCRAMs_CPUs_default = select_first([SumCRAMs_CPUs, 2])
 
@@ -31,6 +34,9 @@ workflow TopMedVariantCaller {
   Array[File] input_cram_files
 
   String docker_image
+  String? docker_contamination_image
+
+  String? docker_create_index_image  = "quay.io/ucsc_cgl/verifybamid:1.25.0"
 
   File ref_1000G_omni2_5_b38_sites_PASS_vcf_gz
   File ref_1000G_omni2_5_b38_sites_PASS_vcf_gz_tbi
@@ -169,57 +175,37 @@ workflow TopMedVariantCaller {
       SumCRAMs_CPUs_default = SumCRAMs_CPUs_default,
       docker_image = docker_image
   }
-
-  if (calculate_contamination) {
-
-#      Array[Array[File]] optional_contamination_scatter_output_files
-      if (defined(input_crai_files)) {
-          # Create an empty array to use to get around zip's requirement that
-          # the input arrays not be optional
-          Array[File] no_crai_files = []
-          Array[File] crai_files = select_first([input_crai_files, no_crai_files])
-          Array[Pair[File, File]] cram_and_crai_files = zip(input_cram_files, crai_files)
-  
-          scatter(cram_or_crai_file in cram_and_crai_files) {
-              call getDNAContamination.calulateDNAContamination as scatter_getContamination {
-                input:
-                    input_cram_file = cram_or_crai_file.left,
-                    input_crai_file = cram_or_crai_file.right,
-        
-                    ref_fasta = ref_hs38DH_fa,
-                    ref_fasta_index = ref_hs38DH_fa_fai,
-              
-                    CalcContamination_CPUs = CalcContamination_CPUs_default 
-              }
-          }
-#          Array[Array[File]] optional_contamination_scatter_output_files = scatter_getContamination.calculate_DNA_contamination_output
-      } 
-
-      if (!defined(input_crai_files)) {
-          scatter(cram_file in input_cram_files) {
-              call getDNAContamination.calulateDNAContamination as scatter_getContamination_no_crai {
-                input:
-                    input_cram_file = cram_file,
-        
-                    ref_fasta = ref_hs38DH_fa,
-                    ref_fasta_index = ref_hs38DH_fa_fai,
-              
-                    CalcContamination_CPUs = CalcContamination_CPUs_default 
-              }
-          }
-#          Array[Array[File]] optional_contamination_no_crai_scatter_output_files = scatter_getContamination_no_crai.calculate_DNA_contamination_output
+ 
+  if (!defined(input_crai_files)) {
+      scatter(cram_file in input_cram_files) {
+          call createCRAMIndex as scatter_createCRAMIndex {
+            input:
+              input_cram = cram_file,
+              disk_size = size(cram_file, "GB") + additional_disk, 
+              createIndex_CPUs_default = createIndex_CPUs_default,
+              docker_image = docker_create_index_image
+           }
       }
-
-     Array[Array[File]] optional_contamination_scatter_output_files = select_first([scatter_getContamination.calculate_DNA_contamination_output, scatter_getContamination_no_crai.calculate_DNA_contamination_output])
-#     if (defined(input_crai_files)) {   
-#         optional_contamination_scatter_output_files = scatter_getContamination.calculate_DNA_contamination_output
-#     }
-#     if (!defined(input_crai_files)) {   
-#         optional_contamination_scatter_output_files = scatter_getContamination_no_crai.calculate_DNA_contamination_output
-#     }
-     Array[File] contamination_output_files = flatten(optional_contamination_scatter_output_files)     
+      Array[File] generated_crai_files = scatter_createCRAMIndex.output_crai_file
   }
 
+  Array[File]? optional_crai_files = if (defined(input_crai_files)) then input_crai_files else generated_crai_files 
+
+  if (calculate_contamination) {
+      scatter(cram_file in input_cram_files) {
+          call getDNAContamination.calulateDNAContamination as scatter_getContamination {
+            input:
+                input_cram_file = cram_file,
+    
+                ref_fasta = ref_hs38DH_fa,
+                ref_fasta_index = ref_hs38DH_fa_fai,
+                docker_image = docker_contamination_image,
+                CalcContamination_CPUs = CalcContamination_CPUs_default 
+          }
+      }
+      Array[Array[File]] optional_contamination_scatter_output_files = scatter_getContamination.calculate_DNA_contamination_output
+      Array[File] contamination_output_files = flatten(optional_contamination_scatter_output_files)     
+  }
   Array[File]? optional_contamination_output_files = contamination_output_files
 
   call variantCalling {
@@ -227,7 +213,7 @@ workflow TopMedVariantCaller {
      input:
       contamination_output_files = optional_contamination_output_files,
 
-      input_crais = input_crai_files,
+      input_crais = optional_crai_files,
       input_crams = input_cram_files,
       disk_size = sumCRAMSizes.total_size + reference_size + additional_disk,
       VariantCaller_CPUs_default = VariantCaller_CPUs_default,
@@ -299,6 +285,53 @@ workflow TopMedVariantCaller {
       File topmed_variant_caller_output = variantCalling.topmed_variant_caller_output_file
   }
 }
+
+  task createCRAMIndex {
+     File input_cram
+     Int createIndex_CPUs_default
+
+     Float disk_size
+     String docker_image
+
+     # Get the file name only with no path and no .cram suffix
+     String input_cram_name = basename("${input_cram}")
+     String output_crai = "${input_cram}.crai"
+
+     # We have to use a trick to make Cromwell
+     # skip substitution when using the bash ${<variable} syntax
+     # See https://gatkforums.broadinstitute.org/wdl/discussion/comment/44570#Comment_44570 
+     String dollar = "$"
+
+     command <<<
+      # Set the exit code of a pipeline to that of the rightmost command
+      # to exit with a non-zero status, or zero if all commands of the pipeline exit 
+      set -o pipefail
+      # cause a bash script to exit immediately when a command fails
+      set -e
+      # cause the bash shell to treat unset variables as an error and exit immediately
+      set -u
+      # echo each line of the script to stdout so we can see what is happening
+      set -o xtrace
+      #to turn off echo do 'set +o xtrace'
+
+      echo "Running create CRAM index"
+
+      printf "Creating index for ${input_cram}"
+      samtools index ${input_cram}
+
+      >>>
+        output {
+          File output_crai_file = "${input_cram}.crai"
+       }
+      runtime {
+         memory: "10 GB"
+         cpu: sub(createIndex_CPUs_default, "\\..*", "")
+         disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
+         zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"
+         docker: docker_image
+       }
+  }
+
 
   task sumCRAMSizes {
     Array[File] input_crams
