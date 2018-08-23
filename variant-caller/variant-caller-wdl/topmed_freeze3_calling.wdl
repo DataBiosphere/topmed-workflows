@@ -293,10 +293,6 @@ workflow TopMedVariantCaller {
      Float disk_size
      String docker_image
 
-     # Get the file name only with no path and no .cram suffix
-     String input_cram_name = basename("${input_cram}")
-     String output_crai = "${input_cram}.crai"
-
      # We have to use a trick to make Cromwell
      # skip substitution when using the bash ${<variable} syntax
      # See https://gatkforums.broadinstitute.org/wdl/discussion/comment/44570#Comment_44570 
@@ -316,8 +312,8 @@ workflow TopMedVariantCaller {
 
       echo "Running create CRAM index"
 
-      printf "Creating index for ${input_cram}"
-      samtools index ${input_cram}
+      printf "Creating index ${input_cram}.crai for ${input_cram}"
+      samtools index ${input_cram} ${input_cram}.crai
 
       >>>
         output {
