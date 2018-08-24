@@ -38,6 +38,15 @@ inputs:
     label: Reference for input CRAM decompressing
     'sbg:x': -152.35092163085938
     'sbg:y': 139.45030212402344
+  - id: threads
+    type: int?
+    label: Number of threads
+  - id: ram_min
+    type: int?
+    label: Minimum amount of RAM
+  - id: cores_min
+    type: int?
+    label: Minimum number of cores
 outputs:
   - id: output
     outputSource: topmed_post_align/output
@@ -56,7 +65,14 @@ steps:
       - id: comp_ref
         source: reference_genome
       - id: threads
+        source: threads
         default: 1
+      - id: ram_min
+        source: ram_min
+        default: 7500
+      - id: cores_min
+        source: cores_min
+        default: 8
     out:
       - id: fastq
       - id: list
@@ -72,6 +88,12 @@ steps:
         source: topmed_pre_align/fastq
       - id: list
         source: topmed_pre_align/list
+      - id: ram_min
+        source: ram_min
+        default: 14000
+      - id: cores_min
+        source: cores_min
+        default: 8
     out:
       - id: cram
     run: steps/align.cwl
@@ -87,6 +109,15 @@ steps:
         source: reference_genome
       - id: input_file
         source: topmed_align/cram
+      - id: threads
+        source: threads
+        default: 1
+      - id: ram_min
+        source: ram_min
+        default: 7000
+      - id: cores_min
+        source: cores_min
+        default: 2
     out:
       - id: output
     run: steps/samtools-sort.cwl
@@ -104,10 +135,17 @@ steps:
         source: dbsnp
       - id: alignment_files
         source: samtools_sort/output
-      - id: threads
-        default: 1
       - id: input_cram
         source: input_file
+      - id: threads
+        source: threads
+        default: 1
+      - id: ram_min
+        source: ram_min
+        default: 7500
+      - id: cores_min
+        source: cores_min
+        default: 8
     out:
       - id: output
     run: steps/post-align.cwl

@@ -28,6 +28,17 @@ inputs:
     id: threads
     type: int?
     label: Number of threads
+    default: 1
+  - 'sbg:toolDefaultValue': '7500'
+    id: ram_min
+    type: int?
+    label: Minimum amount of RAM
+    default: 7500
+  - 'sbg:toolDefaultValue': '8'
+    id: cores_min
+    type: int?
+    label: Minimum number of cores
+    default: 8
 outputs:
   - id: fastq
     type: 'File[]?'
@@ -101,8 +112,8 @@ arguments:
 requirements:
   - class: ShellCommandRequirement
   - class: ResourceRequirement
-    ramMin: 7500
-    coresMin: 2
+    ramMin: $(inputs.ram_min)
+    coresMin: $(inputs.cores_min)
   - class: DockerRequirement
     dockerPull: 'statgen/alignment:1.0.0'
   - class: InitialWorkDirRequirement
