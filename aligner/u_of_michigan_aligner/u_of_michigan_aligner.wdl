@@ -31,13 +31,13 @@ workflow TopMedAligner {
   File dbSNP_vcf_index
 
   Int? PreAlign_CPUs
-  Int PreAlign_CPUs_default = select_first([PreAlign_CPUs, 2])
+  Int PreAlign_CPUs_default = select_first([PreAlign_CPUs, 1])
 
   Int? Align_CPUs
   Int Align_CPUs_default = select_first([Align_CPUs, 32])
 
   Int? PostAlign_CPUs
-  Int PostAlign_CPUs_default = select_first([PostAlign_CPUs, 2])
+  Int PostAlign_CPUs_default = select_first([PostAlign_CPUs, 1])
 
   # Get the file name only with no path and no .cram suffix
   String input_cram_name = basename("${input_cram_file}", ".cram")
@@ -172,7 +172,7 @@ workflow TopMedAligner {
       Array[File] output_fastq_gz_files = glob("${pre_output_base}.*")
     }
    runtime {
-      memory: "10 GB"
+      memory: "6.5 GB"
       cpu: sub(PreAlign_CPUs_default, "\\..*", "")
       disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
       zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"
@@ -252,7 +252,7 @@ workflow TopMedAligner {
       Array[File] output_cram_files = glob("*.cram")
     }
    runtime {
-      memory: "10 GB"
+      memory: "65 GB"
       cpu: sub(Align_CPUs_default, "\\..*", "")
       disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
       zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"
@@ -333,7 +333,7 @@ task PostAlign {
       File output_cram_file = "${output_file_name}"
     }
    runtime {
-      memory: "10 GB"
+      memory: "6.5 GB"
       cpu: sub(PostAlign_CPUs_default, "\\..*", "")
       disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
       zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"
