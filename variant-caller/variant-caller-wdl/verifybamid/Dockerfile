@@ -30,13 +30,13 @@ RUN make install
 ENV PATH /opt/samtools/samtools-1.9/bin:$PATH
 
 WORKDIR	/opt/htslib
-RUN wget https://github.com/samtools/htslib/releases/download/1.3.2/htslib-1.3.2.tar.bz2 -O htslib.tar.bz2 
+RUN wget https://github.com/samtools/htslib/releases/download/1.9/htslib-1.9.tar.bz2 -O htslib.tar.bz2 
 RUN tar -xjvf htslib.tar.bz2 
-WORKDIR	htslib-1.3.2
-RUN ./configure --prefix /opt/htslib/htslib-1.3.2
+WORKDIR	htslib-1.9
+RUN ./configure --prefix /opt/htslib/htslib-1.9
 RUN make
 RUN make install
-ENV PATH /opt/htslib/htslib-1.3.2/bin:$PATH
+ENV PATH /opt/htslib/htslib-1.9/bin:$PATH
 
 # wget the Git repository by commit since this will create a smaller image than 
 # git clone because it does not include the .git dir
@@ -45,10 +45,10 @@ ARG COMMIT=c3c2c4445cb164b63462cbdfcc3efa3b54c4aff2
 WORKDIR /opt/verifybamid
 RUN wget -O VerifyBamID.zip https://github.com/Griffan/VerifyBamID/archive/$COMMIT.zip
 RUN unzip VerifyBamID.zip
-WORKDIR /opt/verifybamid/VerifyBamID
-RUN mv /opt/verifybamid/VerifyBamID-$COMMIT/* /opt/verifybamid/VerifyBamID
+RUN mkdir VerifyBamID
+RUN cp -R VerifyBamID-$COMMIT/. VerifyBamID/
+RUN rm -rf VerifyBamID-$COMMIT
 WORKDIR /opt/verifybamid/VerifyBamID/build
 RUN cmake .. && make && make test
 ENV PATH /opt/verifybamid/VerifyBamID/bin:$PATH
 
-COPY Dockerfile /opt/
