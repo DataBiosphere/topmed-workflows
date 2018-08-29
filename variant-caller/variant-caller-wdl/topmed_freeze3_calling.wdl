@@ -18,11 +18,17 @@ workflow TopMedVariantCaller {
   Boolean? calculate_DNA_contamination
   Boolean calculate_contamination = select_first([calculate_DNA_contamination, true])
 
-  Int? SumCRAMs_CPUs
-  Int SumCRAMs_CPUs_default = select_first([SumCRAMs_CPUs, 2])
+  Int? preemptible_tries
+  Int preemptible_tries_default = select_first([preemptible_tries, 3])
+
+  Int? variant_caller_mem
+  Int variant_caller_mem_default = select_first([variant_caller_mem, 10])
 
   Int? CalcContamination_CPUs
-  Int CalcContamination_CPUs_default = select_first([CalcContamination_CPUs, 2])
+  Int CalcContamination_CPUs_default = select_first([CalcContamination_CPUs, 1])
+
+  Int? CalcContamination_mem
+  Int CalcContamination_mem_default = select_first([CalcContamination_mem, 10])
 
   Int? VariantCaller_CPUs
   Int VariantCaller_CPUs_default = select_first([VariantCaller_CPUs, 32])
@@ -161,18 +167,41 @@ workflow TopMedVariantCaller {
   size(ref_hs38DH_winsize100_gc, "GB")
   )
 
-  call sumCRAMSizes {
-    input:
-      input_crams = input_cram_files,
-      input_crais = input_crai_files,
-      disk_size = reference_size + additional_disk,
-      SumCRAMs_CPUs_default = SumCRAMs_CPUs_default,
-      docker_image = docker_image
+  # Use scatter to get the size of each CRAM file:
+  # Add 1 GB to size in case size is less than 1 GB
+  scatter(cram_file in input_cram_files ) { Float cram_file_size = round(size(cram_file, "GB")) + 1 }
+  # Gather the sizes of the CRAM files:
+  Array[Float] cram_file_sizes = cram_file_size
+  # Use a task to sum the array:
+  call sum_file_sizes as sum_cram_file_sizes { 
+    input: 
+      file_sizes = cram_file_sizes,
+      preemptible_tries = preemptible_tries_default
+  }
+  
+  if (defined(input_crai_files)) {
+      # Create an empty array to use to get around scatter requirement that
+      # the input arrays not be optional
+      Array[File] no_crai_files_array = []
+      Array[File] crai_files_array = select_first([input_crai_files, no_crai_files])
+
+      # Use scatter to get the size of each CRAI file:
+      # Add 1 GB to size in case size is less than 1 GB
+      scatter(crai_file in crai_files_array ) { Int crai_file_size = round(size(crai_file, "GB")) + 1 }
+      # Gather the sizes of the CRAI files:
+      Array[Float] crai_file_sizes_array = crai_file_size
+      # Use a task to sum the array:
+      call sum_file_sizes as sum_crai_file_sizes { 
+        input: 
+          file_sizes = crai_file_sizes_array,
+          preemptible_tries = preemptible_tries_default
+      }
   }
 
-  if (calculate_contamination) {
+  Float? total_size_of_crai_files = if (!defined(input_crai_files)) then sum_crai_file_sizes.total_size else sum_cram_file_sizes.total_size * 0.00003
 
-#      Array[Array[File]] optional_contamination_scatter_output_files
+  
+  if (calculate_contamination) {
       if (defined(input_crai_files)) {
           # Create an empty array to use to get around zip's requirement that
           # the input arrays not be optional
@@ -188,11 +217,13 @@ workflow TopMedVariantCaller {
         
                     ref_fasta = ref_hs38DH_fa,
                     ref_fasta_index = ref_hs38DH_fa_fai,
-              
-                    CalcContamination_CPUs = CalcContamination_CPUs_default 
+
+                    CalcContamination_mem = CalcContamination_mem_default,
+                    CalcContamination_CPUs = CalcContamination_CPUs_default,
+                    preemptible_tries = preemptible_tries_default
+
               }
           }
-#          Array[Array[File]] optional_contamination_scatter_output_files = scatter_getContamination.calculate_DNA_contamination_output
       } 
 
       if (!defined(input_crai_files)) {
@@ -203,20 +234,15 @@ workflow TopMedVariantCaller {
         
                     ref_fasta = ref_hs38DH_fa,
                     ref_fasta_index = ref_hs38DH_fa_fai,
-              
-                    CalcContamination_CPUs = CalcContamination_CPUs_default 
+
+                    CalcContamination_mem = CalcContamination_mem_default,
+                    CalcContamination_CPUs = CalcContamination_CPUs_default, 
+                    preemptible_tries = preemptible_tries_default
               }
           }
-#          Array[Array[File]] optional_contamination_no_crai_scatter_output_files = scatter_getContamination_no_crai.calculate_DNA_contamination_output
       }
 
      Array[Array[File]] optional_contamination_scatter_output_files = select_first([scatter_getContamination.calculate_DNA_contamination_output, scatter_getContamination_no_crai.calculate_DNA_contamination_output])
-#     if (defined(input_crai_files)) {   
-#         optional_contamination_scatter_output_files = scatter_getContamination.calculate_DNA_contamination_output
-#     }
-#     if (!defined(input_crai_files)) {   
-#         optional_contamination_scatter_output_files = scatter_getContamination_no_crai.calculate_DNA_contamination_output
-#     }
      Array[File] contamination_output_files = flatten(optional_contamination_scatter_output_files)     
   }
 
@@ -229,8 +255,11 @@ workflow TopMedVariantCaller {
 
       input_crais = input_crai_files,
       input_crams = input_cram_files,
-      disk_size = sumCRAMSizes.total_size + reference_size + additional_disk,
+      disk_size = sum_cram_file_sizes.total_size + total_size_of_crai_files + reference_size + additional_disk,
       VariantCaller_CPUs_default = VariantCaller_CPUs_default,
+      preemptible_tries = preemptible_tries_default,
+      variant_caller_mem = variant_caller_mem_default,
+
       docker_image = docker_image,
 
       ref_1000G_omni2_5_b38_sites_PASS_vcf_gz = ref_1000G_omni2_5_b38_sites_PASS_vcf_gz,
@@ -300,58 +329,24 @@ workflow TopMedVariantCaller {
   }
 }
 
-  task sumCRAMSizes {
-    Array[File] input_crams
-    Array[File]? input_crais
-    Int SumCRAMs_CPUs_default
-    Float disk_size
-    String docker_image
-
-    # Create empty array to get around requirement for non optional array in length function
-    Array[File] no_input_crais = []
-    Array[File] optional_input_crais = select_first([input_crais, no_input_crais])
-#    Int crai_array_len = if (defined(input_crais)) then length(optional_input_crais) else 0
-    Int crai_array_len = length(optional_input_crais)
-
+  # Calculates sum of a list of floats
+  task sum_file_sizes {
+    Array[Float] file_sizes
+    Int preemptible_tries
+  
     command <<<
-      python <<CODE
-      import os
-      import functools
-
-      cram_string = "${ sep=',' input_crams }"
-      cram_list = cram_string.split(',')
-
-      crams_size = 0
-      for cram_file in cram_list:
-          crams_size = crams_size + os.stat(cram_file).st_size
-
-
-      crais_size = 0
-      if ${crai_array_len} > 0:
-          crai_string = "${ sep=',' input_crais }"
-          crai_list = crai_string.split(',')
-
-          for crai_file in crai_list:
-              crais_size = crais_size + os.stat(crai_file).st_size
-
-      total_size = crams_size + crais_size
-      # Shift right by 30 bits to get Gigabyte size of files
-      total_size = (total_size >> 30)
-      # Bump the size up 1 GB in case the total size is less than 1 GB
-      print total_size + 1
-      CODE
+    python -c "print ${sep="+" file_sizes}"
     >>>
-    runtime {
-      memory: "10 GB"
-      cpu: sub(SumCRAMs_CPUs_default, "\\..*", "")
-      disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
-      zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"
-      docker: docker_image
-    }
     output {
       Float total_size = read_float(stdout())
     }
+    runtime {
+      docker: "python:2.7"
+      preemptible: preemptible_tries
+      cpu: 1
+    }
   }
+
 
   task variantCalling {
      String? chromosomes
@@ -372,8 +367,11 @@ workflow TopMedVariantCaller {
      Array[File]? input_crais
      Array[File] input_crams
 
+     Float variant_caller_mem
      Float disk_size
      Int VariantCaller_CPUs_default
+     Int preemptible_tries
+
      String docker_image
 
      File ref_1000G_omni2_5_b38_sites_PASS_vcf_gz
@@ -687,7 +685,8 @@ workflow TopMedVariantCaller {
       File topmed_variant_caller_output_file = "topmed_variant_caller_output.tar.gz"
     }
    runtime {
-      memory: "10 GB"
+      preemptible: preemptible_tries
+      memory: sub(variant_caller_mem, "\\..*", "") + " GB"
       cpu: sub(VariantCaller_CPUs_default, "\\..*", "")
       disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
       zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"

@@ -11,8 +11,10 @@ workflow calulateDNAContamination {
   File ref_fasta_index
 
   Int? CalcContamination_CPUs
-  Int CalcContamination_CPUs_default = select_first([CalcContamination_CPUs, 2])
+  Int CalcContamination_CPUs_default = select_first([CalcContamination_CPUs, 1])
 
+  Int? preemptible_tries
+  Int preemptible_tries_default = select_first([preemptible_tries, 3])
 
   # Optional input to increase all disk sizes in case of outlier sample with strange size behavior
   Int? increase_disk_size
@@ -23,9 +25,8 @@ workflow calulateDNAContamination {
 
   Float reference_size = size(ref_fasta, "GB") + size(ref_fasta_index, "GB")
   # Account for size of generated CRAM index file
-  Float cram_size = size(input_cram_file, "GB") * 1.25
-  Float crai_size = if (defined(input_crai_file)) then size(input_crai_file, "GB") else (cram_size * 1.25)
-#  Float cram_size = size(input_cram_file, "GB") + size(input_crai_file, "GB")
+  Float cram_size = size(input_cram_file, "GB")
+  Float crai_size = if (defined(input_crai_file)) then size(input_crai_file, "GB") else (cram_size * 0.00003)
 
   String? reference_genome_version
   String reference_genome = select_first([reference_genome_version, 'hg38'])
@@ -42,12 +43,12 @@ workflow calulateDNAContamination {
       ref_fasta_index = ref_fasta_index,
 
       reference_genome = reference_genome,
+      preemptible_tries = preemptible_tries_default,
 
-      CalcContamination_CPUs_default = CalcContamination_CPUs_default,
+      CalcContamination_mem = CalcContamination_mem_default,
+      CalcContamination_CPUs = CalcContamination_CPUs_default,
       disk_size = cram_size + crai_size + reference_size + additional_disk,
-      docker_image = docker_image
- 
-      
+      docker_image = docker_image      
   }
 
   output {
@@ -65,7 +66,9 @@ workflow calulateDNAContamination {
 
      String reference_genome
 
-     Int CalcContamination_CPUs_default
+     Int preemptible_tries
+     Int CalcContamination_CPUs
+     Int CalcContamination_mem
      Float disk_size
      String docker_image
 
@@ -123,8 +126,9 @@ workflow calulateDNAContamination {
        Array[File] DNA_contamination_output_files = [input_cram, "result.out"]
     }
    runtime {
-      memory: "10 GB"
-      cpu: sub(CalcContamination_CPUs_default, "\\..*", "")
+      preemptible: preemptible_tries
+      memory: sub(CalcContamination_mem, "\\..*", "") + " GB"
+      cpu: sub(CalcContamination_CPUs, "\\..*", "")
       disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
       zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"
       docker: docker_image
