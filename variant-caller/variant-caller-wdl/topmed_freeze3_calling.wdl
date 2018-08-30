@@ -173,6 +173,7 @@ workflow TopMedVariantCaller {
 
   # Use scatter to get the size of each CRAM file:
   # Add 1 GB to size in case size is less than 1 GB
+  # Use an array of String instead of File so Cromwell doesn't try to download them
   scatter(cram_file in input_cram_files_names ) { Float cram_file_size = round(size(cram_file, "GB")) + 1 }
   # Gather the sizes of the CRAM files:
   Array[Float] cram_file_sizes = cram_file_size
@@ -183,7 +184,8 @@ workflow TopMedVariantCaller {
       preemptible_tries = preemptible_tries_default
   }
   
- 
+  # If no CRAM index files were input then
+  # create the index files 
   if (!defined(input_crai_files)) {
       scatter(cram_file in input_cram_files) {
           call createCRAMIndex as scatter_createCRAMIndex {
@@ -196,32 +198,29 @@ workflow TopMedVariantCaller {
       Array[File] generated_crai_files = scatter_createCRAMIndex.output_crai_file
   }
 
+  # if the CRAM index files were input then capture them otherwise they must have 
+  # been created so save those
   Array[File]? crai_files = if (defined(input_crai_files)) then input_crai_files else generated_crai_files 
 
-#  if (defined(input_crai_files)) {
-      # Create an empty array to use to get around scatter requirement that
-      # the input arrays not be optional
-#      Array[File] no_crai_files_array = []
-#      Array[File] crai_files_array = select_first([input_crai_files, no_crai_files])
-      Array[File] crai_files_array = select_first([input_crai_files, generated_crai_files])
-      Array[String] crai_files_names_array = crai_files_array
+  # If there is an array of input CRAM index files then select those
+  # otherwise they were generated so save those as an array
+  Array[File] crai_files_array = select_first([input_crai_files, generated_crai_files])
+  # Get the path and names of the CRAM index files for use when getting the
+  # sizes of the files so Cromwell doesn't try to download them
+  Array[String] crai_files_names_array = crai_files_array
 
-      # Use scatter to get the size of each CRAI file:
-      # Add 1 GB to size in case size is less than 1 GB
-      scatter(crai_file in crai_files_names_array ) { Int crai_file_size = round(size(crai_file, "GB")) + 1 }
-      # Gather the sizes of the CRAI files:
-      Array[Float] crai_file_sizes_array = crai_file_size
-      # Use a task to sum the array:
-      call sum_file_sizes as sum_crai_file_sizes { 
-        input: 
-          file_sizes = crai_file_sizes_array,
-          preemptible_tries = preemptible_tries_default
-      }
-#  }
+  # Use scatter to get the size of each CRAI file:
+  # Add 1 GB to size in case size is less than 1 GB
+  scatter(crai_file in crai_files_names_array ) { Int crai_file_size = round(size(crai_file, "GB")) + 1 }
+  # Gather the sizes of the CRAI files:
+  Array[Float] crai_file_sizes_array = crai_file_size
+  # Use a task to sum the array:
+  call sum_file_sizes as sum_crai_file_sizes { 
+    input: 
+      file_sizes = crai_file_sizes_array,
+      preemptible_tries = preemptible_tries_default
+  }
 
-
-
-#  Float? total_size_of_crai_files = if (!defined(input_crai_files)) then sum_crai_file_sizes.total_size else sum_cram_file_sizes.total_size * 0.00003
   
   if (calculate_contamination) {
       if (defined(input_crai_files)) {
@@ -248,6 +247,11 @@ workflow TopMedVariantCaller {
           }
       } 
 
+      # If no CRAM index files were input the contamination calculation
+      # software will generate the index files. We cannot use the array of 
+      # generated CRAM index files already created becuase we cannot be sure
+      # the index file that matches the input CRAM file is in the same location
+      # in the CRAM index array as the CRAM file in its array
       if (!defined(input_crai_files)) {
           scatter(cram_file in input_cram_files) {
               call getDNAContamination.calulateDNAContamination as scatter_getContamination_no_crai {
