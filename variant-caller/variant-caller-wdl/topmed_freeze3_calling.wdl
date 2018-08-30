@@ -361,6 +361,9 @@ workflow TopMedVariantCaller {
      Float disk_size
      String docker_image
 
+     String CRAM_basename = basename(input_cram)
+     String output_crai_file_name = "${CRAM_basename}.crai"
+
      # We have to use a trick to make Cromwell
      # skip substitution when using the bash ${<variable} syntax
      # See https://gatkforums.broadinstitute.org/wdl/discussion/comment/44570#Comment_44570 
@@ -381,11 +384,12 @@ workflow TopMedVariantCaller {
       echo "Running create CRAM index"
 
       printf "Creating index ${input_cram}.crai for ${input_cram}"
-      samtools index ${input_cram} ${input_cram}.crai
+#      samtools index ${input_cram} ${input_cram}.crai
+      samtools index ${input_cram} ${output_crai_file_name}
 
       >>>
         output {
-          File output_crai_file = "${input_cram}.crai"
+          File output_crai_file = "${output_crai_file_name}"
        }
       runtime {
          memory: "10 GB"
@@ -518,6 +522,7 @@ workflow TopMedVariantCaller {
       import csv
       import os
       from shutil import copy 
+      import sys
 
       # Erase the existing PED file; if no PED file is provided as input
       # this will sidestep the pedigree operations
@@ -564,12 +569,24 @@ workflow TopMedVariantCaller {
               # docker run commmand that Cromwell sets up
               base_name = os.path.basename(cram_file)
               base_name_wo_extension = base_name.split('.')[0]
+
+              # The ID must be unique; and this depends on the input CRAM file names
+              # being unique. Test to make sure the IDs are unique and fail the 
+              # workflow if they are not
+              if(any(tsv_entry[0] == base_name_wo_extension for tsv_entry in tsv_crams_rows)):
+                  error_string = "variantCalling: ERROR: Duplicate ID {}. Input CRAM file names are probably not unique".format(base_name_wo_extension)
+                  print(error_string)
+                  sys.exit(error_string)
      
               # Get the Cromwell path to the input CRAM file using the filename. The
               # filename at this time consists of the TopMed DNA sample
               # unique identifier of the form NWD123456.  
-              tsv_crams_rows.append([base_name_wo_extension, cram_file, contamination])
-    
+              #tsv_crams_rows.append([base_name_wo_extension, cram_file, contamination])
+              tsv_crams_rows.append([base_name_wo_extension, "/root/topmed_freeze3_calling/"+base_name, contamination])
+
+              print("variantCalling: Creating symlink {} for CRAM file {}".format(base_name, cram_file))
+              os.symlink(cram_file, "/root/topmed_freeze3_calling/"+base_name)
+   
       else:
           tsv_crams_rows = []
           # Convert the WDL array of strings to a python list
@@ -583,11 +600,24 @@ workflow TopMedVariantCaller {
               # docker run commmand that Cromwell sets up
               base_name = os.path.basename(cram_file)
               base_name_wo_extension = base_name.split('.')[0]
-    
+ 
+              # The ID must be unique; and this depends on the input CRAM file names
+              # being unique. Test to make sure the IDs are unique and fail the 
+              # workflow if they are not
+              if(any(tsv_entry[0] == base_name_wo_extension for tsv_entry in tsv_crams_rows)):
+                  error_string = "variantCalling: ERROR: Duplicate ID {}. Input CRAM file names are probably not unique".format(base_name_wo_extension)
+                  print(error_string)
+                  sys.exit(error_string)
+   
               # Get the Cromwell path to the input CRAM file using the filename. The
               # filename at this time consists of the TopMed DNA sample
               # unique identifier of the form NWD123456.  
-              tsv_crams_rows.append([base_name_wo_extension, cram_file, "0.0"])
+              #tsv_crams_rows.append([base_name_wo_extension, cram_file, "0.0"])
+              tsv_crams_rows.append([base_name_wo_extension, "/root/topmed_freeze3_calling/"+base_name, "0.0"])
+
+              print("variantCalling: Creating symlink {} for CRAM file {}".format(base_name, cram_file))
+              os.symlink(cram_file, "/root/topmed_freeze3_calling/"+base_name)
+
 
       print("variantCalling:  Writing index file {} with contents {}".format("${indexFileName}", tsv_crams_rows))
       with open("/root/topmed_freeze3_calling/data/${indexFileName}", 'w+') as tsv_index_file:
@@ -599,6 +629,19 @@ workflow TopMedVariantCaller {
       with open("/root/topmed_freeze3_calling/data/${indexFileName}", 'r') as tsv_index_file:
           print("variantCalling: Index file is:\n")
           print(tsv_index_file.read())
+
+      # Symlink the CRAM index files to the Cromwell working dir so the variant
+      # can find them
+      input_crais_file_names_string = "${ sep=',' input_crais }"
+      input_crais_file_names_list = input_crais_file_names_string.split(',')
+      print("variantCalling: Input CRAM index files names list is {}".format(input_crais_file_names_list))
+      #working_dir = "/root/topmed_freeze3_calling/"
+      for crai_file in input_crais_file_names_list:
+            crai_file_basename = os.path.basename(crai_file) 
+            print("variantCalling: Creating symlink {} for CRAM index file {}".format(crai_file_basename, crai_file))
+            os.symlink(crai_file, "/root/topmed_freeze3_calling/"+crai_file_basename)
+
+
       CODE
 
 

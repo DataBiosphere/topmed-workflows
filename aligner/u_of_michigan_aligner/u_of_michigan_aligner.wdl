@@ -143,7 +143,8 @@ workflow TopMedAligner {
   }
 
   output {
-      File aligner_output = PostAlign.output_cram_file
+      File aligner_output_cram = PostAlign.output_cram_file
+      File aligner_output_crai = PostAlign.output_crai_file
   }
 }
 
@@ -307,7 +308,8 @@ task PostAlign {
      Int preemptible_tries_default
 
      String input_cram_name
-     String output_file_name = "${input_cram_name}_realigned.cram"
+     String output_cram_file_name = "${input_cram_name}_realigned.cram"
+     String output_crai_file_name = "${input_cram_name}_realigned.cram.crai"
 
      # We have to use a trick to make Cromwell
      # skip substitution when using the bash ${<variable} syntax
@@ -347,9 +349,9 @@ task PostAlign {
 
         rc=$?
         [[ $rc != 0 ]] && break
-#        rm -f ${dollar}{input_file} ${dollar}{tmp_prefix}*
+        rm -f ${dollar}{input_file} ${dollar}{tmp_prefix}*
         # Remove the tmp file; no need to remove the input file from the previous task
-        rm -f ${dollar}{tmp_prefix}*
+#        rm -f ${dollar}{tmp_prefix}*
       done
 
       if [[ $rc == 0 ]]
@@ -357,12 +359,14 @@ task PostAlign {
         samtools merge --threads 1 -c merged.bam *.sorted.bam \
           && rm ./*.sorted.bam \
           && bam-non-primary-dedup dedup_LowMem --allReadNames --binCustom --binQualS 0:2,3:3,4:4,5:5,6:6,7:10,13:20,23:30 --log dedup_lowmem.metrics --recab --in merged.bam --out -.ubam --refFile ${ref_fasta} --dbsnp ${dbSNP_vcf} \
-          | samtools view -h -C -T ${ref_fasta} -o ${output_file_name} --threads 1
+          | samtools view -h -C -T ${ref_fasta} -o ${output_cram_file_name} --threads 1 \
+          && samtools index ${output_cram_file_name}
         rc=$?
       fi
     >>>
      output {
-      File output_cram_file = "${output_file_name}"
+      File output_cram_file = "${output_cram_file_name}"
+      File output_crai_file = "${output_crai_file_name}"
     }
    runtime {
       preemptible: preemptible_tries_default
