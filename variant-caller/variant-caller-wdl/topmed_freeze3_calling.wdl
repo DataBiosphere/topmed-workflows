@@ -35,9 +35,10 @@ workflow TopMedVariantCaller {
 
   Array[File]? input_crai_files
   Array[File] input_cram_files
+  Array[String] input_cram_files_names = input_cram_files
 
   String docker_image
-  String? docker_contamination_image
+  String? docker_contamination_image   = "quay.io/ucsc_cgl/verifybamid:1.25.0"
 
   String? docker_create_index_image  = "quay.io/ucsc_cgl/verifybamid:1.25.0"
 
@@ -172,7 +173,7 @@ workflow TopMedVariantCaller {
 
   # Use scatter to get the size of each CRAM file:
   # Add 1 GB to size in case size is less than 1 GB
-  scatter(cram_file in input_cram_files ) { Float cram_file_size = round(size(cram_file, "GB")) + 1 }
+  scatter(cram_file in input_cram_files_names ) { Float cram_file_size = round(size(cram_file, "GB")) + 1 }
   # Gather the sizes of the CRAM files:
   Array[Float] cram_file_sizes = cram_file_size
   # Use a task to sum the array:
@@ -182,15 +183,32 @@ workflow TopMedVariantCaller {
       preemptible_tries = preemptible_tries_default
   }
   
-  if (defined(input_crai_files)) {
+ 
+  if (!defined(input_crai_files)) {
+      scatter(cram_file in input_cram_files) {
+          call createCRAMIndex as scatter_createCRAMIndex {
+            input:
+              input_cram = cram_file,
+              disk_size = size(cram_file, "GB") + additional_disk, 
+              docker_image = docker_create_index_image
+           }
+      }
+      Array[File] generated_crai_files = scatter_createCRAMIndex.output_crai_file
+  }
+
+  Array[File]? crai_files = if (defined(input_crai_files)) then input_crai_files else generated_crai_files 
+
+#  if (defined(input_crai_files)) {
       # Create an empty array to use to get around scatter requirement that
       # the input arrays not be optional
-      Array[File] no_crai_files_array = []
-      Array[File] crai_files_array = select_first([input_crai_files, no_crai_files])
+#      Array[File] no_crai_files_array = []
+#      Array[File] crai_files_array = select_first([input_crai_files, no_crai_files])
+      Array[File] crai_files_array = select_first([input_crai_files, generated_crai_files])
+      Array[String] crai_files_names_array = crai_files_array
 
       # Use scatter to get the size of each CRAI file:
       # Add 1 GB to size in case size is less than 1 GB
-      scatter(crai_file in crai_files_array ) { Int crai_file_size = round(size(crai_file, "GB")) + 1 }
+      scatter(crai_file in crai_files_names_array ) { Int crai_file_size = round(size(crai_file, "GB")) + 1 }
       # Gather the sizes of the CRAI files:
       Array[Float] crai_file_sizes_array = crai_file_size
       # Use a task to sum the array:
@@ -199,32 +217,19 @@ workflow TopMedVariantCaller {
           file_sizes = crai_file_sizes_array,
           preemptible_tries = preemptible_tries_default
       }
-  }
- 
-  if (!defined(input_crai_files)) {
-      scatter(cram_file in input_cram_files) {
-          call createCRAMIndex as scatter_createCRAMIndex {
-            input:
-              input_cram = cram_file,
-              disk_size = size(cram_file, "GB") + additional_disk, 
-              createIndex_CPUs_default = createIndex_CPUs_default,
-              docker_image = docker_create_index_image
-           }
-      }
-      Array[File] generated_crai_files = scatter_createCRAMIndex.output_crai_file
-  }
+#  }
 
-<<<<<<< HEAD
-  Float? total_size_of_crai_files = if (!defined(input_crai_files)) then sum_crai_file_sizes.total_size else sum_cram_file_sizes.total_size * 0.00003
 
+
+#  Float? total_size_of_crai_files = if (!defined(input_crai_files)) then sum_crai_file_sizes.total_size else sum_cram_file_sizes.total_size * 0.00003
   
   if (calculate_contamination) {
       if (defined(input_crai_files)) {
           # Create an empty array to use to get around zip's requirement that
           # the input arrays not be optional
           Array[File] no_crai_files = []
-          Array[File] crai_files = select_first([input_crai_files, no_crai_files])
-          Array[Pair[File, File]] cram_and_crai_files = zip(input_cram_files, crai_files)
+          Array[File] crai_files_cont = select_first([input_crai_files, no_crai_files])
+          Array[Pair[File, File]] cram_and_crai_files = zip(input_cram_files, crai_files_cont)
   
           scatter(cram_or_crai_file in cram_and_crai_files) {
               call getDNAContamination.calulateDNAContamination as scatter_getContamination {
@@ -237,8 +242,8 @@ workflow TopMedVariantCaller {
 
                     CalcContamination_mem = CalcContamination_mem_default,
                     CalcContamination_CPUs = CalcContamination_CPUs_default,
-                    preemptible_tries = preemptible_tries_default
-
+                    preemptible_tries = preemptible_tries_default,
+                    docker_image = docker_contamination_image
               }
           }
       } 
@@ -254,31 +259,14 @@ workflow TopMedVariantCaller {
 
                     CalcContamination_mem = CalcContamination_mem_default,
                     CalcContamination_CPUs = CalcContamination_CPUs_default, 
-                    preemptible_tries = preemptible_tries_default
+                    preemptible_tries = preemptible_tries_default,
+                    docker_image = docker_contamination_image
               }
           }
       }
 
      Array[Array[File]] optional_contamination_scatter_output_files = select_first([scatter_getContamination.calculate_DNA_contamination_output, scatter_getContamination_no_crai.calculate_DNA_contamination_output])
      Array[File] contamination_output_files = flatten(optional_contamination_scatter_output_files)     
-=======
-  Array[File]? crai_files = if (defined(input_crai_files)) then input_crai_files else generated_crai_files 
-
-  if (calculate_contamination) {
-      scatter(cram_file in input_cram_files) {
-          call getDNAContamination.calulateDNAContamination as scatter_getContamination {
-            input:
-                input_cram_file = cram_file,
-    
-                ref_fasta = ref_hs38DH_fa,
-                ref_fasta_index = ref_hs38DH_fa_fai,
-                docker_image = docker_contamination_image,
-                CalcContamination_CPUs = CalcContamination_CPUs_default 
-          }
-      }
-      Array[Array[File]] optional_contamination_scatter_output_files = scatter_getContamination.calculate_DNA_contamination_output
-      Array[File] contamination_output_files = flatten(optional_contamination_scatter_output_files)     
->>>>>>> origin/feature/TLP-511-optional-crai
   }
   Array[File]? optional_contamination_output_files = contamination_output_files
 
@@ -289,7 +277,7 @@ workflow TopMedVariantCaller {
 
       input_crais = crai_files,
       input_crams = input_cram_files,
-      disk_size = sum_cram_file_sizes.total_size + total_size_of_crai_files + reference_size + additional_disk,
+      disk_size = sum_cram_file_sizes.total_size + sum_crai_file_sizes.total_size + reference_size + additional_disk,
       VariantCaller_CPUs_default = VariantCaller_CPUs_default,
       preemptible_tries = preemptible_tries_default,
       variant_caller_mem = variant_caller_mem_default,
@@ -363,17 +351,9 @@ workflow TopMedVariantCaller {
   }
 }
 
-<<<<<<< HEAD
-  # Calculates sum of a list of floats
-  task sum_file_sizes {
-    Array[Float] file_sizes
-    Int preemptible_tries
-  
-=======
+ 
   task createCRAMIndex {
      File input_cram
-     Int createIndex_CPUs_default
-
      Float disk_size
      String docker_image
 
@@ -405,7 +385,7 @@ workflow TopMedVariantCaller {
        }
       runtime {
          memory: "10 GB"
-         cpu: sub(createIndex_CPUs_default, "\\..*", "")
+         cpu: 1
          disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
          zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"
          docker: docker_image
@@ -413,19 +393,11 @@ workflow TopMedVariantCaller {
   }
 
 
-  task sumCRAMSizes {
-    Array[File] input_crams
-    Array[File]? input_crais
-    Int SumCRAMs_CPUs_default
-    Float disk_size
-    String docker_image
-
-    # Create empty array to get around requirement for non optional array in length function
-    Array[File] no_input_crais = []
-    Array[File] optional_input_crais = select_first([input_crais, no_input_crais])
-    Int crai_array_len = length(optional_input_crais)
-
->>>>>>> origin/feature/TLP-511-optional-crai
+  # Calculates sum of a list of floats
+  task sum_file_sizes {
+    Array[Float] file_sizes
+    Int preemptible_tries
+ 
     command <<<
     python -c "print ${sep="+" file_sizes}"
     >>>

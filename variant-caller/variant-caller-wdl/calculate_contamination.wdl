@@ -13,6 +13,9 @@ workflow calulateDNAContamination {
   Int? CalcContamination_CPUs
   Int CalcContamination_CPUs_default = select_first([CalcContamination_CPUs, 1])
 
+  Int? CalcContamination_mem
+  Int CalcContamination_mem_default = select_first([CalcContamination_mem, 10])
+
   Int? preemptible_tries
   Int preemptible_tries_default = select_first([preemptible_tries, 3])
 

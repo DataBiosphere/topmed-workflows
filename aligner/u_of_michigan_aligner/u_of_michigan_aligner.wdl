@@ -42,14 +42,14 @@ workflow TopMedAligner {
   Int? PostAlign_CPUs
   Int PostAlign_CPUs_default = select_first([PostAlign_CPUs, 1])
 
-  Int? PreAlign_mem
-  Int PreAlign_mem_default = select_first([PreAlign_mem, 6.5])
+  Float? PreAlign_mem
+  Float PreAlign_mem_default = select_first([PreAlign_mem, 6.5])
 
-  Int? Align_mem
-  Int Align_mem_default = select_first([Align_mem, 7])
+  Float? Align_mem
+  Float Align_mem_default = select_first([Align_mem, 7])
 
-  Int? PostAlign_mem
-  Int PostAlign_mem_default = select_first([PostAlign_mem, 6.5])
+  Float? PostAlign_mem
+  Float PostAlign_mem_default = select_first([PostAlign_mem, 6.5])
 
   # Get the file name only with no path and no .cram suffix
   String input_cram_name = basename("${input_cram_file}", ".cram")
@@ -158,7 +158,7 @@ workflow TopMedAligner {
      File ref_fasta_index
 
      Int PreAlign_CPUs_default
-     Int PreAlign_mem_default
+     Float PreAlign_mem_default
 
      # Assign a basename to the intermediate files
      String pre_output_base = "pre_output_base"
@@ -194,7 +194,7 @@ workflow TopMedAligner {
       Array[File] output_fastq_gz_files = glob("${pre_output_base}.*")
     }
    runtime {
-      preemptible: preemptible_tries_default,
+      preemptible: preemptible_tries_default
       #memory: "6.5 GB"
       memory: sub(PreAlign_mem_default, "\\..*", "") + " GB"
       cpu: sub(PreAlign_CPUs_default, "\\..*", "")
@@ -223,7 +223,7 @@ workflow TopMedAligner {
      File ref_fasta_index
 
      Int Align_CPUs_default
-     Int Align_mem_default
+     Float Align_mem_default
 
      Int preemptible_tries_default
 
@@ -279,7 +279,7 @@ workflow TopMedAligner {
       Array[File] output_cram_files = glob("*.cram")
     }
    runtime {
-      preemptible: preemptible_tries_default,
+      preemptible: preemptible_tries_default
       memory: sub(Align_mem_default, "\\..*", "") + " GB"
       #memory: "10 GB"
       cpu: sub(Align_CPUs_default, "\\..*", "")
@@ -302,7 +302,7 @@ task PostAlign {
      Array[File] input_cram_files
 
      Int PostAlign_CPUs_default
-     Int PostAlign_mem_default
+     Float PostAlign_mem_default
 
      Int preemptible_tries_default
 
@@ -365,7 +365,7 @@ task PostAlign {
       File output_cram_file = "${output_file_name}"
     }
    runtime {
-      preemptible: preemptible_tries_default,
+      preemptible: preemptible_tries_default
       #memory: "6.5 GB"
       memory: sub(PostAlign_mem_default, "\\..*", "") + " GB"
       cpu: sub(PostAlign_CPUs_default, "\\..*", "")
