@@ -1,18 +1,23 @@
 ## Calculates DNA contamination by using the Docker image built from the Dockerfile
-## https://github.com/sbg/sbg_dockstore_tools/blob/master/topmed-workflows/variant-caller/verifybamid/Dockerfile
+# at https://github.com/DataBiosphere/topmed-workflows/blob/<version>/variant-caller/variant-caller-wdl/verifybamid/Dockerfile
 ## which is based on the VerifyBamID tool at https://github.com/griffan/VerifyBamID
 
 workflow calulateDNAContamination {
 
-  File input_crai_file
+  File? input_crai_file
   File input_cram_file
 
   File ref_fasta
   File ref_fasta_index
 
   Int? CalcContamination_CPUs
-  Int CalcContamination_CPUs_default = select_first([CalcContamination_CPUs, 2])
+  Int CalcContamination_CPUs_default = select_first([CalcContamination_CPUs, 1])
 
+  Int? CalcContamination_mem
+  Int CalcContamination_mem_default = select_first([CalcContamination_mem, 10])
+
+  Int? preemptible_tries
+  Int preemptible_tries_default = select_first([preemptible_tries, 3])
 
   # Optional input to increase all disk sizes in case of outlier sample with strange size behavior
   Int? increase_disk_size
@@ -22,12 +27,14 @@ workflow calulateDNAContamination {
   Int additional_disk = select_first([increase_disk_size, 20])
 
   Float reference_size = size(ref_fasta, "GB") + size(ref_fasta_index, "GB")
-  Float cram_size = size(input_cram_file, "GB") + size(input_crai_file, "GB")
+  # Account for size of generated CRAM index file
+  Float cram_size = size(input_cram_file, "GB")
+  Float crai_size = if (defined(input_crai_file)) then size(input_crai_file, "GB") else (cram_size * 0.00003)
 
   String? reference_genome_version
   String reference_genome = select_first([reference_genome_version, 'hg38'])
 
-  String? docker_image = "images.sbgenomics.com/vladimir_obucina/topmed:VerifyBamID"
+  String? docker_image = "quay.io/ucsc_cgl/verifybamid:1.26.0"
 
   call VerifyBamID {
      input:
@@ -38,12 +45,12 @@ workflow calulateDNAContamination {
       ref_fasta_index = ref_fasta_index,
 
       reference_genome = reference_genome,
+      preemptible_tries = preemptible_tries_default,
 
-      CalcContamination_CPUs_default = CalcContamination_CPUs_default,
-      disk_size = cram_size + reference_size +  + additional_disk,
-      docker_image = docker_image
- 
-      
+      CalcContamination_mem = CalcContamination_mem_default,
+      CalcContamination_CPUs = CalcContamination_CPUs_default,
+      disk_size = cram_size + crai_size + reference_size + additional_disk,
+      docker_image = docker_image      
   }
 
   output {
@@ -53,7 +60,7 @@ workflow calulateDNAContamination {
 }
 
   task VerifyBamID {
-     File input_crai
+     File? input_crai
      File input_cram
 
      File ref_fasta
@@ -61,7 +68,9 @@ workflow calulateDNAContamination {
 
      String reference_genome
 
-     Int CalcContamination_CPUs_default
+     Int preemptible_tries
+     Int CalcContamination_CPUs
+     Int CalcContamination_mem
      Float disk_size
      String docker_image
 
@@ -84,18 +93,25 @@ workflow calulateDNAContamination {
 
       echo "Running VerifyBamID"
 
+      # If there is no CRAM index file generate it
+      if [[ -z "${input_crai}" ]]
+      then 
+          printf "Creating index for ${input_cram}"
+          samtools index ${input_cram}
+      fi
+
       if [[ ${reference_genome} == 'hg37' ]]
       then
              printf "VerifyBamID: Using hg37 genome\n"
-             UDPath="/VerifyBamID/resource/1000g.phase3.100k.b37.vcf.gz.dat.UD"
-             BedPath="/VerifyBamID/resource/1000g.phase3.100k.b37.vcf.gz.dat.bed"
-             MeanPath="/VerifyBamID/resource/1000g.phase3.100k.b37.vcf.gz.dat.mu"
+             UDPath="/opt/verifybamid/VerifyBamID/resource/1000g.phase3.100k.b37.vcf.gz.dat.UD"
+             BedPath="/opt/verifybamid/VerifyBamID/resource/1000g.phase3.100k.b37.vcf.gz.dat.bed"
+             MeanPath="/opt/verifybamid/VerifyBamID/resource/1000g.phase3.100k.b37.vcf.gz.dat.mu"
       elif [[ ${reference_genome} == 'hg38' ]]
       then
              printf "VerifyBamID: Using hg38 genome\n"
-             UDPath="/VerifyBamID/resource/1000g.phase3.100k.b38.vcf.gz.dat.UD"
-             BedPath="/VerifyBamID/resource/1000g.phase3.100k.b38.vcf.gz.dat.bed"
-             MeanPath="/VerifyBamID/resource/1000g.phase3.100k.b38.vcf.gz.dat.mu"
+             UDPath="/opt/verifybamid/VerifyBamID/resource/1000g.phase3.100k.b38.vcf.gz.dat.UD"
+             BedPath="/opt/verifybamid/VerifyBamID/resource/1000g.phase3.100k.b38.vcf.gz.dat.bed"
+             MeanPath="/opt/verifybamid/VerifyBamID/resource/1000g.phase3.100k.b38.vcf.gz.dat.mu"
       else
           printf "ERROR: Invalid reference genome version string: %s. It should be hg37 or hg38\n" ${reference_genome}
           exit 1
@@ -112,8 +128,9 @@ workflow calulateDNAContamination {
        Array[File] DNA_contamination_output_files = [input_cram, "result.out"]
     }
    runtime {
-      memory: "10 GB"
-      cpu: sub(CalcContamination_CPUs_default, "\\..*", "")
+      preemptible: preemptible_tries
+      memory: sub(CalcContamination_mem, "\\..*", "") + " GB"
+      cpu: sub(CalcContamination_CPUs, "\\..*", "")
       disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
       zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"
       docker: docker_image

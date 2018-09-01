@@ -1,4 +1,4 @@
-import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.23.0/variant-caller/variant-caller-wdl/calculate_contamination.wdl" as getDNAContamination
+import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.26.0/variant-caller/variant-caller-wdl/calculate_contamination.wdl" as getDNAContamination
 
 ## This is the U of Michigan variant caller workflow WDL for the workflow code located here:
 ## https://github.com/statgen/topmed_freeze3_calling
@@ -17,19 +17,29 @@ workflow TopMedVariantCaller {
   Boolean? calculate_DNA_contamination
   Boolean calculate_contamination = select_first([calculate_DNA_contamination, true])
 
-  Int? SumCRAMs_CPUs
-  Int SumCRAMs_CPUs_default = select_first([SumCRAMs_CPUs, 2])
+  Int? preemptible_tries
+  Int preemptible_tries_default = select_first([preemptible_tries, 3])
+
+  Int? variant_caller_mem
+  Int variant_caller_mem_default = select_first([variant_caller_mem, 10])
 
   Int? CalcContamination_CPUs
-  Int CalcContamination_CPUs_default = select_first([CalcContamination_CPUs, 2])
+  Int CalcContamination_CPUs_default = select_first([CalcContamination_CPUs, 1])
+
+  Int? CalcContamination_mem
+  Int CalcContamination_mem_default = select_first([CalcContamination_mem, 10])
 
   Int? VariantCaller_CPUs
   Int VariantCaller_CPUs_default = select_first([VariantCaller_CPUs, 32])
 
-  Array[File] input_crai_files
+  Array[File]? input_crai_files
   Array[File] input_cram_files
+  Array[String] input_cram_files_names = input_cram_files
 
   String docker_image
+  String? docker_contamination_image   = "quay.io/ucsc_cgl/verifybamid:1.26.0"
+
+  String? docker_create_index_image  = "quay.io/ucsc_cgl/verifybamid:1.26.0"
 
   File ref_1000G_omni2_5_b38_sites_PASS_vcf_gz
   File ref_1000G_omni2_5_b38_sites_PASS_vcf_gz_tbi
@@ -160,34 +170,107 @@ workflow TopMedVariantCaller {
   size(ref_hs38DH_winsize100_gc, "GB")
   )
 
-  call sumCRAMSizes {
-    input:
-      input_crams = input_cram_files,
-      input_crais = input_crai_files,
-      disk_size = reference_size + additional_disk,
-      SumCRAMs_CPUs_default = SumCRAMs_CPUs_default,
-      docker_image = docker_image
+  # Use scatter to get the size of each CRAM file:
+  # Add 1 GB to size in case size is less than 1 GB
+  # Use an array of String instead of File so Cromwell doesn't try to download them
+  scatter(cram_file in input_cram_files_names ) { Float cram_file_size = round(size(cram_file, "GB")) + 1 }
+  # Gather the sizes of the CRAM files:
+  Array[Float] cram_file_sizes = cram_file_size
+  # Use a task to sum the array:
+  call sum_file_sizes as sum_cram_file_sizes { 
+    input: 
+      file_sizes = cram_file_sizes,
+      preemptible_tries = preemptible_tries_default
   }
-
-  if (calculate_contamination) {
-    Array[Pair[File, File]] cram_and_crai_files = zip(input_cram_files, input_crai_files)
-    scatter(cram_or_crai_file in cram_and_crai_files) {
-        call getDNAContamination.calulateDNAContamination as scatter_getContamination {
-          input:
-              input_cram_file = cram_or_crai_file.left,
-              input_crai_file = cram_or_crai_file.right,
   
-              ref_fasta = ref_hs38DH_fa,
-              ref_fasta_index = ref_hs38DH_fa_fai,
-        
-              CalcContamination_CPUs = CalcContamination_CPUs_default 
-        }
-    }
-
-    Array[Array[File]] optional_contamination_scatter_output_files = scatter_getContamination.calculate_DNA_contamination_output
-    Array[File] contamination_output_files = flatten(optional_contamination_scatter_output_files)     
+  # If no CRAM index files were input then
+  # create the index files 
+  if (!defined(input_crai_files)) {
+      scatter(cram_file in input_cram_files) {
+          call createCRAMIndex as scatter_createCRAMIndex {
+            input:
+              input_cram = cram_file,
+              disk_size = size(cram_file, "GB") + additional_disk, 
+              docker_image = docker_create_index_image
+           }
+      }
+      Array[File] generated_crai_files = scatter_createCRAMIndex.output_crai_file
   }
 
+  # if the CRAM index files were input then capture them otherwise they must have 
+  # been created so save those
+  Array[File]? crai_files = if (defined(input_crai_files)) then input_crai_files else generated_crai_files 
+
+  # If there is an array of input CRAM index files then select those
+  # otherwise they were generated so save those as an array
+  Array[File] crai_files_array = select_first([input_crai_files, generated_crai_files])
+  # Get the path and names of the CRAM index files for use when getting the
+  # sizes of the files so Cromwell doesn't try to download them
+  Array[String] crai_files_names_array = crai_files_array
+
+  # Use scatter to get the size of each CRAI file:
+  # Add 1 GB to size in case size is less than 1 GB
+  scatter(crai_file in crai_files_names_array ) { Int crai_file_size = round(size(crai_file, "GB")) + 1 }
+  # Gather the sizes of the CRAI files:
+  Array[Float] crai_file_sizes_array = crai_file_size
+  # Use a task to sum the array:
+  call sum_file_sizes as sum_crai_file_sizes { 
+    input: 
+      file_sizes = crai_file_sizes_array,
+      preemptible_tries = preemptible_tries_default
+  }
+
+  
+  if (calculate_contamination) {
+      if (defined(input_crai_files)) {
+          # Create an empty array to use to get around zip's requirement that
+          # the input arrays not be optional
+          Array[File] no_crai_files = []
+          Array[File] crai_files_cont = select_first([input_crai_files, no_crai_files])
+          Array[Pair[File, File]] cram_and_crai_files = zip(input_cram_files, crai_files_cont)
+  
+          scatter(cram_or_crai_file in cram_and_crai_files) {
+              call getDNAContamination.calulateDNAContamination as scatter_getContamination {
+                input:
+                    input_cram_file = cram_or_crai_file.left,
+                    input_crai_file = cram_or_crai_file.right,
+        
+                    ref_fasta = ref_hs38DH_fa,
+                    ref_fasta_index = ref_hs38DH_fa_fai,
+
+                    CalcContamination_mem = CalcContamination_mem_default,
+                    CalcContamination_CPUs = CalcContamination_CPUs_default,
+                    preemptible_tries = preemptible_tries_default,
+                    docker_image = docker_contamination_image
+              }
+          }
+      } 
+
+      # If no CRAM index files were input the contamination calculation
+      # software will generate the index files. We cannot use the array of 
+      # generated CRAM index files already created becuase we cannot be sure
+      # the index file that matches the input CRAM file is in the same location
+      # in the CRAM index array as the CRAM file in its array
+      if (!defined(input_crai_files)) {
+          scatter(cram_file in input_cram_files) {
+              call getDNAContamination.calulateDNAContamination as scatter_getContamination_no_crai {
+                input:
+                    input_cram_file = cram_file,
+        
+                    ref_fasta = ref_hs38DH_fa,
+                    ref_fasta_index = ref_hs38DH_fa_fai,
+
+                    CalcContamination_mem = CalcContamination_mem_default,
+                    CalcContamination_CPUs = CalcContamination_CPUs_default, 
+                    preemptible_tries = preemptible_tries_default,
+                    docker_image = docker_contamination_image
+              }
+          }
+      }
+
+     Array[Array[File]] optional_contamination_scatter_output_files = select_first([scatter_getContamination.calculate_DNA_contamination_output, scatter_getContamination_no_crai.calculate_DNA_contamination_output])
+     Array[File] contamination_output_files = flatten(optional_contamination_scatter_output_files)     
+  }
   Array[File]? optional_contamination_output_files = contamination_output_files
 
   call variantCalling {
@@ -195,10 +278,13 @@ workflow TopMedVariantCaller {
      input:
       contamination_output_files = optional_contamination_output_files,
 
-      input_crais = input_crai_files,
+      input_crais = crai_files,
       input_crams = input_cram_files,
-      disk_size = sumCRAMSizes.total_size + reference_size + additional_disk,
+      disk_size = sum_cram_file_sizes.total_size + sum_crai_file_sizes.total_size + reference_size + additional_disk,
       VariantCaller_CPUs_default = VariantCaller_CPUs_default,
+      preemptible_tries = preemptible_tries_default,
+      variant_caller_mem = variant_caller_mem_default,
+
       docker_image = docker_image,
 
       ref_1000G_omni2_5_b38_sites_PASS_vcf_gz = ref_1000G_omni2_5_b38_sites_PASS_vcf_gz,
@@ -268,50 +354,70 @@ workflow TopMedVariantCaller {
   }
 }
 
-  task sumCRAMSizes {
-    Array[File] input_crams
-    Array[File] input_crais
-    Int SumCRAMs_CPUs_default
-    Float disk_size
-    String docker_image
+ 
+  task createCRAMIndex {
+     File input_cram
+     Float disk_size
+     String docker_image
 
-    command {
-      python <<CODE
-      import os
-      import functools
+     String CRAM_basename = basename(input_cram)
+     String output_crai_file_name = "${CRAM_basename}.crai"
 
-      cram_string = "${ sep=',' input_crams }"
-      cram_list = cram_string.split(',')
+     # We have to use a trick to make Cromwell
+     # skip substitution when using the bash ${<variable} syntax
+     # See https://gatkforums.broadinstitute.org/wdl/discussion/comment/44570#Comment_44570 
+     String dollar = "$"
 
-      crams_size = 0
-      for cram_file in cram_list:
-          crams_size = crams_size + os.stat(cram_file).st_size
+     command <<<
+      # Set the exit code of a pipeline to that of the rightmost command
+      # to exit with a non-zero status, or zero if all commands of the pipeline exit 
+      set -o pipefail
+      # cause a bash script to exit immediately when a command fails
+      set -e
+      # cause the bash shell to treat unset variables as an error and exit immediately
+      set -u
+      # echo each line of the script to stdout so we can see what is happening
+      set -o xtrace
+      #to turn off echo do 'set +o xtrace'
 
-      crai_string = "${ sep=',' input_crais }"
-      crai_list = crai_string.split(',')
+      echo "Running create CRAM index"
 
-      crais_size = 0
-      for crai_file in crai_list:
-          crais_size = crais_size + os.stat(crai_file).st_size
+      printf "Creating index ${input_cram}.crai for ${input_cram}"
+#      samtools index ${input_cram} ${input_cram}.crai
+      samtools index ${input_cram} ${output_crai_file_name}
 
-      total_size = crams_size + crais_size
-      # Shift right by 30 bits to get Gigabyte size of files
-      total_size = (total_size >> 30)
-      # Bump the size up 1 GB in case the total size is less than 1 GB
-      print total_size + 1
-      CODE
-    }
-    runtime {
-      memory: "10 GB"
-      cpu: sub(SumCRAMs_CPUs_default, "\\..*", "")
-      disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
-      zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"
-      docker: docker_image
-    }
+      >>>
+        output {
+          File output_crai_file = "${output_crai_file_name}"
+       }
+      runtime {
+         memory: "10 GB"
+         cpu: 1
+         disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
+         zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"
+         docker: docker_image
+       }
+  }
+
+
+  # Calculates sum of a list of floats
+  task sum_file_sizes {
+    Array[Float] file_sizes
+    Int preemptible_tries
+ 
+    command <<<
+    python -c "print ${sep="+" file_sizes}"
+    >>>
     output {
       Float total_size = read_float(stdout())
     }
+    runtime {
+      docker: "python:2.7"
+      preemptible: preemptible_tries
+      cpu: 1
+    }
   }
+
 
   task variantCalling {
      String? chromosomes
@@ -329,11 +435,14 @@ workflow TopMedVariantCaller {
      # The CRAM index files are listed as an input because they are required
      # by various tools, e.g. Samtools. They should be in the same location
      # as the CRAM files when specified in the input JSON
-     Array[File] input_crais
+     Array[File]? input_crais
      Array[File] input_crams
 
+     Float variant_caller_mem
      Float disk_size
      Int VariantCaller_CPUs_default
+     Int preemptible_tries
+
      String docker_image
 
      File ref_1000G_omni2_5_b38_sites_PASS_vcf_gz
@@ -412,6 +521,7 @@ workflow TopMedVariantCaller {
       import csv
       import os
       from shutil import copy 
+      import sys
 
       # Erase the existing PED file; if no PED file is provided as input
       # this will sidestep the pedigree operations
@@ -458,12 +568,24 @@ workflow TopMedVariantCaller {
               # docker run commmand that Cromwell sets up
               base_name = os.path.basename(cram_file)
               base_name_wo_extension = base_name.split('.')[0]
+
+              # The ID must be unique; and this depends on the input CRAM file names
+              # being unique. Test to make sure the IDs are unique and fail the 
+              # workflow if they are not
+              if(any(tsv_entry[0] == base_name_wo_extension for tsv_entry in tsv_crams_rows)):
+                  error_string = "variantCalling: ERROR: Duplicate ID {}. Input CRAM file names are probably not unique".format(base_name_wo_extension)
+                  print(error_string)
+                  sys.exit(error_string)
      
               # Get the Cromwell path to the input CRAM file using the filename. The
               # filename at this time consists of the TopMed DNA sample
               # unique identifier of the form NWD123456.  
-              tsv_crams_rows.append([base_name_wo_extension, cram_file, contamination])
-    
+              #tsv_crams_rows.append([base_name_wo_extension, cram_file, contamination])
+              tsv_crams_rows.append([base_name_wo_extension, "/root/topmed_freeze3_calling/"+base_name, contamination])
+
+              print("variantCalling: Creating symlink {} for CRAM file {}".format(base_name, cram_file))
+              os.symlink(cram_file, "/root/topmed_freeze3_calling/"+base_name)
+   
       else:
           tsv_crams_rows = []
           # Convert the WDL array of strings to a python list
@@ -477,11 +599,24 @@ workflow TopMedVariantCaller {
               # docker run commmand that Cromwell sets up
               base_name = os.path.basename(cram_file)
               base_name_wo_extension = base_name.split('.')[0]
-    
+ 
+              # The ID must be unique; and this depends on the input CRAM file names
+              # being unique. Test to make sure the IDs are unique and fail the 
+              # workflow if they are not
+              if(any(tsv_entry[0] == base_name_wo_extension for tsv_entry in tsv_crams_rows)):
+                  error_string = "variantCalling: ERROR: Duplicate ID {}. Input CRAM file names are probably not unique".format(base_name_wo_extension)
+                  print(error_string)
+                  sys.exit(error_string)
+   
               # Get the Cromwell path to the input CRAM file using the filename. The
               # filename at this time consists of the TopMed DNA sample
               # unique identifier of the form NWD123456.  
-              tsv_crams_rows.append([base_name_wo_extension, cram_file, "0.0"])
+              #tsv_crams_rows.append([base_name_wo_extension, cram_file, "0.0"])
+              tsv_crams_rows.append([base_name_wo_extension, "/root/topmed_freeze3_calling/"+base_name, "0.0"])
+
+              print("variantCalling: Creating symlink {} for CRAM file {}".format(base_name, cram_file))
+              os.symlink(cram_file, "/root/topmed_freeze3_calling/"+base_name)
+
 
       print("variantCalling:  Writing index file {} with contents {}".format("${indexFileName}", tsv_crams_rows))
       with open("/root/topmed_freeze3_calling/data/${indexFileName}", 'w+') as tsv_index_file:
@@ -493,6 +628,19 @@ workflow TopMedVariantCaller {
       with open("/root/topmed_freeze3_calling/data/${indexFileName}", 'r') as tsv_index_file:
           print("variantCalling: Index file is:\n")
           print(tsv_index_file.read())
+
+      # Symlink the CRAM index files to the Cromwell working dir so the variant
+      # can find them
+      input_crais_file_names_string = "${ sep=',' input_crais }"
+      input_crais_file_names_list = input_crais_file_names_string.split(',')
+      print("variantCalling: Input CRAM index files names list is {}".format(input_crais_file_names_list))
+      #working_dir = "/root/topmed_freeze3_calling/"
+      for crai_file in input_crais_file_names_list:
+            crai_file_basename = os.path.basename(crai_file) 
+            print("variantCalling: Creating symlink {} for CRAM index file {}".format(crai_file_basename, crai_file))
+            os.symlink(crai_file, "/root/topmed_freeze3_calling/"+crai_file_basename)
+
+
       CODE
 
 
@@ -647,7 +795,8 @@ workflow TopMedVariantCaller {
       File topmed_variant_caller_output_file = "topmed_variant_caller_output.tar.gz"
     }
    runtime {
-      memory: "10 GB"
+      preemptible: preemptible_tries
+      memory: sub(variant_caller_mem, "\\..*", "") + " GB"
       cpu: sub(VariantCaller_CPUs_default, "\\..*", "")
       disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
       zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"
