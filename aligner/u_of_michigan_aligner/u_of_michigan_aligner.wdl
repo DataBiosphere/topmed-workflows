@@ -30,14 +30,26 @@ workflow TopMedAligner {
   File dbSNP_vcf
   File dbSNP_vcf_index
 
+  Int? preemptible_tries
+  Int preemptible_tries_default = select_first([preemptible_tries, 3])
+
   Int? PreAlign_CPUs
-  Int PreAlign_CPUs_default = select_first([PreAlign_CPUs, 2])
+  Int PreAlign_CPUs_default = select_first([PreAlign_CPUs, 1])
 
   Int? Align_CPUs
   Int Align_CPUs_default = select_first([Align_CPUs, 32])
 
   Int? PostAlign_CPUs
-  Int PostAlign_CPUs_default = select_first([PostAlign_CPUs, 2])
+  Int PostAlign_CPUs_default = select_first([PostAlign_CPUs, 1])
+
+  Float? PreAlign_mem
+  Float PreAlign_mem_default = select_first([PreAlign_mem, 6.5])
+
+  Float? Align_mem
+  Float Align_mem_default = select_first([Align_mem, 7])
+
+  Float? PostAlign_mem
+  Float PostAlign_mem_default = select_first([PostAlign_mem, 6.5])
 
   # Get the file name only with no path and no .cram suffix
   String input_cram_name = basename("${input_cram_file}", ".cram")
@@ -79,7 +91,9 @@ workflow TopMedAligner {
       docker_image = docker_image,
       ref_fasta = ref_fasta,
       ref_fasta_index = ref_fasta_index,
-      PreAlign_CPUs_default = PreAlign_CPUs_default
+      PreAlign_CPUs_default = PreAlign_CPUs_default,
+      PreAlign_mem_default = PreAlign_mem_default,
+      preemptible_tries_default = preemptible_tries_default
   }
 
   call Align {
@@ -98,7 +112,9 @@ workflow TopMedAligner {
       ref_sa = ref_sa,
       ref_fasta = ref_fasta,
       ref_fasta_index = ref_fasta_index,
-      Align_CPUs_default = Align_CPUs_default
+      Align_CPUs_default = Align_CPUs_default,
+      Align_mem_default = Align_mem_default,
+      preemptible_tries_default = preemptible_tries_default
 
   }
 
@@ -119,12 +135,16 @@ workflow TopMedAligner {
       dbSNP_vcf = dbSNP_vcf,
       dbSNP_vcf_index = dbSNP_vcf_index,
       PostAlign_CPUs_default = PostAlign_CPUs_default,
+      PostAlign_mem_default = PostAlign_mem_default,
 
-      input_cram_name = input_cram_name
+      input_cram_name = input_cram_name,
+      preemptible_tries_default = preemptible_tries_default
+
   }
 
   output {
-      File aligner_output = PostAlign.output_cram_file
+      File aligner_output_cram = PostAlign.output_cram_file
+      File aligner_output_crai = PostAlign.output_crai_file
   }
 }
 
@@ -139,9 +159,12 @@ workflow TopMedAligner {
      File ref_fasta_index
 
      Int PreAlign_CPUs_default
+     Float PreAlign_mem_default
 
      # Assign a basename to the intermediate files
      String pre_output_base = "pre_output_base"
+
+     Int preemptible_tries_default
 
      command {
 
@@ -172,7 +195,9 @@ workflow TopMedAligner {
       Array[File] output_fastq_gz_files = glob("${pre_output_base}.*")
     }
    runtime {
-      memory: "10 GB"
+      preemptible: preemptible_tries_default
+      #memory: "6.5 GB"
+      memory: sub(PreAlign_mem_default, "\\..*", "") + " GB"
       cpu: sub(PreAlign_CPUs_default, "\\..*", "")
       disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
       zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"
@@ -199,6 +224,9 @@ workflow TopMedAligner {
      File ref_fasta_index
 
      Int Align_CPUs_default
+     Float Align_mem_default
+
+     Int preemptible_tries_default
 
      # We have to use a trick to make Cromwell
      # skip substitution when using the bash ${<variable} syntax
@@ -252,7 +280,9 @@ workflow TopMedAligner {
       Array[File] output_cram_files = glob("*.cram")
     }
    runtime {
-      memory: "10 GB"
+      preemptible: preemptible_tries_default
+      memory: sub(Align_mem_default, "\\..*", "") + " GB"
+      #memory: "10 GB"
       cpu: sub(Align_CPUs_default, "\\..*", "")
       disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
       zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"
@@ -273,9 +303,13 @@ task PostAlign {
      Array[File] input_cram_files
 
      Int PostAlign_CPUs_default
+     Float PostAlign_mem_default
+
+     Int preemptible_tries_default
 
      String input_cram_name
-     String output_file_name = "${input_cram_name}_realigned.cram"
+     String output_cram_file_name = "${input_cram_name}_realigned.cram"
+     String output_crai_file_name = "${input_cram_name}_realigned.cram.crai"
 
      # We have to use a trick to make Cromwell
      # skip substitution when using the bash ${<variable} syntax
@@ -315,9 +349,9 @@ task PostAlign {
 
         rc=$?
         [[ $rc != 0 ]] && break
-#        rm -f ${dollar}{input_file} ${dollar}{tmp_prefix}*
+        rm -f ${dollar}{input_file} ${dollar}{tmp_prefix}*
         # Remove the tmp file; no need to remove the input file from the previous task
-        rm -f ${dollar}{tmp_prefix}*
+#        rm -f ${dollar}{tmp_prefix}*
       done
 
       if [[ $rc == 0 ]]
@@ -325,15 +359,19 @@ task PostAlign {
         samtools merge --threads 1 -c merged.bam *.sorted.bam \
           && rm ./*.sorted.bam \
           && bam-non-primary-dedup dedup_LowMem --allReadNames --binCustom --binQualS 0:2,3:3,4:4,5:5,6:6,7:10,13:20,23:30 --log dedup_lowmem.metrics --recab --in merged.bam --out -.ubam --refFile ${ref_fasta} --dbsnp ${dbSNP_vcf} \
-          | samtools view -h -C -T ${ref_fasta} -o ${output_file_name} --threads 1
+          | samtools view -h -C -T ${ref_fasta} -o ${output_cram_file_name} --threads 1 \
+          && samtools index ${output_cram_file_name}
         rc=$?
       fi
     >>>
      output {
-      File output_cram_file = "${output_file_name}"
+      File output_cram_file = "${output_cram_file_name}"
+      File output_crai_file = "${output_crai_file_name}"
     }
    runtime {
-      memory: "10 GB"
+      preemptible: preemptible_tries_default
+      #memory: "6.5 GB"
+      memory: sub(PostAlign_mem_default, "\\..*", "") + " GB"
       cpu: sub(PostAlign_CPUs_default, "\\..*", "")
       disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
       zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"

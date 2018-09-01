@@ -1,11 +1,13 @@
-import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.23.0/variant-caller/variant-caller-wdl/topmed_freeze3_calling.wdl" as TopMed_variantcaller
-import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.23.0/variant-caller/variant-caller-wdl-checker/topmed-variantcaller-checker.wdl" as checker
+import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.26.0/variant-caller/variant-caller-wdl/topmed_freeze3_calling.wdl" as TopMed_variantcaller
+import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.26.0/variant-caller/variant-caller-wdl-checker/topmed-variantcaller-checker.wdl" as checker
 
 workflow checkerWorkflow {
   File inputTruthVCFFile
 
   String docker_image
   String docker_concordance_image
+  String docker_create_index_image
+  String docker_contamination_image
 
   Array[File] input_crai_files
   Array[File] input_cram_files
@@ -77,6 +79,8 @@ workflow checkerWorkflow {
       input_cram_files = input_cram_files,
 
       docker_image = docker_image,
+      docker_contamination_image = docker_contamination_image,
+      docker_create_index_image = docker_create_index_image,
 
       ref_1000G_omni2_5_b38_sites_PASS_vcf_gz = ref_1000G_omni2_5_b38_sites_PASS_vcf_gz,
       ref_1000G_omni2_5_b38_sites_PASS_vcf_gz_tbi = ref_1000G_omni2_5_b38_sites_PASS_vcf_gz_tbi,
