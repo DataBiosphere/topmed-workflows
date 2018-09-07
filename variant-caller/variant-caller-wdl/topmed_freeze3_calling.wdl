@@ -755,8 +755,8 @@ workflow TopMedVariantCaller {
       CODE
 
 
-      set -o pipefail
-      set -e
+      #set -o pipefail
+      #set -e
 
       #echo each line of the script to stdout so we can see what is happening
       set -o xtrace
