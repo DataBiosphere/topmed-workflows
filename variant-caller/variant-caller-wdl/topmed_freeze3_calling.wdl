@@ -81,6 +81,9 @@ workflow TopMedVariantCaller {
   Int VariantCaller_memory_default = select_first([VariantCaller_memory, 200])
   Int? VariantCaller_CPUs
   Int VariantCaller_CPUs_default = select_first([VariantCaller_CPUs, 32])
+  # For adding more disk space for the variant caller from an input file
+  Int? VariantCaller_additional_disk
+  Int VariantCaller_additional_disk_default = select_first([VariantCaller_additional_disk, 1])
 
 
 
@@ -369,7 +372,7 @@ workflow TopMedVariantCaller {
       input_crais = crai_files,
       input_crams = input_cram_files,
 
-      disk_size = cram_files_size + crai_files_size + reference_size + additional_disk,
+      disk_size = cram_files_size + crai_files_size + reference_size + additional_disk + VariantCaller_additional_disk_default,
 
       CPUs = VariantCaller_CPUs_default,
       preemptible_tries = VariantCaller_preemptible_tries_default,
