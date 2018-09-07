@@ -78,9 +78,10 @@ workflow TopMedVariantCaller {
   Int? VariantCaller_maxretries_tries
   Int VariantCaller_maxretries_tries_default = select_first([VariantCaller_maxretries_tries, 3])
   Int? VariantCaller_memory
-  Int VariantCaller_memory_default = select_first([VariantCaller_memory, 200])
+  # Select memory and CPUs to choose a GCP n1-highmem-64 machine
+  Int VariantCaller_memory_default = select_first([VariantCaller_memory, 400])
   Int? VariantCaller_CPUs
-  Int VariantCaller_CPUs_default = select_first([VariantCaller_CPUs, 32])
+  Int VariantCaller_CPUs_default = select_first([VariantCaller_CPUs, 64])
   # For adding more disk space for the variant caller from an input file
   Int? VariantCaller_additional_disk
   Int VariantCaller_additional_disk_default = select_first([VariantCaller_additional_disk, 1])
@@ -534,8 +535,11 @@ workflow TopMedVariantCaller {
      String? chromosomes
      String chromosomes_to_process = select_first([chromosomes, "1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 X" ])
 
+     # The number of jobs to run is the number of cores to use
+     # Typically we use n1-highmem-64 but with 32 processes (ie, -j 32)
+     # These are hyperthreaded cores, so we hope to get a slight performance boost by over-allocating cpus
      Int? num_of_jobs
-     Int num_of_jobs_to_run = select_first([num_of_jobs, 23 ])
+     Int num_of_jobs_to_run = select_first([num_of_jobs, 32 ])
 
      Int? discoverUnit
      Int? genotypeUnit 

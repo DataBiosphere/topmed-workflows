@@ -32,40 +32,47 @@ workflow TopMedAligner {
 
   Int? PreAlign_preemptible_tries
   Int PreAlign_preemptible_tries_default = select_first([PreAlign_preemptible_tries, 3])
+  Int? PreAlign_max_retries
+  Int PreAlign_max_retries_default = select_first([PreAlign_max_retries, 3])
+  Int? PreAlign_CPUs
+  Int PreAlign_CPUs_default = select_first([PreAlign_CPUs, 1])
+  Float? PreAlign_mem
+  Float PreAlign_mem_default = select_first([PreAlign_mem, 6.5])
 
   Int? Align_preemptible_tries
   Int Align_preemptible_tries_default = select_first([Align_preemptible_tries, 3])
+  Int? Align_max_retries
+  Int Align_max_retries_default = select_first([Align_max_retries, 3])
+  Int? Align_CPUs
+  Int Align_CPUs_default = select_first([Align_CPUs, 32])
+  Float? Align_mem
+  Float Align_mem_default = select_first([Align_mem, 7])
 
   # Use one preemptible try for post alignment becuase it often takes more than 24 
   # hours and GCP preemptible nodes are terminated after 24 hours by GCP
   # https://cloud.google.com/compute/docs/instances/preemptible
   # "Compute Engine always terminates preemptible instances after they run for 24 hours."
+  #  So by using 0 for preemptible tries the task is non preemtible
+  #  if preemptible is set to 0 -- then its set to false
+  #  if preemptible is set to a positive integer -- its automatically true
   Int? PostAlign_preemptible_tries
-  Int PostAlign_preemptible_tries_default = select_first([PostAlign_preemptible_tries, 1])
-
-  Int? PreAlign_CPUs
-  Int PreAlign_CPUs_default = select_first([PreAlign_CPUs, 1])
-
-  Int? Align_CPUs
-  Int Align_CPUs_default = select_first([Align_CPUs, 32])
-
+  Int PostAlign_preemptible_tries_default = select_first([PostAlign_preemptible_tries, 0])
+  #if preemptible is 0 and maxRetries is 3 -- then that task can be retried upto 3 times
+  #if preemptible is 3 and maxRetries is 3 for a task -- that can be retried upto 6 times
+  #https://cromwell.readthedocs.io/en/stable/RuntimeAttributes/#maxretries
+  Int? PostAlign_max_retries
+  Int PostAlign_max_retries_default = select_first([PostAlign_max_retries, 3])
   Int? PostAlign_CPUs
   Int PostAlign_CPUs_default = select_first([PostAlign_CPUs, 1])
-
-  Float? PreAlign_mem
-  Float PreAlign_mem_default = select_first([PreAlign_mem, 6.5])
-
-  Float? Align_mem
-  Float Align_mem_default = select_first([Align_mem, 7])
-
   Float? PostAlign_mem
   Float PostAlign_mem_default = select_first([PostAlign_mem, 6.5])
+
 
   Boolean? dynamically_calculate_file_size
   Boolean dynamically_calculate_disk_requirement = select_first([dynamically_calculate_file_size, true])
 
   Float? CRAMandCRAI_disk_size_override
-  Float CRAMandCRAI_disk_size_override_default = select_first([CRAMandCRAI_disk_size_override, 80])
+  Float CRAMandCRAI_disk_size_override_default = select_first([CRAMandCRAI_disk_size_override, 200])
 
   Float? ReferenceGenome_disk_size_override
   Float ReferenceGenome_disk_size_override_default = select_first([ReferenceGenome_disk_size_override, 6.0])
@@ -141,14 +148,16 @@ workflow TopMedAligner {
      input:
       input_crai = input_crai_file,
       input_cram = input_cram_file,
+      ref_fasta = ref_fasta,
+      ref_fasta_index = ref_fasta_index,
+
       #disk_size = ref_size + (bwa_disk_multiplier * cram_size) + (sort_sam_disk_multiplier * cram_size) + cram_size + additional_disk + fastq_gz_files_size,
       disk_size = PreAlign_disk_size,
       docker_image = docker_image,
-      ref_fasta = ref_fasta,
-      ref_fasta_index = ref_fasta_index,
-      PreAlign_CPUs_default = PreAlign_CPUs_default,
-      PreAlign_mem_default = PreAlign_mem_default,
-      preemptible_tries_default = PreAlign_preemptible_tries_default
+      CPUs = PreAlign_CPUs_default,
+      memory = PreAlign_mem_default,
+      preemptible_tries = PreAlign_preemptible_tries_default,
+      max_retries = PreAlign_preemptible_tries_default
   }
 
   call Align {
@@ -158,8 +167,11 @@ workflow TopMedAligner {
 
       #disk_size = ref_size + ref_extra_size + (bwa_disk_multiplier * fastq_gz_files_size) + additional_disk,
       disk_size = Align_disk_size,
-
       docker_image = docker_image,
+      CPUs = Align_CPUs_default,
+      memory = Align_mem_default,
+      preemptible_tries = Align_preemptible_tries_default,
+      max_retries = Align_max_retries_default,
 
       ref_alt = ref_alt,
       ref_bwt = ref_bwt,
@@ -169,9 +181,7 @@ workflow TopMedAligner {
       ref_sa = ref_sa,
       ref_fasta = ref_fasta,
       ref_fasta_index = ref_fasta_index,
-      Align_CPUs_default = Align_CPUs_default,
-      Align_mem_default = Align_mem_default,
-      preemptible_tries_default = Align_preemptible_tries_default
+
 
   }
 
@@ -186,17 +196,18 @@ workflow TopMedAligner {
       disk_size = PostAlign_disk_size,
       #disk_size = ref_size + dbsnp_size + CRAMS_files_size + (sort_sam_disk_multiplier * CRAMS_files_size) + (bwa_disk_multiplier * CRAMS_files_size) + additional_disk,
       docker_image = docker_image,
+      max_retries = PostAlign_max_retries_default,
+      preemptible_tries = PostAlign_preemptible_tries_default,
+      CPUs = PostAlign_CPUs_default,
+      memory = PostAlign_mem_default,
 
       ref_fasta = ref_fasta,
       ref_fasta_index = ref_fasta_index,
 
       dbSNP_vcf = dbSNP_vcf,
       dbSNP_vcf_index = dbSNP_vcf_index,
-      PostAlign_CPUs_default = PostAlign_CPUs_default,
-      PostAlign_mem_default = PostAlign_mem_default,
 
       input_cram_name = input_cram_name,
-      preemptible_tries_default = PostAlign_preemptible_tries_default
 
   }
 
@@ -210,19 +221,18 @@ workflow TopMedAligner {
      File input_crai
      File input_cram
 
-     Float disk_size
-     String docker_image
-
      File ref_fasta
      File ref_fasta_index
 
-     Int PreAlign_CPUs_default
-     Float PreAlign_mem_default
+     Float memory
+     Float disk_size
+     Int CPUs
+     Int preemptible_tries
+     String docker_image
+     Int max_retries
 
      # Assign a basename to the intermediate files
      String pre_output_base = "pre_output_base"
-
-     Int preemptible_tries_default
 
      command {
 
@@ -253,10 +263,11 @@ workflow TopMedAligner {
       Array[File] output_fastq_gz_files = glob("${pre_output_base}.*")
     }
    runtime {
-      preemptible: preemptible_tries_default
+      maxRetries: max_retries
+      preemptible: preemptible_tries
       #memory: "6.5 GB"
-      memory: sub(PreAlign_mem_default, "\\..*", "") + " GB"
-      cpu: sub(PreAlign_CPUs_default, "\\..*", "")
+      memory: sub(memory, "\\..*", "") + " GB"
+      cpu: sub(CPUs, "\\..*", "")
       disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
       zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"
       docker: docker_image
@@ -268,9 +279,6 @@ workflow TopMedAligner {
      File input_list_file
      Array[File] input_fastq_gz_files
 
-     Float disk_size
-     String docker_image
-
      File ref_alt
      File ref_bwt
      File ref_pac
@@ -281,10 +289,13 @@ workflow TopMedAligner {
      File ref_fasta
      File ref_fasta_index
 
-     Int Align_CPUs_default
-     Float Align_mem_default
+     Float memory
+     Float disk_size
+     Int CPUs
+     Int preemptible_tries
+     String docker_image
+     Int max_retries
 
-     Int preemptible_tries_default
 
      # We have to use a trick to make Cromwell
      # skip substitution when using the bash ${<variable} syntax
@@ -338,10 +349,11 @@ workflow TopMedAligner {
       Array[File] output_cram_files = glob("*.cram")
     }
    runtime {
-      preemptible: preemptible_tries_default
-      memory: sub(Align_mem_default, "\\..*", "") + " GB"
+      maxRetries: max_retries
+      preemptible: preemptible_tries
+      memory: sub(memory, "\\..*", "") + " GB"
       #memory: "10 GB"
-      cpu: sub(Align_CPUs_default, "\\..*", "")
+      cpu: sub(CPUs, "\\..*", "")
       disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
       zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"
       docker: docker_image
@@ -349,9 +361,6 @@ workflow TopMedAligner {
   }
 
 task PostAlign {
-     Float disk_size
-     String docker_image
-
      File ref_fasta
      File ref_fasta_index
 
@@ -360,10 +369,12 @@ task PostAlign {
 
      Array[File] input_cram_files
 
-     Int PostAlign_CPUs_default
-     Float PostAlign_mem_default
-
-     Int preemptible_tries_default
+     Float memory
+     Float disk_size
+     Int CPUs
+     Int preemptible_tries
+     String docker_image
+     Int max_retries
 
      String input_cram_name
      String output_cram_file_name = "${input_cram_name}_realigned.cram"
@@ -425,10 +436,11 @@ task PostAlign {
       File output_crai_file = "${output_crai_file_name}"
     }
    runtime {
-      preemptible: preemptible_tries_default
+      maxRetries: max_retries
+      preemptible: preemptible_tries
       #memory: "6.5 GB"
-      memory: sub(PostAlign_mem_default, "\\..*", "") + " GB"
-      cpu: sub(PostAlign_CPUs_default, "\\..*", "")
+      memory: sub(memory, "\\..*", "") + " GB"
+      cpu: sub(CPUs, "\\..*", "")
       disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
       zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"
       docker: docker_image
