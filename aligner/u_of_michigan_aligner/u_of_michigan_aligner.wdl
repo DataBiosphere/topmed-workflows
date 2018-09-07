@@ -30,8 +30,18 @@ workflow TopMedAligner {
   File dbSNP_vcf
   File dbSNP_vcf_index
 
-  Int? preemptible_tries
-  Int preemptible_tries_default = select_first([preemptible_tries, 3])
+  Int? PreAlign_preemptible_tries
+  Int PreAlign_preemptible_tries_default = select_first([PreAlign_preemptible_tries, 3])
+
+  Int? Align_preemptible_tries
+  Int Align_preemptible_tries_default = select_first([Align_preemptible_tries, 3])
+
+  # Use one preemptible try for post alignment becuase it often takes more than 24 
+  # hours and GCP preemptible nodes are terminated after 24 hours by GCP
+  # https://cloud.google.com/compute/docs/instances/preemptible
+  # "Compute Engine always terminates preemptible instances after they run for 24 hours."
+  Int? PostAlign_preemptible_tries
+  Int PostAlign_preemptible_tries_default = select_first([PostAlign_preemptible_tries, 1])
 
   Int? PreAlign_CPUs
   Int PreAlign_CPUs_default = select_first([PreAlign_CPUs, 1])
@@ -50,6 +60,21 @@ workflow TopMedAligner {
 
   Float? PostAlign_mem
   Float PostAlign_mem_default = select_first([PostAlign_mem, 6.5])
+
+  Boolean? dynamically_calculate_file_size
+  Boolean dynamically_calculate_disk_requirement = select_first([dynamically_calculate_file_size, true])
+
+  Float? CRAMandCRAI_disk_size_override
+  Float CRAMandCRAI_disk_size_override_default = select_first([CRAMandCRAI_disk_size_override, 80])
+
+  Float? ReferenceGenome_disk_size_override
+  Float ReferenceGenome_disk_size_override_default = select_first([ReferenceGenome_disk_size_override, 6.0])
+
+  Float? BWT_disk_size_override
+  Float BWT_disk_size_override_default = select_first([BWT_disk_size_override, 2.0])
+
+  Float? dbSNP_disk_size_override
+  Float dbSNP_disk_size_override_default = select_first([dbSNP_disk_size_override, 2.0])
 
   # Get the file name only with no path and no .cram suffix
   String input_cram_name = basename("${input_cram_file}", ".cram")
@@ -76,24 +101,54 @@ workflow TopMedAligner {
   # larger multiplier
   Float sort_sam_disk_multiplier = 3.25
 
-  # Get the size of the standard reference files as well as the additional reference files needed for BWA
-  Float ref_size = size(ref_fasta, "GB") + size(ref_fasta_index, "GB")
-  Float ref_extra_size = size(ref_alt, "GB") + size(ref_bwt, "GB") + size(ref_pac, "GB") + size(ref_ann, "GB") + size(ref_amb, "GB") + size(ref_sa, "GB")
-  Float dbsnp_size = size(dbSNP_vcf, "GB") + size(dbSNP_vcf_index, "GB")
-  Float cram_size = size(input_cram_file, "GB") + size(input_crai_file, "GB")
-  Float fastq_gz_files_size = CRAM_to_fastqgz_multiplier * cram_size
+
+#      # Get the size of the standard reference files as well as the additional reference files needed for BWA
+#      Float ref_size = size(ref_fasta, "GB") + size(ref_fasta_index, "GB")
+#      Float ref_extra_size = size(ref_alt, "GB") + size(ref_bwt, "GB") + size(ref_pac, "GB") + size(ref_ann, "GB") + size(ref_amb, "GB") + size(ref_sa, "GB")
+#      Float dbsnp_size = size(dbSNP_vcf, "GB") + size(dbSNP_vcf_index, "GB")
+#      Float cram_size = size(input_cram_file, "GB") + size(input_crai_file, "GB")
+#      Float fastq_gz_files_size = CRAM_to_fastqgz_multiplier * cram_size
+
+  Float ref_size = if (defined(dynamically_calculate_disk_requirement)) then size(ref_fasta, "GB") + size(ref_fasta_index, "GB") + 
+      additional_disk else ReferenceGenome_disk_size_override_default + additional_disk
+
+  Float ref_extra_size = if (defined(dynamically_calculate_disk_requirement)) then size(ref_alt, "GB") + size(ref_bwt, "GB") + size(ref_pac, "GB") + 
+      size(ref_ann, "GB") + size(ref_amb, "GB") + size(ref_sa, "GB") + 
+      additional_disk else BWT_disk_size_override_default + additional_disk
+
+  Float dbsnp_size =if (defined(dynamically_calculate_disk_requirement)) then size(dbSNP_vcf, "GB") + size(dbSNP_vcf_index, "GB") + 
+     additional_disk else dbSNP_disk_size_override_default + additional_disk
+
+  Float cram_and_crai_size = if (defined(dynamically_calculate_disk_requirement)) then size(input_cram_file, "GB") + size(input_crai_file, "GB") + 
+     additional_disk else CRAMandCRAI_disk_size_override_default + additional_disk
+
+  Float fastq_gz_files_size = CRAM_to_fastqgz_multiplier * cram_and_crai_size
+
+
+
+  Float PreAlign_disk_size = ref_size + (bwa_disk_multiplier * cram_and_crai_size) + 
+     (sort_sam_disk_multiplier * cram_and_crai_size) + cram_and_crai_size + additional_disk + fastq_gz_files_size
+
+  Float Align_disk_size = ref_size + ref_extra_size + (bwa_disk_multiplier * fastq_gz_files_size) + additional_disk
+
+  # The merged cram can be bigger than the summed sizes of the individual aligned crams,
+  # so account for the output size by multiplying the input size by bwa disk multiplier.
+  Float PostAlign_disk_size = ref_size + dbsnp_size + cram_and_crai_size + 
+     (sort_sam_disk_multiplier * cram_and_crai_size) + (bwa_disk_multiplier * cram_and_crai_size) + additional_disk
+
 
   call PreAlign {
      input:
       input_crai = input_crai_file,
       input_cram = input_cram_file,
-      disk_size = ref_size + (bwa_disk_multiplier * cram_size) + (sort_sam_disk_multiplier * cram_size) + cram_size + additional_disk + fastq_gz_files_size,
+      #disk_size = ref_size + (bwa_disk_multiplier * cram_size) + (sort_sam_disk_multiplier * cram_size) + cram_size + additional_disk + fastq_gz_files_size,
+      disk_size = PreAlign_disk_size,
       docker_image = docker_image,
       ref_fasta = ref_fasta,
       ref_fasta_index = ref_fasta_index,
       PreAlign_CPUs_default = PreAlign_CPUs_default,
       PreAlign_mem_default = PreAlign_mem_default,
-      preemptible_tries_default = preemptible_tries_default
+      preemptible_tries_default = PreAlign_preemptible_tries_default
   }
 
   call Align {
@@ -101,7 +156,9 @@ workflow TopMedAligner {
       input_list_file = PreAlign.output_list_file,
       input_fastq_gz_files = PreAlign.output_fastq_gz_files,
 
-      disk_size = ref_size + ref_extra_size + (bwa_disk_multiplier * fastq_gz_files_size) + additional_disk,
+      #disk_size = ref_size + ref_extra_size + (bwa_disk_multiplier * fastq_gz_files_size) + additional_disk,
+      disk_size = Align_disk_size,
+
       docker_image = docker_image,
 
       ref_alt = ref_alt,
@@ -114,11 +171,11 @@ workflow TopMedAligner {
       ref_fasta_index = ref_fasta_index,
       Align_CPUs_default = Align_CPUs_default,
       Align_mem_default = Align_mem_default,
-      preemptible_tries_default = preemptible_tries_default
+      preemptible_tries_default = Align_preemptible_tries_default
 
   }
 
-  Float CRAMS_files_size = fastq_gz_to_CRAM_multiplier * cram_size
+  #Float CRAMS_files_size = fastq_gz_to_CRAM_multiplier * cram_size
 
   call PostAlign {
      input:
@@ -126,7 +183,8 @@ workflow TopMedAligner {
 
       # The merged cram can be bigger than the summed sizes of the individual aligned crams,
       # so account for the output size by multiplying the input size by bwa disk multiplier.
-      disk_size = ref_size + dbsnp_size + CRAMS_files_size + (sort_sam_disk_multiplier * CRAMS_files_size) + (bwa_disk_multiplier * CRAMS_files_size) + additional_disk,
+      disk_size = PostAlign_disk_size,
+      #disk_size = ref_size + dbsnp_size + CRAMS_files_size + (sort_sam_disk_multiplier * CRAMS_files_size) + (bwa_disk_multiplier * CRAMS_files_size) + additional_disk,
       docker_image = docker_image,
 
       ref_fasta = ref_fasta,
@@ -138,7 +196,7 @@ workflow TopMedAligner {
       PostAlign_mem_default = PostAlign_mem_default,
 
       input_cram_name = input_cram_name,
-      preemptible_tries_default = preemptible_tries_default
+      preemptible_tries_default = PostAlign_preemptible_tries_default
 
   }
 
@@ -350,8 +408,6 @@ task PostAlign {
         rc=$?
         [[ $rc != 0 ]] && break
         rm -f ${dollar}{input_file} ${dollar}{tmp_prefix}*
-        # Remove the tmp file; no need to remove the input file from the previous task
-#        rm -f ${dollar}{tmp_prefix}*
       done
 
       if [[ $rc == 0 ]]

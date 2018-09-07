@@ -11,13 +11,32 @@ workflow calulateDNAContamination {
   File ref_fasta_index
 
   Int? CalcContamination_CPUs
-  Int CalcContamination_CPUs_default = select_first([CalcContamination_CPUs, 1])
+  Int CPUs_default = select_first([CalcContamination_CPUs, 1])
 
-  Int? CalcContamination_mem
-  Int CalcContamination_mem_default = select_first([CalcContamination_mem, 10])
+  Int? CalcContamination_memory
+  Int memory_default = select_first([CalcContamination_memory, 7])
 
-  Int? preemptible_tries
-  Int preemptible_tries_default = select_first([preemptible_tries, 3])
+  Int? CalcContamination_preemptible_tries
+  Int preemptible_tries_default = select_first([CalcContamination_preemptible_tries, 3])
+
+  Int? CalcContamination_max_retries
+  Int max_retries_default = select_first([CalcContamination_max_retries, 3])
+
+  Boolean? dynamically_calculate_file_size
+  Boolean dynamically_calculate_disk_requirement = select_first([dynamically_calculate_file_size, true])
+
+  Float? CRAM_file_max_disk_size_override
+  Float CRAM_file_max_disk_size_override_default = select_first([CRAM_file_max_disk_size_override, 200.0])
+
+  Float? CRAI_file_max_disk_size_override
+  Float CRAI_file_max_disk_size_override_default = select_first([CRAI_file_max_disk_size_override, 10.0])
+
+  Float? ReferenceGenome_disk_size_override
+  Float ReferenceGenome_disk_size_override_default = select_first([ReferenceGenome_disk_size_override, 4.0])
+
+  Float? ReferenceGenome_index_disk_size_override
+  Float ReferenceGenome_index_disk_size_override_default = select_first([ReferenceGenome_index_disk_size_override, 1.0])
+
 
   # Optional input to increase all disk sizes in case of outlier sample with strange size behavior
   Int? increase_disk_size
@@ -26,10 +45,11 @@ workflow calulateDNAContamination {
   # Cromwell error from asking for 0 disk when the input is less than 1GB
   Int additional_disk = select_first([increase_disk_size, 20])
 
-  Float reference_size = size(ref_fasta, "GB") + size(ref_fasta_index, "GB")
+  Float reference_size = if(dynamically_calculate_disk_requirement) then size(ref_fasta, "GB") + size(ref_fasta_index, "GB") else ReferenceGenome_index_disk_size_override_default + ReferenceGenome_disk_size_override_default
+
   # Account for size of generated CRAM index file
-  Float cram_size = size(input_cram_file, "GB")
-  Float crai_size = if (defined(input_crai_file)) then size(input_crai_file, "GB") else (cram_size * 0.00003)
+  Float cram_size = if(dynamically_calculate_disk_requirement) then size(input_cram_file, "GB") else CRAM_file_max_disk_size_override_default
+  Float crai_size = if(dynamically_calculate_disk_requirement) then (if (defined(input_crai_file)) then size(input_crai_file, "GB") else (cram_size * 0.00003)) else CRAI_file_max_disk_size_override_default
 
   String? reference_genome_version
   String reference_genome = select_first([reference_genome_version, 'hg38'])
@@ -47,8 +67,9 @@ workflow calulateDNAContamination {
       reference_genome = reference_genome,
       preemptible_tries = preemptible_tries_default,
 
-      CalcContamination_mem = CalcContamination_mem_default,
-      CalcContamination_CPUs = CalcContamination_CPUs_default,
+      memory = memory_default,
+      CPUs = CPUs_default,
+      max_retries = max_retries_default,
       disk_size = cram_size + crai_size + reference_size + additional_disk,
       docker_image = docker_image      
   }
@@ -69,9 +90,10 @@ workflow calulateDNAContamination {
      String reference_genome
 
      Int preemptible_tries
-     Int CalcContamination_CPUs
-     Int CalcContamination_mem
+     Int CPUs
+     Int memory
      Float disk_size
+     Int max_retries
      String docker_image
 
      # We have to use a trick to make Cromwell
@@ -129,8 +151,9 @@ workflow calulateDNAContamination {
     }
    runtime {
       preemptible: preemptible_tries
-      memory: sub(CalcContamination_mem, "\\..*", "") + " GB"
-      cpu: sub(CalcContamination_CPUs, "\\..*", "")
+      maxRetries: max_retries
+      memory: sub(memory, "\\..*", "") + " GB"
+      cpu: sub(CPUs, "\\..*", "")
       disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
       zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"
       docker: docker_image
