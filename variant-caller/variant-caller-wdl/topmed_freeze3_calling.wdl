@@ -833,12 +833,21 @@ workflow TopMedVariantCaller {
       ln -s ${ref_hs38DH_fa_sa}  /root/topmed_freeze3_calling/data/local.org/ref/gotcloud.ref/hg38/hs38DH.fa.sa
       ln -s ${ref_hs38DH_winsize100_gc}  /root/topmed_freeze3_calling/data/local.org/ref/gotcloud.ref/hg38/hs38DH.winsize100.gc
 
+      CROMWELL_WORKING_DIR="$(pwd)"
+      printf "Current directory before pushd is %s\n" "$CROMWELL_WORKING_DIR"
+
       # Change to the directory in the container where the pipeline code is located
+      # because the pipeline exepects this to be the current working directory
       pushd /root/topmed_freeze3_calling
 
-      WORKING_DIR='./' 
+      printf "Current directory after pushd is %s\n" $(pwd)
+
+      WORKING_DIR='/root/topmed_freeze3_calling' 
 
       # Put the correct location of the index file into the global config file
+      # https://stackoverflow.com/questions/31270422/how-to-replace-a-pattern-in-script-using-sed-in-place-inside-the-script
+      # https://unix.stackexchange.com/questions/153608/how-to-change-a-complete-line-with-sed-c-option
+      # http://www.grymoire.com/unix/Sed.html#uh-3
       sed -i '/.*our $refDir.*/ c\our $refDir = "$FindBin::Bin\/..\/data\/local.org\/ref\/gotcloud.ref\/hg38";' "$WORKING_DIR"/scripts/gcconfig.pm
       sed -i '/.*our $ref = "$refDir.*/ c\our $ref = "$refDir\/hs38DH.fa";' "$WORKING_DIR"/scripts/gcconfig.pm
       sed -i '/.*our $dbsnp.*/ c\our $dbsnp = "$refDir\/dbsnp_142.b38.vcf.gz";' "$WORKING_DIR"/scripts/gcconfig.pm
@@ -857,8 +866,12 @@ workflow TopMedVariantCaller {
          sed -i '/.*our $genotypeUnit.*/ c\our $genotypeUnit = ${genotypeUnit};' "$WORKING_DIR"/scripts/gcconfig.pm
       fi
 
+
+      # Escape all the forward slashes for use in sed
+      # https://unix.stackexchange.com/questions/379572/escaping-both-forward-slash-and-back-slash-with-sed
+      CROMWELL_WORKING_DIR_ESCAPED="${dollar}{CROMWELL_WORKING_DIR//\//\\\/}"
       # Put the correct location of the output directory into the local config file
-      #sed -i '/.*our $out =.*/ c\our $out = "/root/topmed_freeze3_calling/out";' "$WORKING_DIR"/scripts/gcconfig.pm
+      sed -i "/.*our \$out =.*/ c\our \$out = \""$CROMWELL_WORKING_DIR_ESCAPED"/out\";" "$WORKING_DIR"/scripts/gcconfig.pm
       # Put the correct location of references into the config file
       sed -i '/.*our $md5 =.*/ c\our $md5 = "\/data\/local.org\/ref\/gotcloud.ref\/md5\/%2s\/%s\/%s";' "$WORKING_DIR"/scripts/config.pm
       sed -i '/.*our $ref =.*/ c\our $ref = "\/data\/local.org\/ref\/gotcloud.ref\/hg38\/hs38DH.fa";' "$WORKING_DIR"/scripts/config.pm
@@ -869,42 +882,48 @@ workflow TopMedVariantCaller {
 
       echo "Running step1 - detect and merge variants"
       echo "Running step1 - detect and merge variants - removing old output dir if it exists"
-      if [ -d "$WORKING_DIR"/out ]; then rm -Rf "$WORKING_DIR"/out; fi
+      #if [ -d "$WORKING_DIR"/out ]; then rm -Rf "$WORKING_DIR"/out; fi
       echo "Running step1 - detect and merge variants - generating Makefile"
       perl "$WORKING_DIR"/scripts/step1-detect-and-merge-variants.pl ${dollar}{formatted_chromosomes_string} 
       echo "Running step1 - detect and merge variants - running Makefile"
-      make SHELL='/bin/bash' -f "$WORKING_DIR"/out/aux/Makefile -j ${num_of_jobs_to_run}
+      make SHELL='/bin/bash' -f "$CROMWELL_WORKING_DIR"/out/aux/Makefile -j ${num_of_jobs_to_run}
       
 
       echo "Running step2 - joint genotyping"
       echo "Running step2 - joint genotyping - removing old output dir if it exists"
-      if [ -d "$WORKING_DIR"/paste ]; then rm -Rf "$WORKING_DIR"/paste; fi
+      #if [ -d "$WORKING_DIR"/paste ]; then rm -Rf "$WORKING_DIR"/paste; fi
       echo "Running step2 - joint genotyping - generating Makefile"
       perl "$WORKING_DIR"/scripts/step2-joint-genotyping.pl ${dollar}{formatted_chromosomes_string}
       echo "Running step2 - joint genotyping - running Makefile"
       # Format makefile name to be e.g. "chrchr2_chr15_chrX.Makefile"
       MAKEFILE_NAME="chr"$(j=0; for i in ${chromosomes_to_process}; do printf "chr""$i"; let "j=j+1"; if [ "$j" -lt "$total" ]; then printf "_"; fi done)".Makefile"
-      make SHELL='/bin/bash' -f "$WORKING_DIR"/out/paste/"$MAKEFILE_NAME" -j ${num_of_jobs_to_run}
+      make SHELL='/bin/bash' -f "$CROMWELL_WORKING_DIR"/out/paste/"$MAKEFILE_NAME" -j ${num_of_jobs_to_run}
 
       if [[ -n "${PED_file}" ]]; then
          printf "variantCalling: Performing variant filtering using pedigree information\n"
          perl "$WORKING_DIR"/scripts/step3a-compute-milk-score.pl ${dollar}{formatted_chromosomes_string}
-         make SHELL='/bin/bash' -f "$WORKING_DIR"/out/aux/milk/*.Makefile -j ${num_of_jobs_to_run}
+         make SHELL='/bin/bash' -f "$CROMWELL_WORKING_DIR"/out/aux/milk/*.Makefile -j ${num_of_jobs_to_run}
          perl "$WORKING_DIR"/scripts/step3b-run-svm-milk-filter.pl ${dollar}{formatted_chromosomes_string}
       fi
+
+      printf "Current directory before popd is %s\n" $(pwd)
 
       # Pop back to the original working directory; on FireCloud this will be a
       # special directory 
       popd
 
+      printf "Current directory after popd is %s\n" $(pwd)
+
+
       if [[ -n "${PED_file}" ]]; then
           # Tar up the output directories into the output file provided in the input JSON
           # Pedigree information is in the svm directory
-          tar -zcvf topmed_variant_caller_output.tar.gz /root/topmed_freeze3_calling/out/paste/ /root/topmed_freeze3_calling/out/aux/individual/ /root/topmed_freeze3_calling/out/svm/
+          tar -zcvf topmed_variant_caller_output.tar.gz "$CROMWELL_WORKING_DIR"/out/paste/ "$CROMWELL_WORKING_DIR"/out/aux/individual/ "$CROMWELL_WORKING_DIR"/out/svm/
       else
            # Tar up the output directories into the output file provided in the input JSON
-          tar -zcvf topmed_variant_caller_output.tar.gz /root/topmed_freeze3_calling/out/paste/ /root/topmed_freeze3_calling/out/aux/individual/
+          tar -zcvf topmed_variant_caller_output.tar.gz "$CROMWELL_WORKING_DIR"/out/paste/ "$CROMWELL_WORKING_DIR"/out/aux/individual/
       fi  
+
     >>>
      output {
       File topmed_variant_caller_output_file = "topmed_variant_caller_output.tar.gz"
