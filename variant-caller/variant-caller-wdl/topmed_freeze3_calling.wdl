@@ -283,8 +283,6 @@ workflow TopMedVariantCaller {
   Array[String] crai_files_names_array = crai_files_array
 
 
-
-
   if (dynamically_calculate_disk_requirement) {
       # Use scatter to get the size of each CRAI file:
       # Add 1 GB to size in case size is less than 1 GB
@@ -338,7 +336,7 @@ workflow TopMedVariantCaller {
 
       # If no CRAM index files were input the contamination calculation
       # software will generate the index files. We cannot use the array of 
-      # generated CRAM index files already created becuase we cannot be sure
+      # generated CRAM index files already created because we cannot be sure
       # the index file that matches the input CRAM file is in the same location
       # in the CRAM index array as the CRAM file in its array
       if (!defined(input_crai_files)) {
@@ -640,12 +638,12 @@ workflow TopMedVariantCaller {
 
       # Erase the existing PED file; if no PED file is provided as input
       # this will sidestep the pedigree operations
-      open('/root/topmed_freeze3_calling/data/trio_data.ped', 'w+').close()
+      open('trio_data.ped', 'w+').close()
 
       # If there is a PED file input copy the contents to the PED file
       # in the location where the program expects it to be 
       if len("${PED_file}") > 0:
-         copy("${PED_file}", "/root/topmed_freeze3_calling/data/trio_data.ped")
+         copy("${PED_file}", "trio_data.ped")
 
       # Convert the WDL array of strings to a python list
       # The resulting string will be empty if the contamination values
@@ -695,12 +693,8 @@ workflow TopMedVariantCaller {
               # Get the Cromwell path to the input CRAM file using the filename. The
               # filename at this time consists of the TopMed DNA sample
               # unique identifier of the form NWD123456.  
-              #tsv_crams_rows.append([base_name_wo_extension, cram_file, contamination])
-              tsv_crams_rows.append([base_name_wo_extension, "/root/topmed_freeze3_calling/"+base_name, contamination])
+              tsv_crams_rows.append([base_name_wo_extension, cram_file, contamination])
 
-              print("variantCalling: Creating symlink {} for CRAM file {}".format(base_name, cram_file))
-              os.symlink(cram_file, "/root/topmed_freeze3_calling/"+base_name)
-   
       else:
           tsv_crams_rows = []
           # Convert the WDL array of strings to a python list
@@ -726,41 +720,25 @@ workflow TopMedVariantCaller {
               # Get the Cromwell path to the input CRAM file using the filename. The
               # filename at this time consists of the TopMed DNA sample
               # unique identifier of the form NWD123456.  
-              #tsv_crams_rows.append([base_name_wo_extension, cram_file, "0.0"])
-              tsv_crams_rows.append([base_name_wo_extension, "/root/topmed_freeze3_calling/"+base_name, "0.0"])
-
-              print("variantCalling: Creating symlink {} for CRAM file {}".format(base_name, cram_file))
-              os.symlink(cram_file, "/root/topmed_freeze3_calling/"+base_name)
+              tsv_crams_rows.append([base_name_wo_extension, cram_file, "0.0"])
 
 
       print("variantCalling:  Writing index file {} with contents {}".format("${indexFileName}", tsv_crams_rows))
-      with open("/root/topmed_freeze3_calling/data/${indexFileName}", 'w+') as tsv_index_file:
+      with open("${indexFileName}", 'w+') as tsv_index_file:
           writer = csv.writer(tsv_index_file, delimiter = '\t')
           for cram_info in tsv_crams_rows:
               writer.writerow(cram_info)
 
       # Print the index file to stdout for debugging purposes
-      with open("/root/topmed_freeze3_calling/data/${indexFileName}", 'r') as tsv_index_file:
+      with open("${indexFileName}", 'r') as tsv_index_file:
           print("variantCalling: Index file is:\n")
           print(tsv_index_file.read())
-
-      # Symlink the CRAM index files to the Cromwell working dir so the variant
-      # can find them
-      input_crais_file_names_string = "${ sep=',' input_crais }"
-      input_crais_file_names_list = input_crais_file_names_string.split(',')
-      print("variantCalling: Input CRAM index files names list is {}".format(input_crais_file_names_list))
-      #working_dir = "/root/topmed_freeze3_calling/"
-      for crai_file in input_crais_file_names_list:
-            crai_file_basename = os.path.basename(crai_file) 
-            print("variantCalling: Creating symlink {} for CRAM index file {}".format(crai_file_basename, crai_file))
-            os.symlink(crai_file, "/root/topmed_freeze3_calling/"+crai_file_basename)
-
 
       CODE
 
 
-      #set -o pipefail
-      #set -e
+      set -o pipefail
+      set -e
 
       #echo each line of the script to stdout so we can see what is happening
       set -o xtrace
@@ -834,13 +812,10 @@ workflow TopMedVariantCaller {
       ln -s ${ref_hs38DH_winsize100_gc}  /root/topmed_freeze3_calling/data/local.org/ref/gotcloud.ref/hg38/hs38DH.winsize100.gc
 
       CROMWELL_WORKING_DIR="$(pwd)"
-      printf "Current directory before pushd is %s\n" "$CROMWELL_WORKING_DIR"
-
-      # Change to the directory in the container where the pipeline code is located
-      # because the pipeline exepects this to be the current working directory
-      pushd /root/topmed_freeze3_calling
-
-      printf "Current directory after pushd is %s\n" $(pwd)
+      printf "Cromwell current working directory is %s\n" "$CROMWELL_WORKING_DIR"
+      # Escape all the forward slashes for use in sed
+      # https://unix.stackexchange.com/questions/379572/escaping-both-forward-slash-and-back-slash-with-sed
+      CROMWELL_WORKING_DIR_ESCAPED="${dollar}{CROMWELL_WORKING_DIR//\//\\\/}"
 
       WORKING_DIR='/root/topmed_freeze3_calling' 
 
@@ -848,11 +823,10 @@ workflow TopMedVariantCaller {
       # https://stackoverflow.com/questions/31270422/how-to-replace-a-pattern-in-script-using-sed-in-place-inside-the-script
       # https://unix.stackexchange.com/questions/153608/how-to-change-a-complete-line-with-sed-c-option
       # http://www.grymoire.com/unix/Sed.html#uh-3
-      sed -i '/.*our $refDir.*/ c\our $refDir = "$FindBin::Bin\/..\/data\/local.org\/ref\/gotcloud.ref\/hg38";' "$WORKING_DIR"/scripts/gcconfig.pm
-      sed -i '/.*our $ref = "$refDir.*/ c\our $ref = "$refDir\/hs38DH.fa";' "$WORKING_DIR"/scripts/gcconfig.pm
-      sed -i '/.*our $dbsnp.*/ c\our $dbsnp = "$refDir\/dbsnp_142.b38.vcf.gz";' "$WORKING_DIR"/scripts/gcconfig.pm
-      sed -i '/.*our $hapmapvcf.*/ c\our $hapmapvcf = "$refDir\/hapmap_3.3.b38.sites.vcf.gz";' "$WORKING_DIR"/scripts/gcconfig.pm
-      sed -i '/.*our $omnivcf.*/ c\our $omnivcf = "$refDir\/1000G_omni2.5.b38.sites.PASS.vcf.gz";' "$WORKING_DIR"/scripts/gcconfig.pm
+      sed -i "/.*our \$index = \"data\/trio_data.index\";/ c\our \$index = \""$CROMWELL_WORKING_DIR_ESCAPED"\/trio_data.index\";" "$WORKING_DIR"/scripts/gcconfig.pm
+      sed -i "/.*our \$pedf = \"data\/trio_data.ped\";/ c\our \$pedf = \""$CROMWELL_WORKING_DIR_ESCAPED"\/trio_data.ped\";" "$WORKING_DIR"/scripts/gcconfig.pm
+      # Put the correct location of the output directory into the local config file
+      sed -i "/.*our \$out =.*/ c\our \$out = \""$CROMWELL_WORKING_DIR_ESCAPED"/out\";" "$WORKING_DIR"/scripts/gcconfig.pm
 
       # Check if the variable is set
       #https://unix.stackexchange.com/questions/212183/how-do-i-check-if-a-variable-exists-in-an-if-statement
@@ -866,15 +840,29 @@ workflow TopMedVariantCaller {
          sed -i '/.*our $genotypeUnit.*/ c\our $genotypeUnit = ${genotypeUnit};' "$WORKING_DIR"/scripts/gcconfig.pm
       fi
 
+      sed -i '/.*our $refDir.*/ c\our $refDir = "$FindBin::Bin\/..\/data\/local.org\/ref\/gotcloud.ref\/hg38";' "$WORKING_DIR"/scripts/gcconfig.pm
+      sed -i '/.*our $ref = "$refDir.*/ c\our $ref = "$refDir\/hs38DH.fa";' "$WORKING_DIR"/scripts/gcconfig.pm
+      sed -i '/.*our $dbsnp.*/ c\our $dbsnp = "$refDir\/dbsnp_142.b38.vcf.gz";' "$WORKING_DIR"/scripts/gcconfig.pm
+      sed -i '/.*our $hapmapvcf.*/ c\our $hapmapvcf = "$refDir\/hapmap_3.3.b38.sites.vcf.gz";' "$WORKING_DIR"/scripts/gcconfig.pm
+      sed -i '/.*our $omnivcf.*/ c\our $omnivcf = "$refDir\/1000G_omni2.5.b38.sites.PASS.vcf.gz";' "$WORKING_DIR"/scripts/gcconfig.pm
 
-      # Escape all the forward slashes for use in sed
-      # https://unix.stackexchange.com/questions/379572/escaping-both-forward-slash-and-back-slash-with-sed
-      CROMWELL_WORKING_DIR_ESCAPED="${dollar}{CROMWELL_WORKING_DIR//\//\\\/}"
-      # Put the correct location of the output directory into the local config file
-      sed -i "/.*our \$out =.*/ c\our \$out = \""$CROMWELL_WORKING_DIR_ESCAPED"/out\";" "$WORKING_DIR"/scripts/gcconfig.pm
+      # Print gcconfig.pm file contents for debugging
+      echo "*** gcconfig.pm file - "$WORKING_DIR"/scripts/gcconfig.pm contents ***"
+      cat "$WORKING_DIR"/scripts/gcconfig.pm
+
+
+
+
       # Put the correct location of references into the config file
       sed -i '/.*our $md5 =.*/ c\our $md5 = "\/data\/local.org\/ref\/gotcloud.ref\/md5\/%2s\/%s\/%s";' "$WORKING_DIR"/scripts/config.pm
       sed -i '/.*our $ref =.*/ c\our $ref = "\/data\/local.org\/ref\/gotcloud.ref\/hg38\/hs38DH.fa";' "$WORKING_DIR"/scripts/config.pm
+      sed -i "/.*our \$index = \"data\/trio_data.index\";/ c\our \$index = \""$CROMWELL_WORKING_DIR_ESCAPED"\/trio_data.index\";" "$WORKING_DIR"/scripts/config.pm
+
+      # Print config.pm contents for debugging
+      echo "*** config.pm file - "$WORKING_DIR"/scripts/config.pm contents ***"
+      cat "$WORKING_DIR"/scripts/config.pm
+
+
 
       # Format the list of chromosomes to be e.g. "chr2 chr5 chrX"
       total=$(echo ${chromosomes_to_process} | wc -w)
@@ -905,14 +893,6 @@ workflow TopMedVariantCaller {
          make SHELL='/bin/bash' -f "$CROMWELL_WORKING_DIR"/out/aux/milk/*.Makefile -j ${num_of_jobs_to_run}
          perl "$WORKING_DIR"/scripts/step3b-run-svm-milk-filter.pl ${dollar}{formatted_chromosomes_string}
       fi
-
-      printf "Current directory before popd is %s\n" $(pwd)
-
-      # Pop back to the original working directory; on FireCloud this will be a
-      # special directory 
-      popd
-
-      printf "Current directory after popd is %s\n" $(pwd)
 
 
       if [[ -n "${PED_file}" ]]; then
