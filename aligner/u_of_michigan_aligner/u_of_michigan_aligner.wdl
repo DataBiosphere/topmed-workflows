@@ -30,6 +30,15 @@ workflow TopMedAligner {
   File dbSNP_vcf
   File dbSNP_vcf_index
 
+  # The CRAM to be realigned may have been aligned with a different reference
+  # genome than what will be used in the alignment step. The pre align step
+  # must use the reference genome that the CRAM was originally aligned with
+  # to convert the CRAM to a SAM
+  File? PreAlign_reference_genome
+  File PreAlign_reference_genome_default = select_first([PreAlign_reference_genome,ref_fasta])
+  File? PreAlign_reference_genome_index
+  File PreAlign_reference_genome_index_default = select_first([PreAlign_reference_genome_index,ref_fasta_index])
+
   Int? PreAlign_preemptible_tries
   Int PreAlign_preemptible_tries_default = select_first([PreAlign_preemptible_tries, 3])
   Int? PreAlign_max_retries
@@ -148,8 +157,8 @@ workflow TopMedAligner {
      input:
       input_crai = input_crai_file,
       input_cram = input_cram_file,
-      ref_fasta = ref_fasta,
-      ref_fasta_index = ref_fasta_index,
+      ref_fasta = PreAlign_reference_genome_default,
+      ref_fasta_index = PreAlign_reference_genome_index_default,
 
       #disk_size = ref_size + (bwa_disk_multiplier * cram_size) + (sort_sam_disk_multiplier * cram_size) + cram_size + additional_disk + fastq_gz_files_size,
       disk_size = PreAlign_disk_size,
