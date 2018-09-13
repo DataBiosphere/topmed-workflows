@@ -124,6 +124,8 @@ workflow TopMedAligner {
 #      Float dbsnp_size = size(dbSNP_vcf, "GB") + size(dbSNP_vcf_index, "GB")
 #      Float cram_size = size(input_cram_file, "GB") + size(input_crai_file, "GB")
 #      Float fastq_gz_files_size = CRAM_to_fastqgz_multiplier * cram_size
+  Float PreAlign_ref_size = if (defined(dynamically_calculate_disk_requirement)) then size(PreAlign_reference_genome_default, "GB") + size(PreAlign_reference_genome_index_default, "GB") + 
+      additional_disk else ReferenceGenome_disk_size_override_default + additional_disk
 
   Float ref_size = if (defined(dynamically_calculate_disk_requirement)) then size(ref_fasta, "GB") + size(ref_fasta_index, "GB") + 
       additional_disk else ReferenceGenome_disk_size_override_default + additional_disk
@@ -142,7 +144,7 @@ workflow TopMedAligner {
 
 
 
-  Float PreAlign_disk_size = ref_size + (bwa_disk_multiplier * cram_and_crai_size) + 
+  Float PreAlign_disk_size = PreAlign_ref_size + (bwa_disk_multiplier * cram_and_crai_size) + 
      (sort_sam_disk_multiplier * cram_and_crai_size) + cram_and_crai_size + additional_disk + fastq_gz_files_size
 
   Float Align_disk_size = ref_size + ref_extra_size + (bwa_disk_multiplier * fastq_gz_files_size) + additional_disk
