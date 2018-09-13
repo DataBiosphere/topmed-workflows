@@ -1,5 +1,5 @@
-import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.26.0/aligner/functional-equivalence-wdl/FunctionalEquivalence.wdl" as TopMed_aligner
-import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.26.0/aligner/functional-equivalence-checker/topmed-alignment-checker.wdl" as checker
+import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.27.0/aligner/functional-equivalence-wdl/FunctionalEquivalence.wdl" as TopMed_aligner
+import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.27.0/aligner/functional-equivalence-checker/topmed-alignment-checker.wdl" as checker
 
 workflow checkerWorkflow {
   Int expectedNumofReads
