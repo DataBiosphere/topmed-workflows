@@ -655,7 +655,6 @@ workflow TopMedVariantCaller {
           print("variantCalling: Contamination output files list is {}".format(contamination_output_file_names_list))
 
    
-          # The user did not provide an index file so create it 
           # DNA contamination values should have already been calculated in
           # a previous task
           tsv_crams_rows = []
@@ -675,7 +674,7 @@ workflow TopMedVariantCaller {
                  contamination = broj[1].rstrip()
                  print("variantCalling: Contamination is {}".format(contamination))
     
-              # Get the Cromwell location of the CRAM file
+              # Get the Cromwell basename  of the CRAM file
               # The worklow will be able to access them
               # since the Cromwell path is mounted in the
               # docker run commmand that Cromwell sets up
@@ -690,10 +689,13 @@ workflow TopMedVariantCaller {
                   print(error_string)
                   sys.exit(error_string)
      
-              # Get the Cromwell path to the input CRAM file using the filename. The
-              # filename at this time consists of the TopMed DNA sample
-              # unique identifier of the form NWD123456.  
-              tsv_crams_rows.append([base_name_wo_extension, cram_file, contamination])
+              # Use the basename of the CRAM file without suffix as an ID
+              # The filename at this time consists of the TopMed DNA sample
+              # unique identifier of the form NWD123456 followed by a suffix like .realigned.cram  
+              tsv_crams_rows.append([base_name_wo_extension, base_name, contamination])
+
+              print("variantCalling: Creating symlink {} for CRAM file {}".format(base_name, cram_file))
+              os.symlink(cram_file, base_name)
 
       else:
           tsv_crams_rows = []
@@ -702,7 +704,7 @@ workflow TopMedVariantCaller {
           input_crams_file_names_list = input_crams_file_names_string.split(',')
           print("variantCalling: Input CRAM files names list is {}".format(input_crams_file_names_list))
           for cram_file in input_crams_file_names_list:
-              # Get the Cromwell location of the CRAM file
+              # Get the Cromwell basename  of the CRAM file
               # The worklow will be able to access them
               # since the Cromwell path is mounted in the
               # docker run commmand that Cromwell sets up
@@ -716,11 +718,24 @@ workflow TopMedVariantCaller {
                   error_string = "variantCalling: ERROR: Duplicate ID {}. Input CRAM file names are probably not unique".format(base_name_wo_extension)
                   print(error_string)
                   sys.exit(error_string)
-   
-              # Get the Cromwell path to the input CRAM file using the filename. The
-              # filename at this time consists of the TopMed DNA sample
-              # unique identifier of the form NWD123456.  
-              tsv_crams_rows.append([base_name_wo_extension, cram_file, "0.0"])
+  
+              # Use the basename of the CRAM file without suffix as an ID
+              # The filename at this time consists of the TopMed DNA sample
+              # unique identifier of the form NWD123456 followed by a suffix like .realigned.cram  
+              tsv_crams_rows.append([base_name_wo_extension, base_name, "0.0"])
+
+              print("variantCalling: Creating symlink {} for CRAM file {}".format(base_name, cram_file))
+              os.symlink(cram_file, base_name)
+
+      # Symlink the CRAM index files to the Cromwell working dir so the variant
+      # caller can find them
+      input_crais_file_names_string = "${ sep=',' input_crais }"
+      input_crais_file_names_list = input_crais_file_names_string.split(',')
+      print("variantCalling: Input CRAM index files names list is {}".format(input_crais_file_names_list))
+      for crai_file in input_crais_file_names_list:
+            crai_file_basename = os.path.basename(crai_file) 
+            print("variantCalling: Creating symlink {} for CRAM index file {}".format(crai_file_basename, crai_file))
+            os.symlink(crai_file, crai_file_basename)
 
 
       print("variantCalling:  Writing index file {} with contents {}".format("${indexFileName}", tsv_crams_rows))
