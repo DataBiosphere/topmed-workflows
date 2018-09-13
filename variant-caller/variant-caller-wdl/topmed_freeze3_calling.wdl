@@ -478,7 +478,6 @@ workflow TopMedVariantCaller {
       echo "Running create CRAM index"
 
       printf "Creating index ${input_cram}.crai for ${input_cram}"
-#      samtools index ${input_cram} ${input_cram}.crai
       samtools index ${input_cram} ${output_crai_file_name}
 
       >>>
