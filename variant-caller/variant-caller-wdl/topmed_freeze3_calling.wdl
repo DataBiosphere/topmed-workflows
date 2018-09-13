@@ -1,7 +1,4 @@
-#import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.26.0/variant-caller/variant-caller-wdl/calculate_contamination.wdl" as getDNAContamination
-import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/feature/TLP-551-enable-disk-size-override/variant-caller/variant-caller-wdl/calculate_contamination.wdl" as getDNAContamination
-
-#import "/Users/waltershands/Documents/UCSC/gitroot/topmed-workflows/variant-caller/variant-caller-wdl/calculate_contamination.wdl" as getDNAContamination
+import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.27.0/variant-caller/variant-caller-wdl/calculate_contamination.wdl" as getDNAContamination
 
 ## This is the U of Michigan variant caller workflow WDL for the workflow code located here:
 ## https://github.com/statgen/topmed_freeze3_calling
@@ -884,7 +881,7 @@ workflow TopMedVariantCaller {
       formatted_chromosomes_string=$(j=0; for i in ${chromosomes_to_process}; do printf "chr""$i"; let "j=j+1"; if [ "$j" -lt "$total" ]; then printf " "; fi done)
 
       echo "Running step1 - detect and merge variants"
-      echo "Running step1 - detect and merge variants - removing old output dir if it exists"
+      #echo "Running step1 - detect and merge variants - removing old output dir if it exists"
       #if [ -d "$WORKING_DIR"/out ]; then rm -Rf "$WORKING_DIR"/out; fi
       echo "Running step1 - detect and merge variants - generating Makefile"
       perl "$WORKING_DIR"/scripts/step1-detect-and-merge-variants.pl ${dollar}{formatted_chromosomes_string} 
@@ -893,7 +890,7 @@ workflow TopMedVariantCaller {
       
 
       echo "Running step2 - joint genotyping"
-      echo "Running step2 - joint genotyping - removing old output dir if it exists"
+      #echo "Running step2 - joint genotyping - removing old output dir if it exists"
       #if [ -d "$WORKING_DIR"/paste ]; then rm -Rf "$WORKING_DIR"/paste; fi
       echo "Running step2 - joint genotyping - generating Makefile"
       perl "$WORKING_DIR"/scripts/step2-joint-genotyping.pl ${dollar}{formatted_chromosomes_string}
