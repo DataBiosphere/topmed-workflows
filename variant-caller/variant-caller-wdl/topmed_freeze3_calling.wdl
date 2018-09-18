@@ -1,4 +1,7 @@
-import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.27.0/variant-caller/variant-caller-wdl/calculate_contamination.wdl" as getDNAContamination
+#import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.27.0/variant-caller/variant-caller-wdl/calculate_contamination.wdl" as getDNAContamination
+import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/feature/get-contam-str/variant-caller/variant-caller-wdl/calculate_contamination.wdl" as getDNAContamination
+#import "/home/ubuntu/dataBiosphere/topmed-workflows/variant-caller/variant-caller-wdl/calculate_contamination.wdl" as getDNAContamination
+
 
 ## This is the U of Michigan variant caller workflow WDL for the workflow code located here:
 ## https://github.com/statgen/topmed_freeze3_calling
@@ -355,10 +358,10 @@ workflow TopMedVariantCaller {
           }
       }
 
-     Array[Array[File]] optional_contamination_scatter_output_files = select_first([scatter_getContamination.calculate_DNA_contamination_output, scatter_getContamination_no_crai.calculate_DNA_contamination_output])
-     Array[File] contamination_output_files = flatten(optional_contamination_scatter_output_files)     
+     Array[Array[String]] optional_contamination_scatter_output_files = select_first([scatter_getContamination.calculate_DNA_contamination_output, scatter_getContamination_no_crai.calculate_DNA_contamination_output])
+     Array[String] contamination_output_files = flatten(optional_contamination_scatter_output_files)     
   }
-  Array[File]? optional_contamination_output_files = contamination_output_files
+  Array[String]? optional_contamination_output_files = contamination_output_files
 
   call variantCalling {
 
@@ -539,7 +542,7 @@ workflow TopMedVariantCaller {
      Int? genotypeUnit 
      File? PED_file
 
-     Array[File]? contamination_output_files
+     Array[String]? contamination_output_files
 
      # The CRAM index files are listed as an input because they are required
      # by various tools, e.g. Samtools. They should be in the same location
@@ -661,14 +664,8 @@ workflow TopMedVariantCaller {
           file_pairs_tuples = zip(file_pairs_it, file_pairs_it)
           for file_tuple in file_pairs_tuples:
               cram_file = file_tuple[0]
-              contamination_file = file_tuple[1]
-              print("variantCalling: CRAM file is {} contamination file is {}".format(cram_file, contamination_file))
-          
-              with open(contamination_file, 'rt') as in_file:
-                 contents = in_file.read()
-                 broj = contents.split("Alpha:",4)
-                 contamination = broj[1].rstrip()
-                 print("variantCalling: Contamination is {}".format(contamination))
+              contamination = file_tuple[1]
+              print("variantCalling: CRAM file is {} contamination is {}".format(cram_file, contamination))
     
               # Get the Cromwell basename  of the CRAM file
               # The worklow will be able to access them
@@ -689,10 +686,6 @@ workflow TopMedVariantCaller {
               # The filename at this time consists of the TopMed DNA sample
               # unique identifier of the form NWD123456 followed by a suffix like .realigned.cram  
               tsv_crams_rows.append([base_name_wo_extension, base_name, contamination])
-
-              print("variantCalling: Creating symlink {} for CRAM file {}".format(base_name, cram_file))
-              os.symlink(cram_file, base_name)
-
       else:
           tsv_crams_rows = []
           # Convert the WDL array of strings to a python list
@@ -720,9 +713,6 @@ workflow TopMedVariantCaller {
               # unique identifier of the form NWD123456 followed by a suffix like .realigned.cram  
               tsv_crams_rows.append([base_name_wo_extension, base_name, "0.0"])
 
-              print("variantCalling: Creating symlink {} for CRAM file {}".format(base_name, cram_file))
-              os.symlink(cram_file, base_name)
-
       # Symlink the CRAM index files to the Cromwell working dir so the variant
       # caller can find them
       input_crais_file_names_string = "${ sep=',' input_crais }"
@@ -733,6 +723,15 @@ workflow TopMedVariantCaller {
             print("variantCalling: Creating symlink {} for CRAM index file {}".format(crai_file_basename, crai_file))
             os.symlink(crai_file, crai_file_basename)
 
+      # Symlink the CRAM files to the Cromwell working dir so the variant
+      # caller can find them
+      input_crams_file_names_string = "${ sep=',' input_crams }"
+      input_crams_file_names_list = input_crams_file_names_string.split(',')
+      print("variantCalling: Input CRAM files names list is {}".format(input_crams_file_names_list))
+      for cram_file in input_crams_file_names_list:
+            cram_file_basename = os.path.basename(cram_file) 
+            print("variantCalling: Creating symlink {} for CRAM file {}".format(cram_file_basename, cram_file))
+            os.symlink(cram_file, cram_file_basename)
 
       print("variantCalling:  Writing index file {} with contents {}".format("${indexFileName}", tsv_crams_rows))
       with open("${indexFileName}", 'w+') as tsv_index_file:

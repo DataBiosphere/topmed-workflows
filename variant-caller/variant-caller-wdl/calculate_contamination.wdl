@@ -75,7 +75,7 @@ workflow calulateDNAContamination {
   }
 
   output {
-      Array[File] calculate_DNA_contamination_output = VerifyBamID.DNA_contamination_output_files
+      Array[String] calculate_DNA_contamination_output = VerifyBamID.DNA_contamination_output_files
 
   }
 }
@@ -100,6 +100,8 @@ workflow calulateDNAContamination {
      # skip substitution when using the bash ${<variable} syntax
      # See https://gatkforums.broadinstitute.org/wdl/discussion/comment/44570#Comment_44570 
      String dollar = "$"
+
+     String cram_contamination = "0.0"
 
      command <<<
       # Set the exit code of a pipeline to that of the rightmost command
@@ -145,9 +147,23 @@ workflow calulateDNAContamination {
           --MeanPath ${dollar}{MeanPath} \
           --Reference ${ref_fasta} --BamFile ${input_cram}
 
+      # Get the contamination value from the result file
+      while read line; do
+          if [[ ${dollar}{line} =~ Alpha: ]]
+          then 
+              contamination_white_space=$(echo ${dollar}{line}| cut -d':' -f 2)
+              # Remove leading and training whitespace from variable
+              # https://stackoverflow.com/questions/369758/how-to-trim-whitespace-from-a-bash-variable
+              contamination="$(echo -e "${dollar}{contamination_white_space}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+              printf "Contamination is ${dollar}{contamination}"
+              echo "${dollar}{contamination}" > contamination.txt
+              break
+          fi
+      done <result.out
+
     >>>
      output {
-       Array[File] DNA_contamination_output_files = [input_cram, "result.out"]
+       Array[String] DNA_contamination_output_files = [input_cram, read_string("contamination.txt")]
     }
    runtime {
       preemptible: preemptible_tries
