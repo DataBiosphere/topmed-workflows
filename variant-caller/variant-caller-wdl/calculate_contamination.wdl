@@ -101,8 +101,6 @@ workflow calulateDNAContamination {
      # See https://gatkforums.broadinstitute.org/wdl/discussion/comment/44570#Comment_44570 
      String dollar = "$"
 
-     String cram_contamination = "0.0"
-
      command <<<
       # Set the exit code of a pipeline to that of the rightmost command
       # to exit with a non-zero status, or zero if all commands of the pipeline exit 
