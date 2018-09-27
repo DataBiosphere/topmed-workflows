@@ -48,7 +48,7 @@ workflow checkerWorkflow {
 
  call checker.checkerTask { 
     input: 
-        inputCRAMFile = aligner.aligner_output,
+        inputCRAMFile = aligner.aligner_output_cram,
         inputTruthCRAMFile = inputTruthCRAMFile,
         referenceFile = ref_fasta,
         docker_image = docker_image }
