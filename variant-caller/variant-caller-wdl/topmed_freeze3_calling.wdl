@@ -1,4 +1,4 @@
-import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.28.0/variant-caller/variant-caller-wdl/calculate_contamination.wdl" as getDNAContamination
+import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.30.0/variant-caller/variant-caller-wdl/calculate_contamination.wdl" as getDNAContamination
 
 
 ## This is the U of Michigan variant caller workflow WDL for the workflow code located here:
@@ -92,9 +92,9 @@ workflow TopMedVariantCaller {
   Array[String] input_cram_files_names = input_cram_files
 
   String docker_image
-  String? docker_contamination_image   = "quay.io/ucsc_cgl/verifybamid:1.29.0"
+  String? docker_contamination_image   = "quay.io/ucsc_cgl/verifybamid:1.30.0"
 
-  String? docker_create_index_image  = "quay.io/ucsc_cgl/verifybamid:1.29.0"
+  String? docker_create_index_image  = "quay.io/ucsc_cgl/verifybamid:1.30.0"
 
   File ref_1000G_omni2_5_b38_sites_PASS_vcf_gz
   File ref_1000G_omni2_5_b38_sites_PASS_vcf_gz_tbi
