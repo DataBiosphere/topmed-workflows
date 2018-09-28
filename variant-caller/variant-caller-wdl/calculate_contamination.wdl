@@ -54,7 +54,7 @@ workflow calulateDNAContamination {
   String? reference_genome_version
   String reference_genome = select_first([reference_genome_version, 'hg38'])
 
-  String? docker_image = "quay.io/ucsc_cgl/verifybamid:1.27.0"
+  String? docker_image = "quay.io/ucsc_cgl/verifybamid:1.29.0"
 
   call VerifyBamID {
      input:
