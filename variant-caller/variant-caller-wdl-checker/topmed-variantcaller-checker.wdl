@@ -143,20 +143,22 @@ task checkerTask {
     import sys, os, tarfile, gzip, csv, math, shutil
     from subprocess import Popen, PIPE, STDOUT
     
-    def read_and_compare_vcfs_from_tar_gz(tar_gz_truth, tar_gz_test,  reference):
+    def read_and_compare_vcfs_from_tar_gz(tar_gz_truth, tar_gz_test, reference):
         """
         Reads the VCF files from the tar gz file produced by the U of Michigan
         WDL variant caller and the truth targ gz file and compares each of them
         and returns 1 if any do not compare favorably and 0 if all of them do.
-    
+
         """
-    
+
         print("test file:{}    truth file:{}".format(tar_gz_test, tar_gz_truth))
         with tarfile.open(tar_gz_test, "r") as test_variant_caller_output, \
              tarfile.open(tar_gz_truth, "r") as truth_variant_caller_output:
-    
+
              test_vcf_file_names = test_variant_caller_output.getnames()
              #print("vcf file names are:{}".format(test_vcf_file_names))
+             test_vcf_file_basenames = [os.path.basename(file_name) for file_name in test_vcf_file_names]
+             #print("vcf file basenames are:{}".format(test_vcf_file_basenames))
 
              # Check that the truth VCF tar file is not empty; if it is something is wrong
              truth_vcf_file_names = truth_variant_caller_output.getnames()
@@ -164,25 +166,29 @@ task checkerTask {
                  print("The truth tar gz file is empty", file=sys.stderr)
                  sys.exit(1)
 
- 
+
              for truth_vcf_file_info in truth_variant_caller_output.getmembers():
                  truth_vcf_file_name = os.path.basename(truth_vcf_file_info.name)
-                 #print("Truth vcf file name is:{}".format(truth_vcf_file_name))           
-    
+                 #print("Truth vcf file name is:{}".format(truth_vcf_file_name)) 
+
                  if truth_vcf_file_info.isfile() and \
                     os.path.basename(truth_vcf_file_info.name).startswith("chr") and \
                     os.path.basename(truth_vcf_file_info.name).endswith("vcf.gz"):
-    
-                    print("Checking to see if truth vcf file {} is present in {}".format(truth_vcf_file_info.name, tar_gz_test))
+
+                    #print("Checking to see if truth vcf file {} is present in {}".format(os.path.basename(truth_vcf_file_info.name), tar_gz_test))
                     # If a VCF file is missing in the test output then
                     # the VCFs are not the same and return error
-                    if truth_vcf_file_info.name not in test_vcf_file_names:
-                        print("VCF file {} is missing from variant caller output".format(truth_vcf_file_info.name), file=sys.stderr)
+                    if os.path.basename(truth_vcf_file_info.name) not in test_vcf_file_basenames:
+                        print("VCF file {} is missing from variant caller output".format(os.path.basename(truth_vcf_file_info.name)), file=sys.stderr)
                         sys.exit(1)
 
                     # Get file like objects for the gzipped vcf files
-                    test_vcf_file_info = test_variant_caller_output.getmember(truth_vcf_file_info.name)
-                    test_vcf_file = test_variant_caller_output.extractfile(test_vcf_file_info)
+                    for test_vcf_file_info in test_variant_caller_output.getmembers():
+                       if os.path.basename(test_vcf_file_info.name) == os.path.basename(truth_vcf_file_info.name):
+                           test_vcf_file = test_variant_caller_output.extractfile(test_vcf_file_info)
+                           #print("Got test vcf file:{} with file name {}".format(test_vcf_file, test_vcf_file_info.name)) 
+                           break;
+
                     truth_vcf_file = truth_variant_caller_output.extractfile(truth_vcf_file_info)
 
                     # The following code writes the file-like objects to the host disk.
