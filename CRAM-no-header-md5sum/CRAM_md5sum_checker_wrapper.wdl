@@ -1,5 +1,5 @@
-import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.29.0/CRAM-no-header-md5sum/md5sum/CRAM_md5sum.wdl" as f1
-import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.29.0/CRAM-no-header-md5sum/checker/CRAM_md5sum_checker.wdl" as f2
+import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.30.0/CRAM-no-header-md5sum/md5sum/CRAM_md5sum.wdl" as f1
+import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.30.0/CRAM-no-header-md5sum/checker/CRAM_md5sum_checker.wdl" as f2
 
 workflow CRAMMd5sumChecker {
   File inputCRAMFile

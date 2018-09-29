@@ -69,72 +69,76 @@ task checkerTask {
 
   # Some tasks need wiggle room, and we also need to add a small amount of disk to prevent getting a
   # Cromwell error from asking for 0 disk when the input is less than 1GB
-  Int additional_disk = select_first([increase_disk_size, 20])
+  Int additional_disk = select_first([increase_disk_size, 500])
 
+  # The size function causes an error when a relative path is provided as input in the JSON
+  # input file, which is done in the test input JSON 
+  # topmed_freeze3_calling_checker.wdl.local.json, so bump up the additional_disk size.
+  # Somehow Cromwell confuses where the file is for the size function in this case.
+  #Float reference_size = (
+  #size(ref_1000G_omni2_5_b38_sites_PASS_vcf_gz, "GB") +
+  #size(ref_1000G_omni2_5_b38_sites_PASS_vcf_gz_tbi, "GB") +
+  #size(chr10_vcf, "GB") +
+  #size(chr11_KI270927v1_alt_vcf, "GB") +
+  #size(chr11_vcf, "GB") +
+  #size(chr12_vcf, "GB") +
+  #size(chr13_vcf, "GB") +
+  #size(chr14_GL000009v2_random_vcf, "GB") +
+  #size(chr14_KI270846v1_alt_vcf, "GB") +
+  #size(chr14_vcf, "GB") +
+  #size(chr15_vcf, "GB") +
+  #size(chr16_vcf, "GB") +
+  #size(chr17_KI270857v1_alt_vcf, "GB") +
+  #size(chr17_KI270862v1_alt_vcf, "GB") +
+  #size(chr17_KI270909v1_alt_vcf, "GB") +
+  #size(chr17_vcf, "GB") +
+  #size(chr18_vcf, "GB") +
+  #size(chr19_KI270938v1_alt_vcf, "GB") +
+  #size(chr19_vcf, "GB") +
+  #size(chr1_KI270706v1_random_vcf, "GB") +
+  #size(chr1_KI270766v1_alt_vcf, "GB") +
+  #size(chr1_vcf, "GB") +
+  #size(chr20_vcf, "GB") +
+  #size(chr21_vcf, "GB") +
+  #size(chr22_KI270879v1_alt_vcf, "GB") +
+  #size(chr22_KI270928v1_alt_vcf, "GB") +
+  #size(chr22_vcf, "GB") +
+  #size(chr2_KI270773v1_alt_vcf, "GB") +
+  #size(chr2_KI270894v1_alt_vcf, "GB") +
+  #size(chr2_vcf, "GB") +
+  #size(chr3_vcf, "GB") +
+  #size(chr4_GL000008v2_random_vcf, "GB") +
+  #size(chr4_vcf, "GB") +
+  #size(chr5_vcf, "GB") +
+  #size(chr6_vcf, "GB") +
+  #size(chr7_KI270803v1_alt_vcf, "GB") +
+  #size(chr7_vcf, "GB") +
+  #size(chr8_KI270821v1_alt_vcf, "GB") +
+  #size(chr8_vcf, "GB") +
+  #size(chr9_vcf, "GB") +
+  #size(chrUn_KI270742v1_vcf, "GB") +
+  #size(chrX_vcf, "GB") +
+  #size(ref_dbsnp_142_b38_vcf_gz, "GB") +
+  #size(ref_dbsnp_142_b38_vcf_gz_tbi, "GB") +
+  #size(ref_dbsnp_All_vcf_gz, "GB") +
+  #size(ref_dbsnp_All_vcf_gz_tbi, "GB") +
+  #size(ref_hapmap_3_3_b38_sites_vcf_gz, "GB") +
+  #size(ref_hapmap_3_3_b38_sites_vcf_gz_tbi, "GB") +
+  #size(ref_hs38DH_bs_umfa, "GB") +
+  #size(ref_hs38DH_dict, "GB") +
+  #size(ref_hs38DH_fa, "GB") +
+  #size(ref_hs38DH_fa_alt, "GB") +
+  #size(ref_hs38DH_fa_amb, "GB") +
+  #size(ref_hs38DH_fa_ann, "GB") +
+  #size(ref_hs38DH_fa_bwt, "GB") +
+  #size(ref_hs38DH_fa_fai, "GB") +
+  #size(ref_hs38DH_fa_pac, "GB") +
+  #size(ref_hs38DH_fa_sa, "GB") +
+  #size(ref_hs38DH_winsize100_gc, "GB")
+  #)
 
-  Float reference_size = (
-  size(ref_1000G_omni2_5_b38_sites_PASS_vcf_gz, "GB") +
-  size(ref_1000G_omni2_5_b38_sites_PASS_vcf_gz_tbi, "GB") +
-  size(chr10_vcf, "GB") +
-  size(chr11_KI270927v1_alt_vcf, "GB") +
-  size(chr11_vcf, "GB") +
-  size(chr12_vcf, "GB") +
-  size(chr13_vcf, "GB") +
-  size(chr14_GL000009v2_random_vcf, "GB") +
-  size(chr14_KI270846v1_alt_vcf, "GB") +
-  size(chr14_vcf, "GB") +
-  size(chr15_vcf, "GB") +
-  size(chr16_vcf, "GB") +
-  size(chr17_KI270857v1_alt_vcf, "GB") +
-  size(chr17_KI270862v1_alt_vcf, "GB") +
-  size(chr17_KI270909v1_alt_vcf, "GB") +
-  size(chr17_vcf, "GB") +
-  size(chr18_vcf, "GB") +
-  size(chr19_KI270938v1_alt_vcf, "GB") +
-  size(chr19_vcf, "GB") +
-  size(chr1_KI270706v1_random_vcf, "GB") +
-  size(chr1_KI270766v1_alt_vcf, "GB") +
-  size(chr1_vcf, "GB") +
-  size(chr20_vcf, "GB") +
-  size(chr21_vcf, "GB") +
-  size(chr22_KI270879v1_alt_vcf, "GB") +
-  size(chr22_KI270928v1_alt_vcf, "GB") +
-  size(chr22_vcf, "GB") +
-  size(chr2_KI270773v1_alt_vcf, "GB") +
-  size(chr2_KI270894v1_alt_vcf, "GB") +
-  size(chr2_vcf, "GB") +
-  size(chr3_vcf, "GB") +
-  size(chr4_GL000008v2_random_vcf, "GB") +
-  size(chr4_vcf, "GB") +
-  size(chr5_vcf, "GB") +
-  size(chr6_vcf, "GB") +
-  size(chr7_KI270803v1_alt_vcf, "GB") +
-  size(chr7_vcf, "GB") +
-  size(chr8_KI270821v1_alt_vcf, "GB") +
-  size(chr8_vcf, "GB") +
-  size(chr9_vcf, "GB") +
-  size(chrUn_KI270742v1_vcf, "GB") +
-  size(chrX_vcf, "GB") +
-  size(ref_dbsnp_142_b38_vcf_gz, "GB") +
-  size(ref_dbsnp_142_b38_vcf_gz_tbi, "GB") +
-  size(ref_dbsnp_All_vcf_gz, "GB") +
-  size(ref_dbsnp_All_vcf_gz_tbi, "GB") +
-  size(ref_hapmap_3_3_b38_sites_vcf_gz, "GB") +
-  size(ref_hapmap_3_3_b38_sites_vcf_gz_tbi, "GB") +
-  size(ref_hs38DH_bs_umfa, "GB") +
-  size(ref_hs38DH_dict, "GB") +
-  size(ref_hs38DH_fa, "GB") +
-  size(ref_hs38DH_fa_alt, "GB") +
-  size(ref_hs38DH_fa_amb, "GB") +
-  size(ref_hs38DH_fa_ann, "GB") +
-  size(ref_hs38DH_fa_bwt, "GB") +
-  size(ref_hs38DH_fa_fai, "GB") +
-  size(ref_hs38DH_fa_pac, "GB") +
-  size(ref_hs38DH_fa_sa, "GB") +
-  size(ref_hs38DH_winsize100_gc, "GB")
-  )
-
-  Float disk_size = reference_size + size(inputTruthVCFFile, "GB") + size(inputTestVCFFile, "GB") + additional_disk
+  #Float disk_size = reference_size + size(inputTruthVCFFile, "GB") + size(inputTestVCFFile, "GB") + additional_disk
+  Float disk_size = additional_disk
 
 
   command <<<
