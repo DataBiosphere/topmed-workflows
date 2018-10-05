@@ -1,6 +1,6 @@
 import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.28.0/variant-caller/variant-caller-wdl/calculate_contamination.wdl" as getDNAContamination
 
-import "/Users/waltershands/Documents/UCSC/gitroot/topmed-workflows/variant-caller/variant-caller-wdl/discover_and_merge_variants.wdl" as discoverAndMergeVariants
+import "/home/ubuntu/dataBiosphere/topmed-workflows/variant-caller/variant-caller-wdl/discover_and_merge_variants.wdl" as discoverAndMergeVariants
 
 ## This is the U of Michigan variant caller workflow WDL for the workflow code located here:
 ## https://github.com/statgen/topmed_freeze3_calling
@@ -929,12 +929,23 @@ workflow TopMedVariantCaller {
      String dollar = "$"
 
      command <<<
+
+      # Make the log directory so the variant caller can output the logs there
+      mkdir -p out/log
+      # Make the aux directorys so the variant caller can create the sample dirs there
+      mkdir -p out/aux/individual
+      mkdir -p out/aux/union
+      mkdir -p out/aux/sites
+      mkdir -p out/aux/evaluation
+      mkdir -p out/paste
+
       python3.5 <<CODE
 
       import csv
       import os
       from shutil import copy 
       import sys
+      import errno
 
       # Erase the existing PED file; if no PED file is provided as input
       # this will sidestep the pedigree operations
@@ -948,17 +959,37 @@ workflow TopMedVariantCaller {
 
       # Symlink the BCF files to the Cromwell working dir so the variant
       # caller can find them
-      #sample_id_BCF_tuples_array = ${sampleBCFFiles}
-      sample_id_BCF_files_tuples_string = "${ sep=',' sampleBCFFiles }"
-      sample_id_BCF_files_tuples_list = sample_id_BCF_files_tuples_string.split(',')
-      for sample_id_BCF_tuple in sample_id_BCF_files_tuples_list:
-          sample_id = sample_id_BCF_tuple[0]
-          BCF_file_array = sample_id_BCF_tuple[1]
-          print("Joint Genotyping: Sample ID is {} BCF file array is {}".format(sample_ID, BCF_file_array))
+      sample_id_BCF_files_tuples_string = '${sep="','" sampleBCFFiles}'
+      print("tuple files tuples string is {}".format(sample_id_BCF_files_tuples_string))
+      sample_id_BCF_files_tuples_list_strings = sample_id_BCF_files_tuples_string.split(')')
+      print("tuple list strings are {}".format(sample_id_BCF_files_tuples_list_strings))
+      for sample_id_BCF_tuple_string in sample_id_BCF_files_tuples_list_strings:
+          print("tuple string is {}".format(sample_id_BCF_tuple_string))
+          sample_id_BCF_tuple_array = sample_id_BCF_tuple_string.strip('()," ').split('[')
+          print("tuple array is {}".format(sample_id_BCF_tuple_array))
+          sample_id = sample_id_BCF_tuple_array[0].strip('"[] ')
+          # If there is no sample id then we reached the end of the tuple list
+          # and splitting on ) has produced an empty tuple
+          if not sample_id:
+             break
+
+          # Create the directory to hold the BCFs for the sample
+          # and don't throw an exception if it already exists
+          # https://stackoverflow.com/questions/16029871/how-to-run-os-mkdir-with-p-option-in-python
+          directory_name = "out/aux/individual/" + sample_id 
+          try:
+              os.makedirs(directory_name)
+          except OSError as exc: 
+              if exc.errno == errno.EEXIST and os.path.isdir(directory_name):
+                  pass
+
+          BCF_file_array = sample_id_BCF_tuple_array[1].split(",")
+          print("Joint Genotyping: Sample ID is {} BCF file array is {}".format(sample_id, BCF_file_array))
           for BCF_file in BCF_file_array:
-              print("Joint Genotyping: Sample ID is {} BCF file is {}".format(sample_ID, BCF_file))
-              BCF_file_basename = os.path.basename(BCF_file)
-              symlink_path="out\/aux\/individual\/"+sample_ID+"\/BCF_file_basename"
+              BCF_file_trimmed = BCF_file.strip('[]" ')
+              print("Joint Genotyping: Sample ID is {} BCF file is {}".format(sample_id, BCF_file_trimmed))
+              BCF_file_basename = os.path.basename(BCF_file_trimmed)
+              symlink_path = "out/aux/individual/" + sample_id + "/" + BCF_file_basename
               print("jointGenotyping: Creating symlink {} for BCF index file {}".format(symlink_path, BCF_file))
               os.symlink(BCF_file, symlink_path)
 
