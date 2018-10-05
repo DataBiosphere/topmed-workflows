@@ -419,10 +419,13 @@ workflow TopMedVariantCaller {
       }
   }
 
-  Array[Array[Pair[String, File]?]] multipleSampleBCFs = scatter_discoverAndMergeVariants.discovery_ID_to_BCF_file_output
-  Array[Array[Pair[String, File]?]] multipleSampleLogs = scatter_discoverAndMergeVariants.discovery_ID_to_log_file_output
-  Array[Pair[String, File]?] sampleBCFs = flatten(multipleSampleBCFs)
-  Array[Pair[String, File]?] sampleLogs = flatten(multipleSampleLogs)
+#  Array[Array[Pair[String, File]?]] multipleSampleBCFs = scatter_discoverAndMergeVariants.discovery_ID_to_BCF_file_output
+#  Array[Array[Pair[String, File]?]] multipleSampleLogs = scatter_discoverAndMergeVariants.discovery_ID_to_log_file_output
+#  Array[Pair[String, File]?] sampleBCFs = flatten(multipleSampleBCFs)
+#  Array[Pair[String, File]?] sampleLogs = flatten(multipleSampleLogs)
+
+  Array[Pair[String, Array[File]]] sampleBCFs = scatter_discoverAndMergeVariants.discovery_ID_to_BCF_file_output
+  Array[Pair[String, Array[File]]] sampleLogs = scatter_discoverAndMergeVariants.discovery_ID_to_log_file_output
 
 
   call jointGenotyping {
@@ -743,7 +746,7 @@ workflow TopMedVariantCaller {
       sed -i "/.*our \$index = \"data\/trio_data.index\";/ c\our \$index = \""$CROMWELL_WORKING_DIR_ESCAPED"\/trio_data.index\";" "$WORKING_DIR"/scripts/gcconfig.pm
       sed -i "/.*our \$pedf = \"data\/trio_data.ped\";/ c\our \$pedf = \""$CROMWELL_WORKING_DIR_ESCAPED"\/trio_data.ped\";" "$WORKING_DIR"/scripts/gcconfig.pm
       # Put the correct location of the output directory into the local config file
-      sed -i "/.*our \$out =.*/ c\our \$out = \""$CROMWELL_WORKING_DIR_ESCAPED"/out\";" "$WORKING_DIR"/scripts/gcconfig.pm
+      #sed -i "/.*our \$out =.*/ c\our \$out = \""$CROMWELL_WORKING_DIR_ESCAPED"/out\";" "$WORKING_DIR"/scripts/gcconfig.pm
 
       # Check if the variable is set
       #https://unix.stackexchange.com/questions/212183/how-do-i-check-if-a-variable-exists-in-an-if-statement
@@ -791,7 +794,8 @@ workflow TopMedVariantCaller {
 
       # Get the list of Makefile targets. We will eventually call each one
       # in a Cromwell scatter
-      grep -o "^"$CROMWELL_WORKING_DIR_ESCAPED"\/out\/aux\/individual\/.*\/chr[X_0-9]*.sites.bcf.OK" "$CROMWELL_WORKING_DIR"/out/aux/Makefile > detect_and_merge_targets.txt
+      #grep -o "^"$CROMWELL_WORKING_DIR_ESCAPED"\/out\/aux\/individual\/.*\/chr[X_0-9]*.sites.bcf.OK" "$CROMWELL_WORKING_DIR"/out/aux/Makefile > detect_and_merge_targets.txt
+      grep -o "^out\/aux\/individual\/.*\/chr[X_0-9]*.sites.bcf.OK" "$CROMWELL_WORKING_DIR"/out/aux/Makefile > detect_and_merge_targets.txt
 
       # Print detect_and_merge_targets.txt contents for debugging
       echo "*** detect_and_merge_targets.txt contents ***"
@@ -842,8 +846,8 @@ workflow TopMedVariantCaller {
      Array[File]? input_crais
      Array[File] input_crams
 
-     Array[Pair[String, File]?] sampleBCFFiles
-     Array[Pair[String, File]?] sampleLogFiles
+     Array[Pair[String, Array[File]]] sampleBCFFiles
+     Array[Pair[String, Array[File]]] sampleLogFiles
 
      File trio_data_index
      File gcconfig_pm
@@ -941,26 +945,22 @@ workflow TopMedVariantCaller {
       if len("${PED_file}") > 0:
          copy("${PED_file}", "trio_data.ped")
 
+
       # Symlink the BCF files to the Cromwell working dir so the variant
       # caller can find them
-      input_BCF_file_names_string = "${ sep=',' sampleBCFFiles }"
-      input_BCF_file_names_list = input_BCF_file_names_string.split(',')
-      print("jointGenotyping: Input BCF files names list is {}".format(input_BCF_file_names_list))
-      # Create list of tuples from the list of cram paths and contamination
-      # Input is [/path/to/cram, contamination, /path/to/cram, contamination...]
-      # see https://stackoverflow.com/questions/23286254/convert-list-to-a-list-of-tuples-python
-      file_pairs_it = iter(input_BCF_file_names_list)
-      file_pairs_tuples = zip(file_pairs_it, file_pairs_it)
-      for file_tuple in file_pairs_tuples:
-          sample_ID = file_tuple[0]
-          BCF_file = file_tuple[1]
-          print("Joint Genotyping: Sample ID is {} BCF file is {}".format(sample_ID, BCF_file))
-
-          BCF_file_basename = os.path.basename(BCF_file)
-          symlink_path="\/root\/topmed_freeze3_calling\/out\/aux\/individual\/"+sample_ID+"\/BCF_file_basename"
-          print("jointGenotyping: Creating symlink {} for BCF index file {}".format(symlink_path, BCF_file))
-          os.symlink(BCF_file, symlink_path)
-
+      #sample_id_BCF_tuples_array = ${sampleBCFFiles}
+      sample_id_BCF_files_tuples_string = "${ sep=',' sampleBCFFiles }"
+      sample_id_BCF_files_tuples_list = sample_id_BCF_files_tuples_string.split(',')
+      for sample_id_BCF_tuple in sample_id_BCF_files_tuples_list:
+          sample_id = sample_id_BCF_tuple[0]
+          BCF_file_array = sample_id_BCF_tuple[1]
+          print("Joint Genotyping: Sample ID is {} BCF file array is {}".format(sample_ID, BCF_file_array))
+          for BCF_file in BCF_file_array:
+              print("Joint Genotyping: Sample ID is {} BCF file is {}".format(sample_ID, BCF_file))
+              BCF_file_basename = os.path.basename(BCF_file)
+              symlink_path="out\/aux\/individual\/"+sample_ID+"\/BCF_file_basename"
+              print("jointGenotyping: Creating symlink {} for BCF index file {}".format(symlink_path, BCF_file))
+              os.symlink(BCF_file, symlink_path)
 
       # Symlink the CRAM index files to the Cromwell working dir so the variant
       # caller can find them
