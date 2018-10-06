@@ -1,8 +1,9 @@
 workflow discoverAndMergeVariants {
 
   File? input_crai_file
-  File input_cram_file
-
+  File? input_cram_file
+  Array[File]? BCFFiles
+ 
   File ref_fasta
   File ref_fasta_index
 
@@ -46,7 +47,7 @@ workflow discoverAndMergeVariants {
   Float reference_size = if(dynamically_calculate_disk_requirement) then size(ref_fasta, "GB") + size(ref_fasta_index, "GB") else ReferenceGenome_index_disk_size_override_default + ReferenceGenome_disk_size_override_default
 
   # Account for size of generated CRAM index file
-  Float cram_size = if(dynamically_calculate_disk_requirement) then size(input_cram_file, "GB") else CRAM_file_max_disk_size_override_default
+  Float cram_size = if(dynamically_calculate_disk_requirement) then (if (defined(input_cram_file)) then size(input_cram_file, "GB") else CRAM_file_max_disk_size_override_default) else CRAM_file_max_disk_size_override_default
   Float crai_size = if(dynamically_calculate_disk_requirement) then (if (defined(input_crai_file)) then size(input_crai_file, "GB") else (cram_size * 0.00003)) else CRAI_file_max_disk_size_override_default
 
 
@@ -113,10 +114,11 @@ workflow discoverAndMergeVariants {
   # the trio_data.index file and is present in the
   # target name as follows:
   # 'out/aux/individual/<ID>/<chr#>_<range>.sites.bcf.OK'
-  String base_name_wo_extension = sub(basename(input_cram_file), "\\..*$", "")
+  String base_name_wo_extension = if (defined(input_cram_file)) then sub(basename(input_cram_file), "\\..*$", "") else ""
 
   call runDiscoverVariants {
           input:
+              sampleBCFs = BCFFiles, 
               input_cram = input_cram_file,
               input_crai = input_crai_file,
               ref_fasta = ref_fasta,
@@ -139,15 +141,18 @@ workflow discoverAndMergeVariants {
       }
 
   output {
-      Pair[String, Array[File]] discovery_ID_to_BCF_file_output = runDiscoverVariants.discovery_ID_to_BCF_files
-      Pair[String, Array[File]] discovery_ID_to_log_file_output = runDiscoverVariants.discovery_ID_to_log_files
+      Array[File] discovery_ID_to_BCF_file_output = runDiscoverVariants.discovery_ID_to_BCF_files
+      
+      #Pair[String, Array[File]] discovery_ID_to_BCF_file_output = runDiscoverVariants.discovery_ID_to_BCF_files
+      #Pair[String, Array[File]] discovery_ID_to_log_file_output = runDiscoverVariants.discovery_ID_to_log_files
   }
 }
 
 
   task runDiscoverVariants {
-     File input_cram
+     File? input_cram
      File? input_crai
+     Array[File]? sampleBCFs
 
      File ref_fasta
      File ref_fasta_index
@@ -166,11 +171,14 @@ workflow discoverAndMergeVariants {
      Int max_retries
      String docker_image
 
-     String CRAM_basename = basename(input_cram)
-     String output_crai_file_name = "${CRAM_basename}.crai"
+     #String CRAM_basename = basename(input_cram)
+     #String output_crai_file_name = "${CRAM_basename}.crai"
 
-     String output_BCF_files = "out/aux/individual/${sample_id}/*.sites.bcf"
-     String output_log_files = "out/aux/individual/${sample_id}/*.sites.log"
+     #String output_BCF_files = "out/aux/individual/${sample_id}/*.sites.bcf"
+     #String output_log_files = "out/aux/individual/${sample_id}/*.sites.log"
+     String output_BCF_files = "out/aux/individual/${sample_id}/*"
+     #String output_log_files = "out/aux/individual/${sample_id}/*.sites.log"
+     String output_merged_BCF_files = "out/aux/union/*"
 
 
      # We have to use a trick to make Cromwell
@@ -179,6 +187,41 @@ workflow discoverAndMergeVariants {
      String dollar = "$"
 
      command <<<
+      python3.5 <<CODE
+
+      import csv
+      import os
+      from shutil import copy 
+      import sys
+      import errno
+
+      # If BCF files from the discovery step were input
+      # Symlink the BCF files to the Cromwell working dir so the variant
+      # caller can find them
+      BCF_file_names_string = "${ sep=',' sampleBCFs }"
+      if len(BCF_file_names_string) > 0:
+          BCF_file_names_list = BCF_file_names_string.split(',')
+          print("variantCalling: BCF files names list is {}".format(BCF_file_names_list))
+          for bcf_file in BCF_file_names_list:
+              bcf_symlink_path = os.path.relpath(bcf_file, 'out/aux')
+              bcf_symlink_path = 'out/aux/' + bcf_symlink_path
+    
+              # Create the directory to hold the BCFs for the sample
+              # and don't throw an exception if it already exists
+              # https://stackoverflow.com/questions/16029871/how-to-run-os-mkdir-with-p-option-in-python
+              directory_name = os.path.dirname(bcf_symlink_path) 
+              try:
+                  os.makedirs(directory_name)
+              except OSError as exc: 
+                  if exc.errno == errno.EEXIST and os.path.isdir(directory_name):
+                      pass
+    
+              print("variantCalling: Creating symlink {} for BCF file {}".format(bcf_symlink_path, bcf_file))
+              os.symlink(bcf_file, bcf_symlink_path)
+      CODE
+
+
+
       # Set the exit code of a pipeline to that of the rightmost command
       # to exit with a non-zero status, or zero if all commands of the pipeline exit 
       set -o pipefail
@@ -192,27 +235,35 @@ workflow discoverAndMergeVariants {
 
       printf "Running variant discovery"
 
-      # If there is no CRAM index file generate it
-      if [[ -z "${input_crai}" ]]
-      then
-          printf "Creating index for ${input_cram}"
-          /root/topmed_freeze3_calling/samtools/samtools index ${input_cram}
-          # Symlink the CRAI file from the current working directory to the
-          # input dir where samtools creates it
-          # based on the location of the input CRAM file
-          # The trio_data.index file lists the CRAM in the current working
-          # directory so samtools expects the CRAI to be in the CWD
-          ln -s ${input_cram}.crai ${output_crai_file_name}
-      else
-          ln -s ${input_crai} ${output_crai_file_name}
+      # If a CRAM file was input
+      if [[ -n "${input_cram}" ]]; then
+
+          printf "Creating symlink for ${input_cram}"
+          cram_basename=$(basename "${input_cram}")
+          # Symlink the CRAM file so that the script can find it
+          # We assume the CRAM name was put into the trio_data.index file as
+          # the basename of the input CRAM file in the setupConfigFiles task
+          # The CRAI file will be in the current working dir whether
+          # it was input or created in this task
+          ln -s ${input_cram} ${dollar}{cram_basename}
+
+          output_crai_file_name=${dollar}{cram_basename}.crai
+          # If there is no CRAM index file generate it
+          if [[ -z "${input_crai}" ]]
+          then
+              printf "Creating index for ${input_cram}"
+              /root/topmed_freeze3_calling/samtools/samtools index ${input_cram}
+              # Symlink the CRAI file from the current working directory to the
+              # input dir where samtools creates it
+              # based on the location of the input CRAM file
+              # The trio_data.index file lists the CRAM in the current working
+              # directory so samtools expects the CRAI to be in the CWD
+              ln -s ${input_cram}.crai ${dollar}{output_crai_file_name}
+          else
+              ln -s ${input_crai} ${dollar}{output_crai_file_name}
+          fi
       fi
 
-      # Symlink the CRAM file so that the script can find it
-      # We assume the CRAM name was put into the trio_data.index file as
-      # the basename of the input CRAM file in the setupConfigFiles task
-      # The CRAI file will be in the current working dir whether
-      # it was input or created in this task
-      ln -s ${input_cram} ${CRAM_basename}
 
       # Symlink the config files to where the variant caller scripts expect them to be
       # Use the -f switch to unlink the existing config files so we can create the link
@@ -242,7 +293,19 @@ workflow discoverAndMergeVariants {
       ALL_CRAM_MAKEFILE_TARGETS="${ sep=',' all_sample_targets }"
       #CRAM_MAKEFILE_TARGETS=$(grep -o "^.*\/out\/aux\/individual\/${sample_id}\/chr[X_0-9]*.sites.bcf.OK" ${dollar}{ALL_CRAM_MAKEFILE_TARGETS})
 
-      REG_EX=".*out\/aux\/individual\/"${sample_id}"\/chr[X_0-9]*.sites.bcf.OK"
+
+      # If there is no CRAM file then variant discovery should
+      # have been done on all CRAMs and the next step is to 
+      # merge the results. In this case we need to run the Makefile
+      # targets that put the merged variants in the 'union' folder
+      if [[ -z "${input_cram}" ]]
+      then
+          REG_EX=".*out\/aux\/union\/chr[X_0-9]*\.sites\.bcf(\.csi)?\.OK"
+      else
+          REG_EX=".*out\/aux\/individual\/"${sample_id}"\/chr[X_0-9]*\.sites\.bcf\.OK"
+      fi
+
+      #REG_EX=".*out\/aux\/individual\/"${sample_id}"\/chr[X_0-9]*.sites.bcf.OK"
       CRAM_MAKEFILE_TARGETS=$(echo ${dollar}{ALL_CRAM_MAKEFILE_TARGETS} | awk -v pat="$REG_EX" 'BEGIN{RS=","} {where = match($1, pat); if (where !=0 ) printf "%s ",$1 }')
 
       printf "Running discovery with targets: ${dollar}{CRAM_MAKEFILE_TARGETS}"
@@ -251,8 +314,10 @@ workflow discoverAndMergeVariants {
 
       >>>
         output {
-          Pair[String, Array[File]] discovery_ID_to_BCF_files = (sample_id, glob("${output_BCF_files}"))
-          Pair[String, Array[File]] discovery_ID_to_log_files = (sample_id, glob("${output_log_files}"))
+          Array[File] discovery_ID_to_BCF_files = if (defined("${input_cram}")) then glob("${output_BCF_files}") else glob("${output_merged_BCF_files}")
+
+          #Pair[String, Array[File]] discovery_ID_to_BCF_files = (sample_id, glob("${output_BCF_files}"))
+          #Pair[String, Array[File]] discovery_ID_to_log_files = (sample_id, glob("${output_log_files}"))
        }
       runtime {
          memory: sub(memory, "\\..*", "") + " GB"

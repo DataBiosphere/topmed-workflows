@@ -75,7 +75,7 @@ workflow TopMedVariantCaller {
   Int? Discovery_preemptible_tries
   Int Discovery_preemptible_tries_default = select_first([Discovery_preemptible_tries, 3])
   Int? Discovery_maxretries_tries
-  Int Discovery_maxretries_tries_default = select_first([Discovery_maxretries_tries, 3])
+  Int Discovery_maxretries_tries_default = select_first([Discovery_maxretries_tries, 0])
   Int? Discovery_memory
   Int Discovery_memory_default = select_first([Discovery_memory, 100 ])
   Int? Discovery_CPUs
@@ -92,7 +92,7 @@ workflow TopMedVariantCaller {
   #if preemptible is 3 and maxRetries is 3 for a task -- that can be retried upto 6 times
   #https://cromwell.readthedocs.io/en/stable/RuntimeAttributes/#maxretries
   Int? VariantCaller_maxretries_tries
-  Int VariantCaller_maxretries_tries_default = select_first([VariantCaller_maxretries_tries, 3])
+  Int VariantCaller_maxretries_tries_default = select_first([VariantCaller_maxretries_tries, 0])
   Int? VariantCaller_memory
   # Select memory and CPUs to choose a GCP n1-highmem-64 machine
   Int VariantCaller_memory_default = select_first([VariantCaller_memory, 400])
@@ -398,7 +398,7 @@ workflow TopMedVariantCaller {
   }
 
   scatter(cram_file in input_cram_files) {
-      call discoverAndMergeVariants.discoverAndMergeVariants as scatter_discoverAndMergeVariants {
+      call discoverAndMergeVariants.discoverAndMergeVariants as scatter_discoverVariants {
           input:
               input_cram_file = cram_file,
               ref_fasta = ref_hs38DH_fa,
@@ -424,9 +424,32 @@ workflow TopMedVariantCaller {
 #  Array[Pair[String, File]?] sampleBCFs = flatten(multipleSampleBCFs)
 #  Array[Pair[String, File]?] sampleLogs = flatten(multipleSampleLogs)
 
-  Array[Pair[String, Array[File]]] sampleBCFs = scatter_discoverAndMergeVariants.discovery_ID_to_BCF_file_output
-  Array[Pair[String, Array[File]]] sampleLogs = scatter_discoverAndMergeVariants.discovery_ID_to_log_file_output
+#  Array[Pair[String, Array[File]]] sampleBCFs = scatter_discoverVariants.discovery_ID_to_BCF_file_output
+#  Array[Pair[String, Array[File]]] sampleLogs = scatter_discoverVariants.discovery_ID_to_log_file_output
 
+  Array[Array[File]] multiple_sampleBCFs = scatter_discoverVariants.discovery_ID_to_BCF_file_output
+  Array[File] sampleBCFs = flatten(multiple_sampleBCFs)
+ 
+  call discoverAndMergeVariants.discoverAndMergeVariants as mergeVariants {
+      input:
+          BCFFiles = sampleBCFs,
+
+          ref_fasta = ref_hs38DH_fa,
+          ref_fasta_index = ref_hs38DH_fa_fai,
+
+          trio_data_index = setupConfigFiles.trio_data_index,
+          gcconfig_pm = setupConfigFiles.gcconfig_pm,
+          config_pm = setupConfigFiles.config_pm,
+          detect_and_merge_targets_list = setupConfigFiles.detect_and_merge_targets_list,
+          detect_and_merge_Makefile = setupConfigFiles.detect_and_merge_Makefile,
+
+          dynamically_calculate_file_size = dynamically_calculate_disk_requirement,
+          CPUs = Discovery_CPUs_default,
+          preemptible_tries = Discovery_preemptible_tries_default,
+          max_retries = Discovery_maxretries_tries_default,
+          memory = Discovery_memory_default,
+          docker_image = docker_image
+  }
 
   call jointGenotyping {
 
@@ -435,7 +458,7 @@ workflow TopMedVariantCaller {
       input_crams = input_cram_files,
 
       sampleBCFFiles = sampleBCFs,
-      sampleLogFiles = sampleLogs,
+      #sampleLogFiles = sampleLogs,
 
       trio_data_index = setupConfigFiles.trio_data_index,
       gcconfig_pm = setupConfigFiles.gcconfig_pm,
@@ -795,7 +818,8 @@ workflow TopMedVariantCaller {
       # Get the list of Makefile targets. We will eventually call each one
       # in a Cromwell scatter
       #grep -o "^"$CROMWELL_WORKING_DIR_ESCAPED"\/out\/aux\/individual\/.*\/chr[X_0-9]*.sites.bcf.OK" "$CROMWELL_WORKING_DIR"/out/aux/Makefile > detect_and_merge_targets.txt
-      grep -o "^out\/aux\/individual\/.*\/chr[X_0-9]*.sites.bcf.OK" "$CROMWELL_WORKING_DIR"/out/aux/Makefile > detect_and_merge_targets.txt
+      #grep -o "^out\/aux\/individual\/.*\/chr[X_0-9]*.sites.bcf.OK" "$CROMWELL_WORKING_DIR"/out/aux/Makefile > detect_and_merge_targets.txt
+      grep -E -o "^out\/aux\/(individual\/.*|union)\/chr[X_0-9]*\.sites\.bcf(\.csi)?\.OK" "$CROMWELL_WORKING_DIR"/out/aux/Makefile > detect_and_merge_targets.txt
 
       # Print detect_and_merge_targets.txt contents for debugging
       echo "*** detect_and_merge_targets.txt contents ***"
@@ -846,8 +870,10 @@ workflow TopMedVariantCaller {
      Array[File]? input_crais
      Array[File] input_crams
 
-     Array[Pair[String, Array[File]]] sampleBCFFiles
-     Array[Pair[String, Array[File]]] sampleLogFiles
+     Array[File] sampleBCFFiles
+
+     #Array[Pair[String, Array[File]]] sampleBCFFiles
+     #Array[Pair[String, Array[File]]] sampleLogFiles
 
      File trio_data_index
      File gcconfig_pm
@@ -959,6 +985,30 @@ workflow TopMedVariantCaller {
 
       # Symlink the BCF files to the Cromwell working dir so the variant
       # caller can find them
+      BCF_file_names_string = "${ sep=',' sampleBCFFiles }"
+      BCF_file_names_list = BCF_file_names_string.split(',')
+      print("variantCalling: BCF files names list is {}".format(BCF_file_names_list))
+      for bcf_file in BCF_file_names_list:
+          bcf_symlink_path = os.path.relpath(bcf_file, 'out/aux')
+          bcf_symlink_path = 'out/aux/' + bcf_symlink_path
+
+          # Create the directory to hold the BCFs for the sample
+          # and don't throw an exception if it already exists
+          # https://stackoverflow.com/questions/16029871/how-to-run-os-mkdir-with-p-option-in-python
+          directory_name = os.path.dirname(bcf_symlink_path) 
+          try:
+              os.makedirs(directory_name)
+          except OSError as exc: 
+              if exc.errno == errno.EEXIST and os.path.isdir(directory_name):
+                  pass
+
+          print("variantCalling: Creating symlink {} for BCF file {}".format(bcf_symlink_path, bcf_file))
+          os.symlink(bcf_file, bcf_symlink_path)
+
+
+
+
+      """
       sample_id_BCF_files_tuples_string = '${sep="','" sampleBCFFiles}'
       print("tuple files tuples string is {}".format(sample_id_BCF_files_tuples_string))
       sample_id_BCF_files_tuples_list_strings = sample_id_BCF_files_tuples_string.split(')')
@@ -967,12 +1017,14 @@ workflow TopMedVariantCaller {
           print("tuple string is {}".format(sample_id_BCF_tuple_string))
           sample_id_BCF_tuple_array = sample_id_BCF_tuple_string.strip('()," ').split('[')
           print("tuple array is {}".format(sample_id_BCF_tuple_array))
-          sample_id = sample_id_BCF_tuple_array[0].strip('"[] ')
+          sample_id = sample_id_BCF_tuple_array[0]
+          sample_id = sample_id.strip('" ,')
           # If there is no sample id then we reached the end of the tuple list
           # and splitting on ) has produced an empty tuple
           if not sample_id:
              break
 
+          print("sample id is: {}".format(sample_id))
           # Create the directory to hold the BCFs for the sample
           # and don't throw an exception if it already exists
           # https://stackoverflow.com/questions/16029871/how-to-run-os-mkdir-with-p-option-in-python
@@ -986,12 +1038,13 @@ workflow TopMedVariantCaller {
           BCF_file_array = sample_id_BCF_tuple_array[1].split(",")
           print("Joint Genotyping: Sample ID is {} BCF file array is {}".format(sample_id, BCF_file_array))
           for BCF_file in BCF_file_array:
-              BCF_file_trimmed = BCF_file.strip('[]" ')
-              print("Joint Genotyping: Sample ID is {} BCF file is {}".format(sample_id, BCF_file_trimmed))
-              BCF_file_basename = os.path.basename(BCF_file_trimmed)
+              BCF_file = BCF_file.strip(']" ')
+              print("Joint Genotyping: Sample ID is {} BCF file is {}".format(sample_id, BCF_file))
+              BCF_file_basename = os.path.basename(BCF_file)
               symlink_path = "out/aux/individual/" + sample_id + "/" + BCF_file_basename
               print("jointGenotyping: Creating symlink {} for BCF index file {}".format(symlink_path, BCF_file))
               os.symlink(BCF_file, symlink_path)
+      """
 
       # Symlink the CRAM index files to the Cromwell working dir so the variant
       # caller can find them
