@@ -1,6 +1,6 @@
 import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.28.0/variant-caller/variant-caller-wdl/calculate_contamination.wdl" as getDNAContamination
 
-import "/home/ubuntu/dataBiosphere/topmed-workflows/variant-caller/variant-caller-wdl/discover_and_merge_variants.wdl" as discoverAndMergeVariants
+import "/Users/waltershands/Documents/UCSC/gitroot/topmed-workflows/variant-caller/variant-caller-wdl/discover_and_merge_variants.wdl" as discoverAndMergeVariants
 
 ## This is the U of Michigan variant caller workflow WDL for the workflow code located here:
 ## https://github.com/statgen/topmed_freeze3_calling
@@ -427,9 +427,11 @@ workflow TopMedVariantCaller {
 #  Array[Pair[String, Array[File]]] sampleBCFs = scatter_discoverVariants.discovery_ID_to_BCF_file_output
 #  Array[Pair[String, Array[File]]] sampleLogs = scatter_discoverVariants.discovery_ID_to_log_file_output
 
-  Array[Array[File]] multiple_sampleBCFs = scatter_discoverVariants.discovery_ID_to_BCF_file_output
-  Array[File] sampleBCFs = flatten(multiple_sampleBCFs)
- 
+  #Array[Array[File]] multiple_sampleBCFs = scatter_discoverVariants.discovery_ID_to_BCF_file_output
+  #Array[File] sampleBCFs = flatten(multiple_sampleBCFs)
+
+  Array[Map[String, Array[File]]] sampleBCFs = scatter_discoverVariants.discovery_ID_to_BCF_file_output
+
   call discoverAndMergeVariants.discoverAndMergeVariants as mergeVariants {
       input:
           BCFFiles = sampleBCFs,
@@ -457,7 +459,7 @@ workflow TopMedVariantCaller {
       input_crais = crai_files,
       input_crams = input_cram_files,
 
-      sampleBCFFiles = sampleBCFs,
+      sampleBCFFiles = mergeVariants.discovery_ID_to_BCF_file_output,
       #sampleLogFiles = sampleLogs,
 
       trio_data_index = setupConfigFiles.trio_data_index,

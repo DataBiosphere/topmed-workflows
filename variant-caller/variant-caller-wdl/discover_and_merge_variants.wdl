@@ -2,8 +2,8 @@ workflow discoverAndMergeVariants {
 
   File? input_crai_file
   File? input_cram_file
-  Array[File]? BCFFiles
- 
+  Array[Map[String, Array[File]]]? BCFFiles
+
   File ref_fasta
   File ref_fasta_index
 
@@ -118,7 +118,7 @@ workflow discoverAndMergeVariants {
 
   call runDiscoverVariants {
           input:
-              sampleBCFs = BCFFiles, 
+              sampleBCFs = BCFFiles,
               input_cram = input_cram_file,
               input_crai = input_crai_file,
               ref_fasta = ref_fasta,
@@ -141,8 +141,9 @@ workflow discoverAndMergeVariants {
       }
 
   output {
-      Array[File] discovery_ID_to_BCF_file_output = runDiscoverVariants.discovery_ID_to_BCF_files
-      
+      Map[String, Array[File]] discovery_ID_to_BCF_file_output = runDiscoverVariants.discovery_ID_to_BCF_files
+      #Array[File] discovery_ID_to_BCF_file_output = runDiscoverVariants.discovery_ID_to_BCF_files
+
       #Pair[String, Array[File]] discovery_ID_to_BCF_file_output = runDiscoverVariants.discovery_ID_to_BCF_files
       #Pair[String, Array[File]] discovery_ID_to_log_file_output = runDiscoverVariants.discovery_ID_to_log_files
   }
@@ -152,7 +153,7 @@ workflow discoverAndMergeVariants {
   task runDiscoverVariants {
      File? input_cram
      File? input_crai
-     Array[File]? sampleBCFs
+     Array[Map[String,Array[File]]]? sampleBCFs
 
      File ref_fasta
      File ref_fasta_index
@@ -183,47 +184,71 @@ workflow discoverAndMergeVariants {
 
      # We have to use a trick to make Cromwell
      # skip substitution when using the bash ${<variable} syntax
-     # See https://gatkforums.broadinstitute.org/wdl/discussion/comment/44570#Comment_44570 
+     # See https://gatkforums.broadinstitute.org/wdl/discussion/comment/44570#Comment_44570
      String dollar = "$"
 
      command <<<
+
+      # Make the log directory so the variant caller can output the logs there
+      mkdir -p out/log
+      # Make the aux directorys so the variant caller can create the sample dirs there
+      mkdir -p out/aux/individual
+      mkdir -p out/aux/union
+      mkdir -p out/aux/sites
+      mkdir -p out/aux/evaluation
+      mkdir -p out/paste
+
+
+
       python3.5 <<CODE
 
       import csv
       import os
-      from shutil import copy 
+      from shutil import copy
       import sys
       import errno
+      import json
+      import errno
 
-      # If BCF files from the discovery step were input
-      # Symlink the BCF files to the Cromwell working dir so the variant
-      # caller can find them
-      BCF_file_names_string = "${ sep=',' sampleBCFs }"
-      if len(BCF_file_names_string) > 0:
-          BCF_file_names_list = BCF_file_names_string.split(',')
-          print("variantCalling: BCF files names list is {}".format(BCF_file_names_list))
-          for bcf_file in BCF_file_names_list:
-              bcf_symlink_path = os.path.relpath(bcf_file, 'out/aux')
-              bcf_symlink_path = 'out/aux/' + bcf_symlink_path
-    
-              # Create the directory to hold the BCFs for the sample
-              # and don't throw an exception if it already exists
-              # https://stackoverflow.com/questions/16029871/how-to-run-os-mkdir-with-p-option-in-python
-              directory_name = os.path.dirname(bcf_symlink_path) 
-              try:
-                  os.makedirs(directory_name)
-              except OSError as exc: 
-                  if exc.errno == errno.EEXIST and os.path.isdir(directory_name):
-                      pass
-    
-              print("variantCalling: Creating symlink {} for BCF file {}".format(bcf_symlink_path, bcf_file))
-              os.symlink(bcf_file, bcf_symlink_path)
+      if len("${input_cram}") == 0:
+          all_BCFS_json_string = ""
+          all_BCFs_json = []
+          with open("${write_json(sampleBCFs)}", 'r') as all_BCFs_json_file:
+              all_BCFs_json = json.load(all_BCFs_json_file)
+              print("BCF JSON is:{}".format(all_BCFs_json))
+          #all_BCFs_json = json.loads(all_BCFs_json_string)
+          for sample_BCF_output in all_BCFs_json:
+              for sampleID, BCF_output_array in sample_BCF_output.items():
+                  for BCF_file in BCF_output_array:
+                      BCF_file_basename = os.path.basename(BCF_file)
+                      symlink_path = "out/aux/individual/" + sampleID + "/" + BCF_file_basename
+
+                      # Create the directory to hold the BCFs for the sample
+                      # and don't throw an exception if it already exists
+                      # https://stackoverflow.com/questions/16029871/how-to-run-os-mkdir-with-p-option-in-python
+                      directory_name = os.path.dirname(symlink_path)
+                      print("Creating directory {}".format(directory_name))
+                      try:
+                          os.makedirs(directory_name)
+                      except OSError as exc:
+                          if exc.errno == errno.EEXIST and os.path.isdir(directory_name):
+                              pass
+
+                      print("Creating symlink for {} as {}".format(BCF_file, symlink_path))
+                      os.symlink(BCF_file, symlink_path)
+
+
+
+
+
+
+
       CODE
 
 
 
       # Set the exit code of a pipeline to that of the rightmost command
-      # to exit with a non-zero status, or zero if all commands of the pipeline exit 
+      # to exit with a non-zero status, or zero if all commands of the pipeline exit
       set -o pipefail
       # cause a bash script to exit immediately when a command fails
       set -e
@@ -300,7 +325,7 @@ workflow discoverAndMergeVariants {
       # targets that put the merged variants in the 'union' folder
       if [[ -z "${input_cram}" ]]
       then
-          REG_EX=".*out\/aux\/union\/chr[X_0-9]*\.sites\.bcf(\.csi)?\.OK"
+          REG_EX="out\/aux\/union\/chr[X_0-9]*\.sites\.bcf(\.csi)?\.OK"
       else
           REG_EX=".*out\/aux\/individual\/"${sample_id}"\/chr[X_0-9]*\.sites\.bcf\.OK"
       fi
@@ -314,7 +339,9 @@ workflow discoverAndMergeVariants {
 
       >>>
         output {
-          Array[File] discovery_ID_to_BCF_files = if (defined("${input_cram}")) then glob("${output_BCF_files}") else glob("${output_merged_BCF_files}")
+          Map[String, Array[File]] discovery_ID_to_BCF_files = if (defined("${input_cram}")) then {sample_id : glob("${output_BCF_files}")} else {sample_id : glob("${output_merged_BCF_files}")}
+
+          #Array[File] discovery_ID_to_BCF_files = if (defined("${input_cram}")) then glob("${output_BCF_files}") else glob("${output_merged_BCF_files}")
 
           #Pair[String, Array[File]] discovery_ID_to_BCF_files = (sample_id, glob("${output_BCF_files}"))
           #Pair[String, Array[File]] discovery_ID_to_log_files = (sample_id, glob("${output_log_files}"))
