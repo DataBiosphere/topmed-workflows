@@ -57,64 +57,13 @@ workflow discoverAndMergeVariants {
   File config_pm
   File trio_data_index
 
-#  scatter(target in detect_and_merge_targets_list) {
-#
-#      # Get the Cromwell basename  of the CRAM file
-#      # This should have been the ID that is put in
-#      # the trio_data.index file and is present in the
-#      # target name as follows:
-#      # 'out/aux/individual/<ID>/<chr#>_<range>.sites.bcf.OK'
-#      #String base_name_wo_extension = basename(input_cram_file, ".cram")
-#      String base_name_wo_extension = sub(basename(input_cram_file), "\\..*$", "")
-#      # If substiting what the target name should be (accepting any region)
-#      # with an empty string results
-#      # in an empty string then this is a target for this CRAM
-#      #Boolean cram_target_valid = sub(target, ".*\\/out\\/aux\\/individual\\/${base_name_wo_extension}\\/.*.sites.bcf.OK", "") == ""
-#      String search_string = ".*out\\/aux\\/individual\\/${base_name_wo_extension}/.*\\.sites\\.bcf\\.OK"
-#      Boolean cram_target_valid = sub(target, search_string, "") == ""
-#
-#      if ( cram_target_valid ) {
-#          call runDiscoveryAndMergeTarget as scatter_runDiscoveryAndMergeTarget {
-#              input:
-#                  input_cram = input_cram_file,
-#                  input_crai = input_crai_file,
-#                  ref_fasta = ref_fasta,
-#                  ref_fasta_index = ref_fasta_index,
-#
-#                  target = target,
-#                  sample_id = base_name_wo_extension,
-#                  trio_data_index = trio_data_index,
-#                  gcconfig_pm = gcconfig_pm,
-#                  config_pm = config_pm,
-#                  detect_and_merge_Makefile = detect_and_merge_Makefile,
-#
-#
-#                  disk_size = cram_size + crai_size + reference_size + additional_disk,
-#                  memory = memory_default,
-#                  CPUs = CPUs_default,
-#                  preemptible_tries = preemptible_tries_default,
-#                  max_retries = max_retries_default,
-#                  docker_image = docker_image
-#          }
-#      }
-#
-#  }
-#
-#  Array[Pair[String, File]?] discovery_ID_to_BCF_file = scatter_runDiscoveryAndMergeTarget.discovery_ID_to_BCF_file
-#  Array[Pair[String, File]?] discovery_ID_to_log_file = scatter_runDiscoveryAndMergeTarget.discovery_ID_to_log_file
-#
-#  output {
-#      Array[Pair[String, File]?] discovery_ID_to_BCF_file_output = discovery_ID_to_BCF_file
-#      Array[Pair[String, File]?] discovery_ID_to_log_file_output = discovery_ID_to_log_file
-#  }
-
 
   # Get the Cromwell basename  of the CRAM file
   # This should have been the ID that is put in
   # the trio_data.index file and is present in the
   # target name as follows:
   # 'out/aux/individual/<ID>/<chr#>_<range>.sites.bcf.OK'
-  String base_name_wo_extension = if (defined(input_cram_file)) then sub(basename(input_cram_file), "\\..*$", "") else ""
+  String base_name_wo_extension = if (defined(input_cram_file)) then sub(basename(input_cram_file), "\\..*$", "") else "merge_dir"
 
   call runDiscoverVariants {
           input:
@@ -145,7 +94,7 @@ workflow discoverAndMergeVariants {
       #Array[File] discovery_ID_to_BCF_file_output = runDiscoverVariants.discovery_ID_to_BCF_files
 
       #Pair[String, Array[File]] discovery_ID_to_BCF_file_output = runDiscoverVariants.discovery_ID_to_BCF_files
-      #Pair[String, Array[File]] discovery_ID_to_log_file_output = runDiscoverVariants.discovery_ID_to_log_files
+      #Array[File] log_file_output = runDiscoverVariants.log_files
   }
 }
 
@@ -177,8 +126,9 @@ workflow discoverAndMergeVariants {
 
      #String output_BCF_files = "out/aux/individual/${sample_id}/*.sites.bcf"
      #String output_log_files = "out/aux/individual/${sample_id}/*.sites.log"
-     String output_BCF_files = "out/aux/individual/${sample_id}/*"
-     #String output_log_files = "out/aux/individual/${sample_id}/*.sites.log"
+     # Set output string to
+     String output_BCF_files = if (defined(input_cram)) then  "out/aux/individual/${sample_id}/*" else "out/aux/union/*"
+     String output_log_files = "out/log/*"
      String output_merged_BCF_files = "out/aux/union/*"
 
 
@@ -191,8 +141,15 @@ workflow discoverAndMergeVariants {
 
       # Make the log directory so the variant caller can output the logs there
       mkdir -p out/log
-      # Make the aux directorys so the variant caller can create the sample dirs there
-      mkdir -p out/aux/individual
+      # Make the aux directories so the variant caller can create the sample dirs there
+      # Only make the sample ID directory if a CRAM file was input becuase
+      # the sample ID is created from the CRAM name. If a directory with no name
+      # in it is created then the glob use for output files will try to glob the
+      # directory with nothing in it. The Cromwell script hard links the glob contents
+      # and as a result will try to hard link a directory
+      if [[ -n "${input_cram}" ]]; then
+          mkdir -p out/aux/individual/${sample_id}
+      fi
       mkdir -p out/aux/union
       mkdir -p out/aux/sites
       mkdir -p out/aux/evaluation
@@ -237,12 +194,6 @@ workflow discoverAndMergeVariants {
                       print("Creating symlink for {} as {}".format(BCF_file, symlink_path))
                       os.symlink(BCF_file, symlink_path)
 
-
-
-
-
-
-
       CODE
 
 
@@ -258,7 +209,7 @@ workflow discoverAndMergeVariants {
       set -o xtrace
       #to turn off echo do 'set +o xtrace'
 
-      printf "Running variant discovery"
+      printf "Running variant discovery\n"
 
       # If a CRAM file was input
       if [[ -n "${input_cram}" ]]; then
@@ -287,6 +238,12 @@ workflow discoverAndMergeVariants {
           else
               ln -s ${input_crai} ${dollar}{output_crai_file_name}
           fi
+      else
+          # Discovery should have been done already and merging of BCFs
+          # is the step we are on.
+          # Create or update the timestamp on the rule for discovery, so
+          # the merge rules don't try to run discovery again
+          touch -d "2 hours ago" out/log/start.discovery.OK
       fi
 
 
@@ -304,20 +261,13 @@ workflow discoverAndMergeVariants {
       ln -s ${ref_fasta}  /root/topmed_freeze3_calling/data/local.org/ref/gotcloud.ref/hg38/hs38DH.fa
       ln -s ${ref_fasta_index}  /root/topmed_freeze3_calling/data/local.org/ref/gotcloud.ref/hg38/hs38DH.fa.fai
 
-      # Make the log directory so the variant caller can output the logs there
-      mkdir -p out/log
-      # Make the aux directorys so the variant caller can create the sample dirs there
-      mkdir -p out/aux/individual/${sample_id}
-      mkdir -p out/aux/union
-      mkdir -p out/aux/sites
-      mkdir -p out/aux/evaluation
-      mkdir -p out/paste
-
-      printf "Search ${ sep=',' all_sample_targets } for matches to ${sample_id}"
+      #printf "Search ${ sep=',' all_sample_targets }\n for matches to ${sample_id}\n"
       # Get the list of Makefile targets for the input CRAM file
       ALL_CRAM_MAKEFILE_TARGETS="${ sep=',' all_sample_targets }"
       #CRAM_MAKEFILE_TARGETS=$(grep -o "^.*\/out\/aux\/individual\/${sample_id}\/chr[X_0-9]*.sites.bcf.OK" ${dollar}{ALL_CRAM_MAKEFILE_TARGETS})
 
+
+      ln -s ${detect_and_merge_Makefile} out/aux/Makefile
 
       # If there is no CRAM file then variant discovery should
       # have been done on all CRAMs and the next step is to 
@@ -333,103 +283,19 @@ workflow discoverAndMergeVariants {
       #REG_EX=".*out\/aux\/individual\/"${sample_id}"\/chr[X_0-9]*.sites.bcf.OK"
       CRAM_MAKEFILE_TARGETS=$(echo ${dollar}{ALL_CRAM_MAKEFILE_TARGETS} | awk -v pat="$REG_EX" 'BEGIN{RS=","} {where = match($1, pat); if (where !=0 ) printf "%s ",$1 }')
 
-      printf "Running discovery with targets: ${dollar}{CRAM_MAKEFILE_TARGETS}"
+      printf "Running discovery with targets: ${dollar}{CRAM_MAKEFILE_TARGETS}\n"
       # Run discovery and merge on the target
-      make SHELL='/bin/bash' -f ${detect_and_merge_Makefile} ${dollar}{CRAM_MAKEFILE_TARGETS}
+      make SHELL='/bin/bash' -f out/aux/Makefile ${dollar}{CRAM_MAKEFILE_TARGETS}
 
       >>>
         output {
-          Map[String, Array[File]] discovery_ID_to_BCF_files = if (defined("${input_cram}")) then {sample_id : glob("${output_BCF_files}")} else {sample_id : glob("${output_merged_BCF_files}")}
+          Map[String, Array[File]] discovery_ID_to_BCF_files = {sample_id : glob("${output_BCF_files}")}
+          #Map[String, Array[File]] discovery_ID_to_BCF_files = if (defined("${input_cram}")) then {sample_id : glob("${output_BCF_files}")} else {sample_id : glob("${output_merged_BCF_files}")}
 
           #Array[File] discovery_ID_to_BCF_files = if (defined("${input_cram}")) then glob("${output_BCF_files}") else glob("${output_merged_BCF_files}")
 
           #Pair[String, Array[File]] discovery_ID_to_BCF_files = (sample_id, glob("${output_BCF_files}"))
-          #Pair[String, Array[File]] discovery_ID_to_log_files = (sample_id, glob("${output_log_files}"))
-       }
-      runtime {
-         memory: sub(memory, "\\..*", "") + " GB"
-         cpu: sub(CPUs, "\\..*", "")
-         maxRetries: max_retries
-         preemptible: preemptible_tries
-         disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
-         zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"
-         docker: docker_image
-       }
-  }
-
-
-
-
-  task runDiscoveryAndMergeTarget {
-     File input_cram
-     File? input_crai
-
-     File ref_fasta
-     File ref_fasta_index
-
-     File detect_and_merge_Makefile
-     File gcconfig_pm
-     File config_pm
-     File trio_data_index
-     String target
-     String sample_id
-
-     Float memory
-     Float disk_size
-     Int CPUs
-     Int preemptible_tries
-     Int max_retries
-     String docker_image
-
-     String CRAM_basename = basename(input_cram)
-     String output_crai_file_name = "${CRAM_basename}.crai"
-
-     String output_BCF_file_name = sub(target, "\\.sites\\.bcf\\.OK", "\\.sites\\.bcf")
-     String output_log_file_name = sub(target, "\\.sites\\.bcf\\.OK", "\\.discover2\\.log")
-
-
-     # We have to use a trick to make Cromwell
-     # skip substitution when using the bash ${<variable} syntax
-     # See https://gatkforums.broadinstitute.org/wdl/discussion/comment/44570#Comment_44570 
-     String dollar = "$"
-
-     command <<<
-      # Set the exit code of a pipeline to that of the rightmost command
-      # to exit with a non-zero status, or zero if all commands of the pipeline exit 
-      set -o pipefail
-      # cause a bash script to exit immediately when a command fails
-      set -e
-      # cause the bash shell to treat unset variables as an error and exit immediately
-      set -u
-      # echo each line of the script to stdout so we can see what is happening
-      set -o xtrace
-      #to turn off echo do 'set +o xtrace'
-
-      echo "Running variant discovery ${target} for ${input_cram}"
-
-      # If there is no CRAM index file generate it
-      if [[ -z "${input_crai}" ]]
-      then
-          printf "Creating index for ${input_cram}"
-          /root/topmed_freeze3_calling/samtools/samtools index ${input_cram}
-      fi
-
-      # Symlink the config files to where the variant caller scripts expect them to be
-      ln -s ${gcconfig_pm} /root/topmed_freeze3_calling/scripts/gcconfig.pm
-      ln -s ${config_pm} /root/topmed_freeze3_calling/scripts/config.pm
-      ln -s ${detect_and_merge_Makefile} /root/topmed_freeze3_calling/out/aux/Makefile
-      ln -s ${trio_data_index} /root/topmed_freeze3_calling/data/trio_data.index
-
-      ln -s ${ref_fasta}  /root/topmed_freeze3_calling/data/local.org/ref/gotcloud.ref/hg38/hs38DH.fa
-      ln -s ${ref_fasta_index}  /root/topmed_freeze3_calling/data/local.org/ref/gotcloud.ref/hg38/hs38DH.fa.fai
-
-      # Run discovery and merge on the target
-      make SHELL='/bin/bash' -f /root/topmed_freeze3_calling/out/aux/Makefile ${target}
-
-      >>>
-        output {
-          Pair[String, File] discovery_ID_to_BCF_file = (sample_id, "${output_BCF_file_name}")
-          Pair[String, File] discovery_ID_to_log_file = (sample_id, "${output_log_file_name}")
+          #Array[File] log_files = (sample_id, glob("${output_log_files}"))
        }
       runtime {
          memory: sub(memory, "\\..*", "") + " GB"
