@@ -1,6 +1,6 @@
 import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.28.0/variant-caller/variant-caller-wdl/calculate_contamination.wdl" as getDNAContamination
 
-import "/Users/waltershands/Documents/UCSC/gitroot/topmed-workflows/variant-caller/variant-caller-wdl/discover_and_merge_variants.wdl" as discoverAndMergeVariants
+import "/home/ubuntu/dataBiosphere/topmed-workflows/variant-caller/variant-caller-wdl/discover_and_merge_variants.wdl" as discoverAndMergeVariants
 
 ## This is the U of Michigan variant caller workflow WDL for the workflow code located here:
 ## https://github.com/statgen/topmed_freeze3_calling
@@ -444,6 +444,7 @@ workflow TopMedVariantCaller {
           config_pm = setupConfigFiles.config_pm,
           detect_and_merge_targets_list = setupConfigFiles.detect_and_merge_targets_list,
           detect_and_merge_Makefile = setupConfigFiles.detect_and_merge_Makefile,
+          BCFListFiles = setupConfigFiles.list_files, 
 
           dynamically_calculate_file_size = dynamically_calculate_disk_requirement,
           CPUs = Discovery_CPUs_default,
@@ -644,6 +645,8 @@ workflow TopMedVariantCaller {
 
      String indexFileName = "trio_data.index"
 
+     String output_list_files = "out/aux/union/*.list"
+
      # We have to use a trick to make Cromwell
      # skip substitution when using the bash ${<variable} syntax
      # This is necessary to get the <var>=$(<command>) sub shell 
@@ -838,6 +841,7 @@ workflow TopMedVariantCaller {
       File trio_data_index = "${indexFileName}"
       File detect_and_merge_Makefile = "out/aux/Makefile"
       Array[String] detect_and_merge_targets_list = read_lines("detect_and_merge_targets.txt")
+      Array[File] list_files = glob("${output_list_files}") 
 
     }
    runtime {
@@ -872,7 +876,7 @@ workflow TopMedVariantCaller {
      Array[File]? input_crais
      Array[File] input_crams
 
-     Array[File] sampleBCFFiles
+     Map[String,Array[String]] sampleBCFFiles
 
      #Array[Pair[String, Array[File]]] sampleBCFFiles
      #Array[Pair[String, Array[File]]] sampleLogFiles
@@ -973,6 +977,7 @@ workflow TopMedVariantCaller {
       import os
       from shutil import copy 
       import sys
+      import json
       import errno
 
       # Erase the existing PED file; if no PED file is provided as input
@@ -985,68 +990,20 @@ workflow TopMedVariantCaller {
          copy("${PED_file}", "trio_data.ped")
 
 
-      # Symlink the BCF files to the Cromwell working dir so the variant
-      # caller can find them
-      BCF_file_names_string = "${ sep=',' sampleBCFFiles }"
-      BCF_file_names_list = BCF_file_names_string.split(',')
-      print("variantCalling: BCF files names list is {}".format(BCF_file_names_list))
-      for bcf_file in BCF_file_names_list:
-          bcf_symlink_path = os.path.relpath(bcf_file, 'out/aux')
-          bcf_symlink_path = 'out/aux/' + bcf_symlink_path
+      all_BCFs_json = []
+      with open("${write_json(sampleBCFFiles)}", 'r') as all_BCFs_json_file:
+          all_BCFs_json = json.load(all_BCFs_json_file)
+          print("BCF JSON for joint genotyping is:{}".format(all_BCFs_json))
+          # Sample ID is not used here; the Map[sample_id, Array[File]]
+          # is used as output from discovery where there is a sample_id subdirectory
+          for sampleID, BCF_output_array in all_BCFs_json.items():
+              for BCF_file in BCF_output_array:
+                  BCF_file_basename = os.path.basename(BCF_file)
+                  symlink_path = "out/aux/union/" + BCF_file_basename
 
-          # Create the directory to hold the BCFs for the sample
-          # and don't throw an exception if it already exists
-          # https://stackoverflow.com/questions/16029871/how-to-run-os-mkdir-with-p-option-in-python
-          directory_name = os.path.dirname(bcf_symlink_path) 
-          try:
-              os.makedirs(directory_name)
-          except OSError as exc: 
-              if exc.errno == errno.EEXIST and os.path.isdir(directory_name):
-                  pass
+                  print("Creating symlink for {} as {}".format(BCF_file, symlink_path))
+                  os.symlink(BCF_file, symlink_path)
 
-          print("variantCalling: Creating symlink {} for BCF file {}".format(bcf_symlink_path, bcf_file))
-          os.symlink(bcf_file, bcf_symlink_path)
-
-
-
-
-      """
-      sample_id_BCF_files_tuples_string = '${sep="','" sampleBCFFiles}'
-      print("tuple files tuples string is {}".format(sample_id_BCF_files_tuples_string))
-      sample_id_BCF_files_tuples_list_strings = sample_id_BCF_files_tuples_string.split(')')
-      print("tuple list strings are {}".format(sample_id_BCF_files_tuples_list_strings))
-      for sample_id_BCF_tuple_string in sample_id_BCF_files_tuples_list_strings:
-          print("tuple string is {}".format(sample_id_BCF_tuple_string))
-          sample_id_BCF_tuple_array = sample_id_BCF_tuple_string.strip('()," ').split('[')
-          print("tuple array is {}".format(sample_id_BCF_tuple_array))
-          sample_id = sample_id_BCF_tuple_array[0]
-          sample_id = sample_id.strip('" ,')
-          # If there is no sample id then we reached the end of the tuple list
-          # and splitting on ) has produced an empty tuple
-          if not sample_id:
-             break
-
-          print("sample id is: {}".format(sample_id))
-          # Create the directory to hold the BCFs for the sample
-          # and don't throw an exception if it already exists
-          # https://stackoverflow.com/questions/16029871/how-to-run-os-mkdir-with-p-option-in-python
-          directory_name = "out/aux/individual/" + sample_id 
-          try:
-              os.makedirs(directory_name)
-          except OSError as exc: 
-              if exc.errno == errno.EEXIST and os.path.isdir(directory_name):
-                  pass
-
-          BCF_file_array = sample_id_BCF_tuple_array[1].split(",")
-          print("Joint Genotyping: Sample ID is {} BCF file array is {}".format(sample_id, BCF_file_array))
-          for BCF_file in BCF_file_array:
-              BCF_file = BCF_file.strip(']" ')
-              print("Joint Genotyping: Sample ID is {} BCF file is {}".format(sample_id, BCF_file))
-              BCF_file_basename = os.path.basename(BCF_file)
-              symlink_path = "out/aux/individual/" + sample_id + "/" + BCF_file_basename
-              print("jointGenotyping: Creating symlink {} for BCF index file {}".format(symlink_path, BCF_file))
-              os.symlink(BCF_file, symlink_path)
-      """
 
       # Symlink the CRAM index files to the Cromwell working dir so the variant
       # caller can find them
@@ -1077,6 +1034,12 @@ workflow TopMedVariantCaller {
       #echo each line of the script to stdout so we can see what is happening
       set -o xtrace
       #to turn of echo do 'set +o xtrace'
+
+      # Discovery and merging of BCFs should have been done already
+      # Joint genotyping is the step we are on.
+      # Update the timestamp on the BCF file, so
+      # the Makefile rules don't try to run merging again
+      find out/aux/union -maxdepth 1 -mindepth 1 -exec touch -h -d "2 hours ago" {} +
 
 
       # Make sure the directory where the reference files are supposed to be
@@ -1154,11 +1117,11 @@ workflow TopMedVariantCaller {
 
 
 
-      CROMWELL_WORKING_DIR="$(pwd)"
-      printf "Cromwell current working directory is %s\n" "$CROMWELL_WORKING_DIR"
+      #CROMWELL_WORKING_DIR="$(pwd)"
+      #printf "Cromwell current working directory is %s\n" "$CROMWELL_WORKING_DIR"
       # Escape all the forward slashes for use in sed
       # https://unix.stackexchange.com/questions/379572/escaping-both-forward-slash-and-back-slash-with-sed
-      CROMWELL_WORKING_DIR_ESCAPED="${dollar}{CROMWELL_WORKING_DIR//\//\\\/}"
+      #CROMWELL_WORKING_DIR_ESCAPED="${dollar}{CROMWELL_WORKING_DIR//\//\\\/}"
 
       WORKING_DIR='/root/topmed_freeze3_calling'
 
@@ -1176,12 +1139,12 @@ workflow TopMedVariantCaller {
       echo "Running step2 - joint genotyping - running Makefile"
       # Format makefile name to be e.g. "chrchr2_chr15_chrX.Makefile"
       MAKEFILE_NAME="chr"$(j=0; for i in ${chromosomes_to_process}; do printf "chr""$i"; let "j=j+1"; if [ "$j" -lt "$total" ]; then printf "_"; fi done)".Makefile"
-      make SHELL='/bin/bash' -f "$CROMWELL_WORKING_DIR"/out/paste/"$MAKEFILE_NAME" -j ${num_of_jobs_to_run}
+      make SHELL='/bin/bash' -f out/paste/"$MAKEFILE_NAME" -j ${num_of_jobs_to_run}
 
       if [[ -n "${PED_file}" ]]; then
          printf "variantCalling: Performing variant filtering using pedigree information\n"
          perl "$WORKING_DIR"/scripts/step3a-compute-milk-score.pl ${dollar}{formatted_chromosomes_string}
-         make SHELL='/bin/bash' -f "$CROMWELL_WORKING_DIR"/out/aux/milk/*.Makefile -j ${num_of_jobs_to_run}
+         make SHELL='/bin/bash' -f out/aux/milk/*.Makefile -j ${num_of_jobs_to_run}
          perl "$WORKING_DIR"/scripts/step3b-run-svm-milk-filter.pl ${dollar}{formatted_chromosomes_string}
       fi
 
@@ -1189,10 +1152,10 @@ workflow TopMedVariantCaller {
       if [[ -n "${PED_file}" ]]; then
           # Tar up the output directories into the output file provided in the input JSON
           # Pedigree information is in the svm directory
-          tar -zcvf topmed_variant_caller_output.tar.gz "$CROMWELL_WORKING_DIR"/out/paste/ "$CROMWELL_WORKING_DIR"/out/aux/individual/ "$CROMWELL_WORKING_DIR"/out/svm/
+          tar -zcvf topmed_variant_caller_output.tar.gz out/paste/ out/aux/individual/ out/svm/
       else
            # Tar up the output directories into the output file provided in the input JSON
-          tar -zcvf topmed_variant_caller_output.tar.gz "$CROMWELL_WORKING_DIR"/out/paste/ "$CROMWELL_WORKING_DIR"/out/aux/individual/
+          tar -zcvf topmed_variant_caller_output.tar.gz out/paste/ out/aux/individual/
       fi
 
     >>>

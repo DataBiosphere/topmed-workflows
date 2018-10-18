@@ -3,6 +3,7 @@ workflow discoverAndMergeVariants {
   File? input_crai_file
   File? input_cram_file
   Array[Map[String, Array[File]]]? BCFFiles
+  Array[File]? BCFListFiles
 
   File ref_fasta
   File ref_fasta_index
@@ -67,9 +68,12 @@ workflow discoverAndMergeVariants {
 
   call runDiscoverVariants {
           input:
-              sampleBCFs = BCFFiles,
               input_cram = input_cram_file,
               input_crai = input_crai_file,
+
+              sampleBCFs = BCFFiles,
+              BCFListFiles = BCFListFiles,
+
               ref_fasta = ref_fasta,
               ref_fasta_index = ref_fasta_index,
 
@@ -79,7 +83,7 @@ workflow discoverAndMergeVariants {
               gcconfig_pm = gcconfig_pm,
               config_pm = config_pm,
               detect_and_merge_Makefile = detect_and_merge_Makefile,
-
+              
 
               disk_size = cram_size + crai_size + reference_size + additional_disk,
               memory = memory_default,
@@ -113,6 +117,7 @@ workflow discoverAndMergeVariants {
      File trio_data_index
      Array[String] all_sample_targets
      String sample_id
+     Array[File]? BCFListFiles
 
      Float memory
      Float disk_size
@@ -128,8 +133,6 @@ workflow discoverAndMergeVariants {
      #String output_log_files = "out/aux/individual/${sample_id}/*.sites.log"
      # Set output string to
      String output_BCF_files = if (defined(input_cram)) then  "out/aux/individual/${sample_id}/*" else "out/aux/union/*"
-     String output_log_files = "out/log/*"
-     String output_merged_BCF_files = "out/aux/union/*"
 
 
      # We have to use a trick to make Cromwell
@@ -161,14 +164,14 @@ workflow discoverAndMergeVariants {
 
       import csv
       import os
-      from shutil import copy
+      from shutil import copyfile
       import sys
       import errno
       import json
       import errno
 
       if len("${input_cram}") == 0:
-          all_BCFS_json_string = ""
+          #all_BCFS_json_string = ""
           all_BCFs_json = []
           with open("${write_json(sampleBCFs)}", 'r') as all_BCFs_json_file:
               all_BCFs_json = json.load(all_BCFs_json_file)
@@ -193,6 +196,23 @@ workflow discoverAndMergeVariants {
 
                       print("Creating symlink for {} as {}".format(BCF_file, symlink_path))
                       os.symlink(BCF_file, symlink_path)
+                      #print("Copying {} to {}".format(BCF_file, symlink_path))
+                      #copyfile(BCF_file, symlink_path)
+
+      # Symlink the BCF list files to the Cromwell working dir so the variant
+      # caller can find them
+      BCF_list_file_names_string = "${ sep=',' BCFListFiles }"
+      if len(BCF_list_file_names_string) > 0: 
+          BCF_list_file_names_list = BCF_list_file_names_string.split(',')
+          print("variantCalling: BCF files names list is {}\n".format(BCF_list_file_names_list))
+          for bcf_list_file in BCF_list_file_names_list:
+              bcf_list_symlink_file = os.path.basename(bcf_list_file)
+              bcf_list_symlink_path = 'out/aux/union/' + bcf_list_symlink_file
+    
+              print("variantCalling: Creating symlink {} for BCF list file {}\n".format(bcf_list_symlink_path, bcf_list_file))
+              os.symlink(bcf_list_file, bcf_list_symlink_path)
+
+
 
       CODE
 
@@ -268,6 +288,7 @@ workflow discoverAndMergeVariants {
 
 
       ln -s ${detect_and_merge_Makefile} out/aux/Makefile
+      #cp ${detect_and_merge_Makefile} out/aux/Makefile
 
       # If there is no CRAM file then variant discovery should
       # have been done on all CRAMs and the next step is to 
