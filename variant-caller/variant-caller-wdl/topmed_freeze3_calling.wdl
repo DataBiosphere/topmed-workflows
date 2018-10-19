@@ -1,6 +1,6 @@
 import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.28.0/variant-caller/variant-caller-wdl/calculate_contamination.wdl" as getDNAContamination
 
-import "/home/ubuntu/dataBiosphere/topmed-workflows/variant-caller/variant-caller-wdl/discover_and_merge_variants.wdl" as discoverAndMergeVariants
+import "/Users/waltershands/Documents/UCSC/gitroot/topmed-workflows/variant-caller/variant-caller-wdl/discover_and_merge_variants.wdl" as discoverAndMergeVariants
 
 ## This is the U of Michigan variant caller workflow WDL for the workflow code located here:
 ## https://github.com/statgen/topmed_freeze3_calling
@@ -771,8 +771,11 @@ workflow TopMedVariantCaller {
       # https://stackoverflow.com/questions/31270422/how-to-replace-a-pattern-in-script-using-sed-in-place-inside-the-script
       # https://unix.stackexchange.com/questions/153608/how-to-change-a-complete-line-with-sed-c-option
       # http://www.grymoire.com/unix/Sed.html#uh-3
-      sed -i "/.*our \$index = \"data\/trio_data.index\";/ c\our \$index = \""$CROMWELL_WORKING_DIR_ESCAPED"\/trio_data.index\";" "$WORKING_DIR"/scripts/gcconfig.pm
-      sed -i "/.*our \$pedf = \"data\/trio_data.ped\";/ c\our \$pedf = \""$CROMWELL_WORKING_DIR_ESCAPED"\/trio_data.ped\";" "$WORKING_DIR"/scripts/gcconfig.pm
+      #sed -i "/.*our \$index = \"data\/trio_data.index\";/ c\our \$index = \""$CROMWELL_WORKING_DIR_ESCAPED"\/trio_data.index\";" "$WORKING_DIR"/scripts/gcconfig.pm
+      #sed -i "/.*our \$pedf = \"data\/trio_data.ped\";/ c\our \$pedf = \""$CROMWELL_WORKING_DIR_ESCAPED"\/trio_data.ped\";" "$WORKING_DIR"/scripts/gcconfig.pm
+
+      sed -i "/.*our \$index = \"data\/trio_data.index\";/ c\our \$index = \""$WORKING_DIR"\/data\/trio_data.index\";" "$WORKING_DIR"/scripts/gcconfig.pm
+      sed -i "/.*our \$pedf = \"data\/trio_data.ped\";/ c\our \$pedf = \""$WORKING_DIR"\/data\/trio_data.ped\";" "$WORKING_DIR"/scripts/gcconfig.pm
       # Put the correct location of the output directory into the local config file
       #sed -i "/.*our \$out =.*/ c\our \$out = \""$CROMWELL_WORKING_DIR_ESCAPED"/out\";" "$WORKING_DIR"/scripts/gcconfig.pm
 
@@ -801,7 +804,8 @@ workflow TopMedVariantCaller {
       # Put the correct location of references into the config file
       sed -i '/.*our $md5 =.*/ c\our $md5 = "\/data\/local.org\/ref\/gotcloud.ref\/md5\/%2s\/%s\/%s";' "$WORKING_DIR"/scripts/config.pm
       sed -i '/.*our $ref =.*/ c\our $ref = "\/data\/local.org\/ref\/gotcloud.ref\/hg38\/hs38DH.fa";' "$WORKING_DIR"/scripts/config.pm
-      sed -i "/.*our \$index = \"data\/trio_data.index\";/ c\our \$index = \""$CROMWELL_WORKING_DIR_ESCAPED"\/trio_data.index\";" "$WORKING_DIR"/scripts/config.pm
+      #sed -i "/.*our \$index = \"data\/trio_data.index\";/ c\our \$index = \""$CROMWELL_WORKING_DIR_ESCAPED"\/trio_data.index\";" "$WORKING_DIR"/scripts/config.pm
+      sed -i "/.*our \$index = \"data\/trio_data.index\";/ c\our \$index = \""$WORKING_DIR"\/data\/trio_data.index\";" "$WORKING_DIR"/scripts/config.pm
 
       # Print config.pm contents for debugging
       echo "*** config.pm file - "$WORKING_DIR"/scripts/config.pm contents ***"
@@ -810,6 +814,9 @@ workflow TopMedVariantCaller {
       # Set up symlinks so the Perl scripts can find the genome reference file and index
       ln -s ${ref_fasta_index}  /root/topmed_freeze3_calling/data/local.org/ref/gotcloud.ref/hg38/hs38DH.fa.fai
       ln -s ${ref_fasta}  /root/topmed_freeze3_calling/data/local.org/ref/gotcloud.ref/hg38/hs38DH.fa
+
+      # Copy the index file to where the variant caller scripts expects it to be
+      cp trio_data.index /root/topmed_freeze3_calling/data/trio_data.index
 
       # Format the list of chromosomes to be e.g. "chr2 chr5 chrX"
       total=$(echo ${chromosomes_to_process} | wc -w)
@@ -876,7 +883,7 @@ workflow TopMedVariantCaller {
      Array[File]? input_crais
      Array[File] input_crams
 
-     Map[String,Array[String]] sampleBCFFiles
+     Map[String,Array[File]] sampleBCFFiles
 
      #Array[Pair[String, Array[File]]] sampleBCFFiles
      #Array[Pair[String, Array[File]]] sampleLogFiles
@@ -994,15 +1001,17 @@ workflow TopMedVariantCaller {
       with open("${write_json(sampleBCFFiles)}", 'r') as all_BCFs_json_file:
           all_BCFs_json = json.load(all_BCFs_json_file)
           print("BCF JSON for joint genotyping is:{}".format(all_BCFs_json))
-          # Sample ID is not used here; the Map[sample_id, Array[File]]
-          # is used as output from discovery where there is a sample_id subdirectory
-          for sampleID, BCF_output_array in all_BCFs_json.items():
-              for BCF_file in BCF_output_array:
-                  BCF_file_basename = os.path.basename(BCF_file)
-                  symlink_path = "out/aux/union/" + BCF_file_basename
+      # Sample ID is not used here; the Map[sample_id, Array[File]]
+      # is used as output from discovery where there is a sample_id subdirectory
+      for sampleID, BCF_output_array in all_BCFs_json.items():
+          for BCF_file in BCF_output_array:
+              BCF_file_basename = os.path.basename(BCF_file)
+              symlink_path = "out/aux/union/" + BCF_file_basename
 
-                  print("Creating symlink for {} as {}".format(BCF_file, symlink_path))
-                  os.symlink(BCF_file, symlink_path)
+              print("Creating symlink for {} as {}".format(BCF_file, symlink_path))
+              os.symlink(BCF_file, symlink_path)
+              #print("Copying {} to {}".format(BCF_file, symlink_path))
+              #copy(BCF_file, symlink_path)
 
 
       # Symlink the CRAM index files to the Cromwell working dir so the variant
@@ -1040,6 +1049,7 @@ workflow TopMedVariantCaller {
       # Update the timestamp on the BCF file, so
       # the Makefile rules don't try to run merging again
       find out/aux/union -maxdepth 1 -mindepth 1 -exec touch -h -d "2 hours ago" {} +
+      #find out/aux/union -maxdepth 1 -mindepth 1 -exec touch -d "2 hours ago" {} +
 
 
       # Make sure the directory where the reference files are supposed to be
@@ -1047,11 +1057,12 @@ workflow TopMedVariantCaller {
       mkdir -p /root/topmed_freeze3_calling/data/local.org/ref/gotcloud.ref/hg38
 
 
-      # Copy the config files to where the variant caller scripts expect them to be
-      cp ${gcconfig_pm} /root/topmed_freeze3_calling/scripts/gcconfig.pm
-      cp ${config_pm} /root/topmed_freeze3_calling/scripts/config.pm
-      cp ${trio_data_index} /root/topmed_freeze3_calling/data/trio_data.index
-
+      # Symlink the config files to where the variant caller scripts expect them to be
+      # Use the -f switch to unlink the existing config files so we can create the link
+      # to the config files with the variant caller updated paths
+      ln -fs ${gcconfig_pm} /root/topmed_freeze3_calling/scripts/gcconfig.pm
+      ln -fs ${config_pm} /root/topmed_freeze3_calling/scripts/config.pm
+      ln -fs ${trio_data_index} /root/topmed_freeze3_calling/data/trio_data.index
 
       # Create a symlink from the where the workflow expects the reference files
       # to the Cromwell location of the reference files 
@@ -1139,7 +1150,11 @@ workflow TopMedVariantCaller {
       echo "Running step2 - joint genotyping - running Makefile"
       # Format makefile name to be e.g. "chrchr2_chr15_chrX.Makefile"
       MAKEFILE_NAME="chr"$(j=0; for i in ${chromosomes_to_process}; do printf "chr""$i"; let "j=j+1"; if [ "$j" -lt "$total" ]; then printf "_"; fi done)".Makefile"
+
+      dir=$(pwd)
+      echo "Running in directory: $dir" 
       make SHELL='/bin/bash' -f out/paste/"$MAKEFILE_NAME" -j ${num_of_jobs_to_run}
+      #make SHELL='/bin/bash' -f out/paste/"$MAKEFILE_NAME" out/paste/chr1/chr1_1_1000000_paste.bcf.OK
 
       if [[ -n "${PED_file}" ]]; then
          printf "variantCalling: Performing variant filtering using pedigree information\n"
