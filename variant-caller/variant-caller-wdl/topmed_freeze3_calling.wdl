@@ -885,9 +885,6 @@ workflow TopMedVariantCaller {
 
      Map[String,Array[File]] sampleBCFFiles
 
-     #Array[Pair[String, Array[File]]] sampleBCFFiles
-     #Array[Pair[String, Array[File]]] sampleLogFiles
-
      File trio_data_index
      File gcconfig_pm
      File config_pm
@@ -1152,9 +1149,8 @@ workflow TopMedVariantCaller {
       MAKEFILE_NAME="chr"$(j=0; for i in ${chromosomes_to_process}; do printf "chr""$i"; let "j=j+1"; if [ "$j" -lt "$total" ]; then printf "_"; fi done)".Makefile"
 
       dir=$(pwd)
-      echo "Running in directory: $dir" 
+      echo "Running in directory: $dir"
       make SHELL='/bin/bash' -f out/paste/"$MAKEFILE_NAME" -j ${num_of_jobs_to_run}
-      #make SHELL='/bin/bash' -f out/paste/"$MAKEFILE_NAME" out/paste/chr1/chr1_1_1000000_paste.bcf.OK
 
       if [[ -n "${PED_file}" ]]; then
          printf "variantCalling: Performing variant filtering using pedigree information\n"
