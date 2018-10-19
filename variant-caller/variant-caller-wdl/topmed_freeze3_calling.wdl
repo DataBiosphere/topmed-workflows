@@ -419,16 +419,6 @@ workflow TopMedVariantCaller {
       }
   }
 
-#  Array[Array[Pair[String, File]?]] multipleSampleBCFs = scatter_discoverAndMergeVariants.discovery_ID_to_BCF_file_output
-#  Array[Array[Pair[String, File]?]] multipleSampleLogs = scatter_discoverAndMergeVariants.discovery_ID_to_log_file_output
-#  Array[Pair[String, File]?] sampleBCFs = flatten(multipleSampleBCFs)
-#  Array[Pair[String, File]?] sampleLogs = flatten(multipleSampleLogs)
-
-#  Array[Pair[String, Array[File]]] sampleBCFs = scatter_discoverVariants.discovery_ID_to_BCF_file_output
-#  Array[Pair[String, Array[File]]] sampleLogs = scatter_discoverVariants.discovery_ID_to_log_file_output
-
-  #Array[Array[File]] multiple_sampleBCFs = scatter_discoverVariants.discovery_ID_to_BCF_file_output
-  #Array[File] sampleBCFs = flatten(multiple_sampleBCFs)
 
   Array[Map[String, Array[File]]] sampleBCFs = scatter_discoverVariants.discovery_ID_to_BCF_file_output
 
@@ -759,64 +749,54 @@ workflow TopMedVariantCaller {
       # located exists in the container
       mkdir -p /root/topmed_freeze3_calling/data/local.org/ref/gotcloud.ref/hg38
 
-      CROMWELL_WORKING_DIR="$(pwd)"
-      printf "Cromwell current working directory is %s\n" "$CROMWELL_WORKING_DIR"
-      # Escape all the forward slashes for use in sed
-      # https://unix.stackexchange.com/questions/379572/escaping-both-forward-slash-and-back-slash-with-sed
-      CROMWELL_WORKING_DIR_ESCAPED="${dollar}{CROMWELL_WORKING_DIR//\//\\\/}"
-
-      WORKING_DIR='/root/topmed_freeze3_calling'
+      CONTAINER_WORKING_DIR='/root/topmed_freeze3_calling'
 
       # Put the correct location of the index file into the global config file
       # https://stackoverflow.com/questions/31270422/how-to-replace-a-pattern-in-script-using-sed-in-place-inside-the-script
       # https://unix.stackexchange.com/questions/153608/how-to-change-a-complete-line-with-sed-c-option
       # http://www.grymoire.com/unix/Sed.html#uh-3
-      #sed -i "/.*our \$index = \"data\/trio_data.index\";/ c\our \$index = \""$CROMWELL_WORKING_DIR_ESCAPED"\/trio_data.index\";" "$WORKING_DIR"/scripts/gcconfig.pm
-      #sed -i "/.*our \$pedf = \"data\/trio_data.ped\";/ c\our \$pedf = \""$CROMWELL_WORKING_DIR_ESCAPED"\/trio_data.ped\";" "$WORKING_DIR"/scripts/gcconfig.pm
-
-      sed -i "/.*our \$index = \"data\/trio_data.index\";/ c\our \$index = \""$WORKING_DIR"\/data\/trio_data.index\";" "$WORKING_DIR"/scripts/gcconfig.pm
-      sed -i "/.*our \$pedf = \"data\/trio_data.ped\";/ c\our \$pedf = \""$WORKING_DIR"\/data\/trio_data.ped\";" "$WORKING_DIR"/scripts/gcconfig.pm
+      sed -i "/.*our \$index = \"data\/trio_data.index\";/ c\our \$index = \""$CONTAINER_WORKING_DIR"\/data\/trio_data.index\";" "$CONTAINER_WORKING_DIR"/scripts/gcconfig.pm
+      sed -i "/.*our \$pedf = \"data\/trio_data.ped\";/ c\our \$pedf = \""$CONTAINER_WORKING_DIR"\/data\/trio_data.ped\";" "$CONTAINER_WORKING_DIR"/scripts/gcconfig.pm
       # Put the correct location of the output directory into the local config file
-      #sed -i "/.*our \$out =.*/ c\our \$out = \""$CROMWELL_WORKING_DIR_ESCAPED"/out\";" "$WORKING_DIR"/scripts/gcconfig.pm
+      sed -i "/.*our \$out =.*/ c\our \$out = \"out\";" "$CONTAINER_WORKING_DIR"/scripts/gcconfig.pm
 
       # Check if the variable is set
       #https://unix.stackexchange.com/questions/212183/how-do-i-check-if-a-variable-exists-in-an-if-statement
       if [[ -n "${discoverUnit}" ]]; then
          printf "Setting discoverUnit to %s in gcconfig.pm\n" ${discoverUnit}
-         sed -i '/.*our $discoverUnit.*/ c\our $discoverUnit = ${discoverUnit};' "$WORKING_DIR"/scripts/gcconfig.pm
+         sed -i '/.*our $discoverUnit.*/ c\our $discoverUnit = ${discoverUnit};' "$CONTAINER_WORKING_DIR"/scripts/gcconfig.pm
       fi
 
       if [[ -n "${genotypeUnit}" ]]; then
          printf "Setting genotypeUnit to %s in gcconfig.pm\n" ${genotypeUnit}
-         sed -i '/.*our $genotypeUnit.*/ c\our $genotypeUnit = ${genotypeUnit};' "$WORKING_DIR"/scripts/gcconfig.pm
+         sed -i '/.*our $genotypeUnit.*/ c\our $genotypeUnit = ${genotypeUnit};' "$CONTAINER_WORKING_DIR"/scripts/gcconfig.pm
       fi
 
-      sed -i '/.*our $refDir.*/ c\our $refDir = "$FindBin::Bin\/..\/data\/local.org\/ref\/gotcloud.ref\/hg38";' "$WORKING_DIR"/scripts/gcconfig.pm
-      sed -i '/.*our $ref = "$refDir.*/ c\our $ref = "$refDir\/hs38DH.fa";' "$WORKING_DIR"/scripts/gcconfig.pm
-      sed -i '/.*our $dbsnp.*/ c\our $dbsnp = "$refDir\/dbsnp_142.b38.vcf.gz";' "$WORKING_DIR"/scripts/gcconfig.pm
-      sed -i '/.*our $hapmapvcf.*/ c\our $hapmapvcf = "$refDir\/hapmap_3.3.b38.sites.vcf.gz";' "$WORKING_DIR"/scripts/gcconfig.pm
-      sed -i '/.*our $omnivcf.*/ c\our $omnivcf = "$refDir\/1000G_omni2.5.b38.sites.PASS.vcf.gz";' "$WORKING_DIR"/scripts/gcconfig.pm
+      sed -i '/.*our $refDir.*/ c\our $refDir = "$FindBin::Bin\/..\/data\/local.org\/ref\/gotcloud.ref\/hg38";' "$CONTAINER_WORKING_DIR"/scripts/gcconfig.pm
+      sed -i '/.*our $ref = "$refDir.*/ c\our $ref = "$refDir\/hs38DH.fa";' "$CONTAINER_WORKING_DIR"/scripts/gcconfig.pm
+      sed -i '/.*our $dbsnp.*/ c\our $dbsnp = "$refDir\/dbsnp_142.b38.vcf.gz";' "$CONTAINER_WORKING_DIR"/scripts/gcconfig.pm
+      sed -i '/.*our $hapmapvcf.*/ c\our $hapmapvcf = "$refDir\/hapmap_3.3.b38.sites.vcf.gz";' "$CONTAINER_WORKING_DIR"/scripts/gcconfig.pm
+      sed -i '/.*our $omnivcf.*/ c\our $omnivcf = "$refDir\/1000G_omni2.5.b38.sites.PASS.vcf.gz";' "$CONTAINER_WORKING_DIR"/scripts/gcconfig.pm
 
       # Print gcconfig.pm file contents for debugging
-      echo "*** gcconfig.pm file - "$WORKING_DIR"/scripts/gcconfig.pm contents ***"
-      cat "$WORKING_DIR"/scripts/gcconfig.pm
+      echo "*** gcconfig.pm file - "$CONTAINER_WORKING_DIR"/scripts/gcconfig.pm contents ***"
+      cat "$CONTAINER_WORKING_DIR"/scripts/gcconfig.pm
 
       # Put the correct location of references into the config file
-      sed -i '/.*our $md5 =.*/ c\our $md5 = "\/data\/local.org\/ref\/gotcloud.ref\/md5\/%2s\/%s\/%s";' "$WORKING_DIR"/scripts/config.pm
-      sed -i '/.*our $ref =.*/ c\our $ref = "\/data\/local.org\/ref\/gotcloud.ref\/hg38\/hs38DH.fa";' "$WORKING_DIR"/scripts/config.pm
-      #sed -i "/.*our \$index = \"data\/trio_data.index\";/ c\our \$index = \""$CROMWELL_WORKING_DIR_ESCAPED"\/trio_data.index\";" "$WORKING_DIR"/scripts/config.pm
-      sed -i "/.*our \$index = \"data\/trio_data.index\";/ c\our \$index = \""$WORKING_DIR"\/data\/trio_data.index\";" "$WORKING_DIR"/scripts/config.pm
+      sed -i '/.*our $md5 =.*/ c\our $md5 = "\/data\/local.org\/ref\/gotcloud.ref\/md5\/%2s\/%s\/%s";' "$CONTAINER_WORKING_DIR"/scripts/config.pm
+      sed -i '/.*our $ref =.*/ c\our $ref = "\/data\/local.org\/ref\/gotcloud.ref\/hg38\/hs38DH.fa";' "$CONTAINER_WORKING_DIR"/scripts/config.pm
+      sed -i "/.*our \$index = \"data\/trio_data.index\";/ c\our \$index = \""$CONTAINER_WORKING_DIR"\/data\/trio_data.index\";" "$CONTAINER_WORKING_DIR"/scripts/config.pm
 
       # Print config.pm contents for debugging
-      echo "*** config.pm file - "$WORKING_DIR"/scripts/config.pm contents ***"
-      cat "$WORKING_DIR"/scripts/config.pm
+      echo "*** config.pm file - "$CONTAINER_WORKING_DIR"/scripts/config.pm contents ***"
+      cat "$CONTAINER_WORKING_DIR"/scripts/config.pm
 
       # Set up symlinks so the Perl scripts can find the genome reference file and index
-      ln -s ${ref_fasta_index}  /root/topmed_freeze3_calling/data/local.org/ref/gotcloud.ref/hg38/hs38DH.fa.fai
-      ln -s ${ref_fasta}  /root/topmed_freeze3_calling/data/local.org/ref/gotcloud.ref/hg38/hs38DH.fa
+      ln -s ${ref_fasta_index}  "$CONTAINER_WORKING_DIR"/data/local.org/ref/gotcloud.ref/hg38/hs38DH.fa.fai
+      ln -s ${ref_fasta}  "$CONTAINER_WORKING_DIR"/data/local.org/ref/gotcloud.ref/hg38/hs38DH.fa
 
       # Copy the index file to where the variant caller scripts expects it to be
-      cp trio_data.index /root/topmed_freeze3_calling/data/trio_data.index
+      cp trio_data.index "$CONTAINER_WORKING_DIR"/data/trio_data.index
 
       # Format the list of chromosomes to be e.g. "chr2 chr5 chrX"
       total=$(echo ${chromosomes_to_process} | wc -w)
@@ -825,21 +805,19 @@ workflow TopMedVariantCaller {
       echo "Running step1 - detect and merge variants"
       #echo "Running step1 - detect and merge variants - removing old output dir if it exists"
       echo "Running step1 - detect and merge variants - generating Makefile"
-      perl "$WORKING_DIR"/scripts/step1-detect-and-merge-variants.pl ${dollar}{formatted_chromosomes_string}
+      perl "$CONTAINER_WORKING_DIR"/scripts/step1-detect-and-merge-variants.pl ${dollar}{formatted_chromosomes_string}
 
       # Get the list of Makefile targets. We will eventually call each one
       # in a Cromwell scatter
-      #grep -o "^"$CROMWELL_WORKING_DIR_ESCAPED"\/out\/aux\/individual\/.*\/chr[X_0-9]*.sites.bcf.OK" "$CROMWELL_WORKING_DIR"/out/aux/Makefile > detect_and_merge_targets.txt
-      #grep -o "^out\/aux\/individual\/.*\/chr[X_0-9]*.sites.bcf.OK" "$CROMWELL_WORKING_DIR"/out/aux/Makefile > detect_and_merge_targets.txt
-      grep -E -o "^out\/aux\/(individual\/.*|union)\/chr[X_0-9]*\.sites\.bcf(\.csi)?\.OK" "$CROMWELL_WORKING_DIR"/out/aux/Makefile > detect_and_merge_targets.txt
+      grep -E -o "^out\/aux\/(individual\/.*|union)\/chr[X_0-9]*\.sites\.bcf(\.csi)?\.OK" out/aux/Makefile > detect_and_merge_targets.txt
 
       # Print detect_and_merge_targets.txt contents for debugging
-      echo "*** detect_and_merge_targets.txt contents ***"
-      cat detect_and_merge_targets.txt
+      #echo "*** detect_and_merge_targets.txt contents ***"
+      #cat detect_and_merge_targets.txt
 
       # Copy config files to Cromwell working directory so they can be output from the workflow
-      cp /root/topmed_freeze3_calling/scripts/gcconfig.pm gcconfig.pm
-      cp /root/topmed_freeze3_calling/scripts/config.pm config.pm
+      cp "$CONTAINER_WORKING_DIR"/scripts/gcconfig.pm gcconfig.pm
+      cp "$CONTAINER_WORKING_DIR"/scripts/config.pm config.pm
 
     >>>
      output {
@@ -848,7 +826,7 @@ workflow TopMedVariantCaller {
       File trio_data_index = "${indexFileName}"
       File detect_and_merge_Makefile = "out/aux/Makefile"
       Array[String] detect_and_merge_targets_list = read_lines("detect_and_merge_targets.txt")
-      Array[File] list_files = glob("${output_list_files}") 
+      Array[File] list_files = glob("${output_list_files}")
 
     }
    runtime {
@@ -979,7 +957,7 @@ workflow TopMedVariantCaller {
 
       import csv
       import os
-      from shutil import copy 
+      from shutil import copy
       import sys
       import json
       import errno
@@ -1007,8 +985,6 @@ workflow TopMedVariantCaller {
 
               print("Creating symlink for {} as {}".format(BCF_file, symlink_path))
               os.symlink(BCF_file, symlink_path)
-              #print("Copying {} to {}".format(BCF_file, symlink_path))
-              #copy(BCF_file, symlink_path)
 
 
       # Symlink the CRAM index files to the Cromwell working dir so the variant
@@ -1046,13 +1022,10 @@ workflow TopMedVariantCaller {
       # Update the timestamp on the BCF file, so
       # the Makefile rules don't try to run merging again
       find out/aux/union -maxdepth 1 -mindepth 1 -exec touch -h -d "2 hours ago" {} +
-      #find out/aux/union -maxdepth 1 -mindepth 1 -exec touch -d "2 hours ago" {} +
-
 
       # Make sure the directory where the reference files are supposed to be
       # located exists in the container
       mkdir -p /root/topmed_freeze3_calling/data/local.org/ref/gotcloud.ref/hg38
-
 
       # Symlink the config files to where the variant caller scripts expect them to be
       # Use the -f switch to unlink the existing config files so we can create the link
@@ -1123,16 +1096,7 @@ workflow TopMedVariantCaller {
       ln -s ${ref_hs38DH_fa_sa}  /root/topmed_freeze3_calling/data/local.org/ref/gotcloud.ref/hg38/hs38DH.fa.sa
       ln -s ${ref_hs38DH_winsize100_gc}  /root/topmed_freeze3_calling/data/local.org/ref/gotcloud.ref/hg38/hs38DH.winsize100.gc
 
-
-
-      #CROMWELL_WORKING_DIR="$(pwd)"
-      #printf "Cromwell current working directory is %s\n" "$CROMWELL_WORKING_DIR"
-      # Escape all the forward slashes for use in sed
-      # https://unix.stackexchange.com/questions/379572/escaping-both-forward-slash-and-back-slash-with-sed
-      #CROMWELL_WORKING_DIR_ESCAPED="${dollar}{CROMWELL_WORKING_DIR//\//\\\/}"
-
-      WORKING_DIR='/root/topmed_freeze3_calling'
-
+      CONTAINER_WORKING_DIR='/root/topmed_freeze3_calling'
 
       # Format the list of chromosomes to be e.g. "chr2 chr5 chrX"
       total=$(echo ${chromosomes_to_process} | wc -w)
@@ -1141,9 +1105,9 @@ workflow TopMedVariantCaller {
 
       echo "Running step2 - joint genotyping"
       #echo "Running step2 - joint genotyping - removing old output dir if it exists"
-      #if [ -d "$WORKING_DIR"/paste ]; then rm -Rf "$WORKING_DIR"/paste; fi
+      #if [ -d "$CONTAINER_WORKING_DIR"/paste ]; then rm -Rf "$CONTAINER_WORKING_DIR"/paste; fi
       echo "Running step2 - joint genotyping - generating Makefile"
-      perl "$WORKING_DIR"/scripts/step2-joint-genotyping.pl ${dollar}{formatted_chromosomes_string}
+      perl "$CONTAINER_WORKING_DIR"/scripts/step2-joint-genotyping.pl ${dollar}{formatted_chromosomes_string}
       echo "Running step2 - joint genotyping - running Makefile"
       # Format makefile name to be e.g. "chrchr2_chr15_chrX.Makefile"
       MAKEFILE_NAME="chr"$(j=0; for i in ${chromosomes_to_process}; do printf "chr""$i"; let "j=j+1"; if [ "$j" -lt "$total" ]; then printf "_"; fi done)".Makefile"
@@ -1153,10 +1117,12 @@ workflow TopMedVariantCaller {
       make SHELL='/bin/bash' -f out/paste/"$MAKEFILE_NAME" -j ${num_of_jobs_to_run}
 
       if [[ -n "${PED_file}" ]]; then
+         # Copy the pedigree file to where the variant caller scripts expects it to be
+         cp "${PED_file}" "$CONTAINER_WORKING_DIR"/data/trio_data.ped
          printf "variantCalling: Performing variant filtering using pedigree information\n"
-         perl "$WORKING_DIR"/scripts/step3a-compute-milk-score.pl ${dollar}{formatted_chromosomes_string}
+         perl "$CONTAINER_WORKING_DIR"/scripts/step3a-compute-milk-score.pl ${dollar}{formatted_chromosomes_string}
          make SHELL='/bin/bash' -f out/aux/milk/*.Makefile -j ${num_of_jobs_to_run}
-         perl "$WORKING_DIR"/scripts/step3b-run-svm-milk-filter.pl ${dollar}{formatted_chromosomes_string}
+         perl "$CONTAINER_WORKING_DIR"/scripts/step3b-run-svm-milk-filter.pl ${dollar}{formatted_chromosomes_string}
       fi
 
 

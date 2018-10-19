@@ -83,7 +83,7 @@ workflow discoverAndMergeVariants {
               gcconfig_pm = gcconfig_pm,
               config_pm = config_pm,
               detect_and_merge_Makefile = detect_and_merge_Makefile,
-              
+
 
               disk_size = cram_size + crai_size + reference_size + additional_disk,
               memory = memory_default,
@@ -95,10 +95,6 @@ workflow discoverAndMergeVariants {
 
   output {
       Map[String, Array[File]] discovery_ID_to_BCF_file_output = runDiscoverVariants.discovery_ID_to_BCF_files
-      #Array[File] discovery_ID_to_BCF_file_output = runDiscoverVariants.discovery_ID_to_BCF_files
-
-      #Pair[String, Array[File]] discovery_ID_to_BCF_file_output = runDiscoverVariants.discovery_ID_to_BCF_files
-      #Array[File] log_file_output = runDiscoverVariants.log_files
   }
 }
 
@@ -126,14 +122,8 @@ workflow discoverAndMergeVariants {
      Int max_retries
      String docker_image
 
-     #String CRAM_basename = basename(input_cram)
-     #String output_crai_file_name = "${CRAM_basename}.crai"
-
-     #String output_BCF_files = "out/aux/individual/${sample_id}/*.sites.bcf"
-     #String output_log_files = "out/aux/individual/${sample_id}/*.sites.log"
      # Set output string to
      String output_BCF_files = if (defined(input_cram)) then  "out/aux/individual/${sample_id}/*" else "out/aux/union/*"
-
 
      # We have to use a trick to make Cromwell
      # skip substitution when using the bash ${<variable} syntax
@@ -158,13 +148,10 @@ workflow discoverAndMergeVariants {
       mkdir -p out/aux/evaluation
       mkdir -p out/paste
 
-
-
       python3.5 <<CODE
 
       import csv
       import os
-      from shutil import copyfile
       import sys
       import errno
       import json
@@ -196,27 +183,21 @@ workflow discoverAndMergeVariants {
 
                       print("Creating symlink for {} as {}".format(BCF_file, symlink_path))
                       os.symlink(BCF_file, symlink_path)
-                      #print("Copying {} to {}".format(BCF_file, symlink_path))
-                      #copyfile(BCF_file, symlink_path)
 
       # Symlink the BCF list files to the Cromwell working dir so the variant
       # caller can find them
       BCF_list_file_names_string = "${ sep=',' BCFListFiles }"
-      if len(BCF_list_file_names_string) > 0: 
+      if len(BCF_list_file_names_string) > 0:
           BCF_list_file_names_list = BCF_list_file_names_string.split(',')
           print("variantCalling: BCF files names list is {}\n".format(BCF_list_file_names_list))
           for bcf_list_file in BCF_list_file_names_list:
               bcf_list_symlink_file = os.path.basename(bcf_list_file)
               bcf_list_symlink_path = 'out/aux/union/' + bcf_list_symlink_file
-    
+
               print("variantCalling: Creating symlink {} for BCF list file {}\n".format(bcf_list_symlink_path, bcf_list_file))
               os.symlink(bcf_list_file, bcf_list_symlink_path)
 
-
-
       CODE
-
-
 
       # Set the exit code of a pipeline to that of the rightmost command
       # to exit with a non-zero status, or zero if all commands of the pipeline exit
@@ -284,11 +265,8 @@ workflow discoverAndMergeVariants {
       #printf "Search ${ sep=',' all_sample_targets }\n for matches to ${sample_id}\n"
       # Get the list of Makefile targets for the input CRAM file
       ALL_CRAM_MAKEFILE_TARGETS="${ sep=',' all_sample_targets }"
-      #CRAM_MAKEFILE_TARGETS=$(grep -o "^.*\/out\/aux\/individual\/${sample_id}\/chr[X_0-9]*.sites.bcf.OK" ${dollar}{ALL_CRAM_MAKEFILE_TARGETS})
-
 
       ln -s ${detect_and_merge_Makefile} out/aux/Makefile
-      #cp ${detect_and_merge_Makefile} out/aux/Makefile
 
       # If there is no CRAM file then variant discovery should
       # have been done on all CRAMs and the next step is to 
@@ -296,27 +274,22 @@ workflow discoverAndMergeVariants {
       # targets that put the merged variants in the 'union' folder
       if [[ -z "${input_cram}" ]]
       then
+          printf "Running merge variants\n"
           REG_EX="out\/aux\/union\/chr[X_0-9]*\.sites\.bcf(\.csi)?\.OK"
       else
+          printf "Running discover variants\n"
           REG_EX=".*out\/aux\/individual\/"${sample_id}"\/chr[X_0-9]*\.sites\.bcf\.OK"
       fi
 
-      #REG_EX=".*out\/aux\/individual\/"${sample_id}"\/chr[X_0-9]*.sites.bcf.OK"
       CRAM_MAKEFILE_TARGETS=$(echo ${dollar}{ALL_CRAM_MAKEFILE_TARGETS} | awk -v pat="$REG_EX" 'BEGIN{RS=","} {where = match($1, pat); if (where !=0 ) printf "%s ",$1 }')
 
-      printf "Running discovery with targets: ${dollar}{CRAM_MAKEFILE_TARGETS}\n"
+      printf "Running discovery or merge with targets: ${dollar}{CRAM_MAKEFILE_TARGETS}\n"
       # Run discovery and merge on the target
       make SHELL='/bin/bash' -f out/aux/Makefile ${dollar}{CRAM_MAKEFILE_TARGETS}
 
       >>>
         output {
           Map[String, Array[File]] discovery_ID_to_BCF_files = {sample_id : glob("${output_BCF_files}")}
-          #Map[String, Array[File]] discovery_ID_to_BCF_files = if (defined("${input_cram}")) then {sample_id : glob("${output_BCF_files}")} else {sample_id : glob("${output_merged_BCF_files}")}
-
-          #Array[File] discovery_ID_to_BCF_files = if (defined("${input_cram}")) then glob("${output_BCF_files}") else glob("${output_merged_BCF_files}")
-
-          #Pair[String, Array[File]] discovery_ID_to_BCF_files = (sample_id, glob("${output_BCF_files}"))
-          #Array[File] log_files = (sample_id, glob("${output_log_files}"))
        }
       runtime {
          memory: sub(memory, "\\..*", "") + " GB"
