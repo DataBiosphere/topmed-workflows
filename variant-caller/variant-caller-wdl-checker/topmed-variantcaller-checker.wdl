@@ -142,19 +142,19 @@ task checkerTask {
     from __future__ import print_function, division
     import sys, os, tarfile, gzip, csv, math, shutil
     from subprocess import Popen, PIPE, STDOUT
-    
+
     def read_and_compare_vcfs_from_tar_gz(tar_gz_truth, tar_gz_test,  reference):
         """
         Reads the VCF files from the tar gz file produced by the U of Michigan
         WDL variant caller and the truth targ gz file and compares each of them
         and returns 1 if any do not compare favorably and 0 if all of them do.
-    
+
         """
-    
+
         print("test file:{}    truth file:{}".format(tar_gz_test, tar_gz_truth))
         with tarfile.open(tar_gz_test, "r") as test_variant_caller_output, \
              tarfile.open(tar_gz_truth, "r") as truth_variant_caller_output:
-    
+
              test_vcf_file_names = test_variant_caller_output.getnames()
              #print("vcf file names are:{}".format(test_vcf_file_names))
 
@@ -164,15 +164,15 @@ task checkerTask {
                  print("The truth tar gz file is empty", file=sys.stderr)
                  sys.exit(1)
 
- 
+
              for truth_vcf_file_info in truth_variant_caller_output.getmembers():
                  truth_vcf_file_name = os.path.basename(truth_vcf_file_info.name)
-                 #print("Truth vcf file name is:{}".format(truth_vcf_file_name))           
-    
+                 #print("Truth vcf file name is:{}".format(truth_vcf_file_name))
+
                  if truth_vcf_file_info.isfile() and \
                     os.path.basename(truth_vcf_file_info.name).startswith("chr") and \
                     os.path.basename(truth_vcf_file_info.name).endswith("vcf.gz"):
-    
+
                     print("Checking to see if truth vcf file {} is present in {}".format(truth_vcf_file_info.name, tar_gz_test))
                     # If a VCF file is missing in the test output then
                     # the VCFs are not the same and return error
@@ -218,7 +218,7 @@ task checkerTask {
 
         # Show the output from inside the Docker on the host terminal.
         print("GenotypeConcordance out: {}".format(p.communicate()))
-        
+
         d = process_output_tsv(output_tsv=output_file)
         print(d)  # print to stdout so we read it in WDL
 
