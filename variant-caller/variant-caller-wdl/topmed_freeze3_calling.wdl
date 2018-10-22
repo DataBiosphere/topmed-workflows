@@ -74,7 +74,7 @@ workflow TopMedVariantCaller {
   Int? Discovery_preemptible_tries
   Int Discovery_preemptible_tries_default = select_first([Discovery_preemptible_tries, 3])
   Int? Discovery_maxretries_tries
-  Int Discovery_maxretries_tries_default = select_first([Discovery_maxretries_tries, 0])
+  Int Discovery_maxretries_tries_default = select_first([Discovery_maxretries_tries, 3])
   Int? Discovery_memory
   Int Discovery_memory_default = select_first([Discovery_memory, 100 ])
   Int? Discovery_CPUs
@@ -91,7 +91,7 @@ workflow TopMedVariantCaller {
   #if preemptible is 3 and maxRetries is 3 for a task -- that can be retried upto 6 times
   #https://cromwell.readthedocs.io/en/stable/RuntimeAttributes/#maxretries
   Int? VariantCaller_maxretries_tries
-  Int VariantCaller_maxretries_tries_default = select_first([VariantCaller_maxretries_tries, 0])
+  Int VariantCaller_maxretries_tries_default = select_first([VariantCaller_maxretries_tries, 3])
   Int? VariantCaller_memory
   # Select memory and CPUs to choose a GCP n1-highmem-64 machine
   Int VariantCaller_memory_default = select_first([VariantCaller_memory, 400])
@@ -1103,16 +1103,12 @@ workflow TopMedVariantCaller {
 
 
       echo "Running step2 - joint genotyping"
-      #echo "Running step2 - joint genotyping - removing old output dir if it exists"
-      #if [ -d "$CONTAINER_WORKING_DIR"/paste ]; then rm -Rf "$CONTAINER_WORKING_DIR"/paste; fi
       echo "Running step2 - joint genotyping - generating Makefile"
       perl "$CONTAINER_WORKING_DIR"/scripts/step2-joint-genotyping.pl ${dollar}{formatted_chromosomes_string}
       echo "Running step2 - joint genotyping - running Makefile"
       # Format makefile name to be e.g. "chrchr2_chr15_chrX.Makefile"
       MAKEFILE_NAME="chr"$(j=0; for i in ${chromosomes_to_process}; do printf "chr""$i"; let "j=j+1"; if [ "$j" -lt "$total" ]; then printf "_"; fi done)".Makefile"
 
-      dir=$(pwd)
-      echo "Running in directory: $dir"
       make SHELL='/bin/bash' -f out/paste/"$MAKEFILE_NAME" -j ${num_of_jobs_to_run}
 
       if [[ -n "${PED_file}" ]]; then
