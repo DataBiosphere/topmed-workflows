@@ -1,6 +1,4 @@
-#import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.28.0/variant-caller/variant-caller-wdl/topmed_freeze3_calling.wdl" as TopMed_variantcaller
-import "/Users/waltershands/Documents/UCSC/gitroot/topmed-workflows/variant-caller/variant-caller-wdl/topmed_freeze3_calling.wdl" as TopMed_variantcaller
-
+import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/feature/variant-discovery-task/variant-caller/variant-caller-wdl/topmed_freeze3_calling.wdl" as TopMed_variantcaller
 import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.28.0/variant-caller/variant-caller-wdl-checker/topmed-variantcaller-checker.wdl" as checker
 
 workflow checkerWorkflow {
