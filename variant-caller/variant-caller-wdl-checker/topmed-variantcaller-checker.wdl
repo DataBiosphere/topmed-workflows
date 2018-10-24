@@ -173,7 +173,7 @@ task checkerTask {
 
              for truth_vcf_file_info in truth_variant_caller_output.getmembers():
                  truth_vcf_file_name = os.path.basename(truth_vcf_file_info.name)
-                 #print("Truth vcf file name is:{}".format(truth_vcf_file_name)) 
+                 #print("Truth vcf file name is:{}".format(truth_vcf_file_name))
 
                  if truth_vcf_file_info.isfile() and \
                     os.path.basename(truth_vcf_file_info.name).startswith("chr") and \
@@ -228,7 +228,7 @@ task checkerTask {
 
         # Show the output from inside the Docker on the host terminal.
         print("GenotypeConcordance out: {}".format(p.communicate()))
-        
+
         d = process_output_tsv(output_tsv=output_file)
         print(d)  # print to stdout so we read it in WDL
 

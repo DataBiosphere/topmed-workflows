@@ -71,7 +71,7 @@ workflow calulateDNAContamination {
       CPUs = CPUs_default,
       max_retries = max_retries_default,
       disk_size = cram_size + crai_size + reference_size + additional_disk,
-      docker_image = docker_image      
+      docker_image = docker_image
   }
 
   output {
@@ -138,7 +138,7 @@ workflow calulateDNAContamination {
           printf "ERROR: Invalid reference genome version string: %s. It should be hg37 or hg38\n" ${reference_genome}
           exit 1
       fi
-       
+
       export PATH=$PATH:/VerifyBamID/bin/ && VerifyBamID \
           --UDPath ${dollar}{UDPath} \
           --BedPath ${dollar}{BedPath} \
@@ -148,7 +148,7 @@ workflow calulateDNAContamination {
       # Get the contamination value from the result file
       while read line; do
           if [[ ${dollar}{line} =~ Alpha: ]]
-          then 
+          then
               contamination_white_space=$(echo ${dollar}{line}| cut -d':' -f 2)
               # Remove leading and training whitespace from variable
               # https://stackoverflow.com/questions/369758/how-to-trim-whitespace-from-a-bash-variable
