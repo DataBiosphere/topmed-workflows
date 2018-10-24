@@ -1,5 +1,7 @@
 import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.30.0/variant-caller/variant-caller-wdl/calculate_contamination.wdl" as getDNAContamination
-import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/feature/variant-discovery-task/variant-caller/variant-caller-wdl/discover_and_merge_variants.wdl" as discoverAndMergeVariants
+
+#import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/feature/variant-discovery-task/variant-caller/variant-caller-wdl/discover_and_merge_variants.wdl" as discoverAndMergeVariants
+import "/home/ubuntu/topmed-workflows/variant-caller/variant-caller-wdl/discover_and_merge_variants.wdl" as discoverAndMergeVariants
 
 ## This is the U of Michigan variant caller workflow WDL for the workflow code located here:
 ## https://github.com/statgen/topmed_freeze3_calling
@@ -74,7 +76,7 @@ workflow TopMedVariantCaller {
   Int? Discovery_preemptible_tries
   Int Discovery_preemptible_tries_default = select_first([Discovery_preemptible_tries, 3])
   Int? Discovery_maxretries_tries
-  Int Discovery_maxretries_tries_default = select_first([Discovery_maxretries_tries, 3])
+  Int Discovery_maxretries_tries_default = select_first([Discovery_maxretries_tries, 0])
   Int? Discovery_memory
   Int Discovery_memory_default = select_first([Discovery_memory, 100 ])
   Int? Discovery_CPUs
@@ -91,7 +93,7 @@ workflow TopMedVariantCaller {
   #if preemptible is 3 and maxRetries is 3 for a task -- that can be retried upto 6 times
   #https://cromwell.readthedocs.io/en/stable/RuntimeAttributes/#maxretries
   Int? VariantCaller_maxretries_tries
-  Int VariantCaller_maxretries_tries_default = select_first([VariantCaller_maxretries_tries, 3])
+  Int VariantCaller_maxretries_tries_default = select_first([VariantCaller_maxretries_tries, 0])
   Int? VariantCaller_memory
   # Select memory and CPUs to choose a GCP n1-highmem-64 machine
   Int VariantCaller_memory_default = select_first([VariantCaller_memory, 400])
@@ -101,7 +103,11 @@ workflow TopMedVariantCaller {
   Int? VariantCaller_additional_disk
   Int VariantCaller_additional_disk_default = select_first([VariantCaller_additional_disk, 1])
 
-
+  # The number of jobs to run is the number of cores to use
+  # Typically we use n1-highmem-64 but with 32 processes (ie, -j 32)
+  # These are hyperthreaded cores, so we hope to get a slight performance boost by over-allocating cpus
+  Int? num_of_jobs
+  Int num_of_jobs_to_run = select_first([num_of_jobs, 32 ])
 
 
   Array[File]? input_crai_files
@@ -406,8 +412,10 @@ workflow TopMedVariantCaller {
               trio_data_index = setupConfigFiles.trio_data_index,
               gcconfig_pm = setupConfigFiles.gcconfig_pm,
               config_pm = setupConfigFiles.config_pm,
-              detect_and_merge_targets_list = setupConfigFiles.detect_and_merge_targets_list,
+              detect_and_merge_targets_file = setupConfigFiles.detect_and_merge_targets_file,
+
               detect_and_merge_Makefile = setupConfigFiles.detect_and_merge_Makefile,
+              num_of_jobs = num_of_jobs_to_run,
 
               dynamically_calculate_file_size = dynamically_calculate_disk_requirement,
               CPUs = Discovery_CPUs_default,
@@ -431,8 +439,10 @@ workflow TopMedVariantCaller {
           trio_data_index = setupConfigFiles.trio_data_index,
           gcconfig_pm = setupConfigFiles.gcconfig_pm,
           config_pm = setupConfigFiles.config_pm,
-          detect_and_merge_targets_list = setupConfigFiles.detect_and_merge_targets_list,
+          detect_and_merge_targets_file = setupConfigFiles.detect_and_merge_targets_file,
+
           detect_and_merge_Makefile = setupConfigFiles.detect_and_merge_Makefile,
+          num_of_jobs = num_of_jobs_to_run,
           BCFListFiles = setupConfigFiles.list_files, 
 
           dynamically_calculate_file_size = dynamically_calculate_disk_requirement,
@@ -450,13 +460,12 @@ workflow TopMedVariantCaller {
       input_crams = input_cram_files,
 
       sampleBCFFiles = mergeVariants.discovery_ID_to_BCF_file_output,
-      #sampleLogFiles = sampleLogs,
 
       trio_data_index = setupConfigFiles.trio_data_index,
       gcconfig_pm = setupConfigFiles.gcconfig_pm,
       config_pm = setupConfigFiles.config_pm,
 
-
+      num_of_jobs = num_of_jobs_to_run,
       disk_size = cram_files_size + crai_files_size + reference_size + additional_disk + VariantCaller_additional_disk_default,
 
       CPUs = VariantCaller_CPUs_default,
@@ -824,7 +833,7 @@ workflow TopMedVariantCaller {
       File config_pm = "config.pm"
       File trio_data_index = "${indexFileName}"
       File detect_and_merge_Makefile = "out/aux/Makefile"
-      Array[String] detect_and_merge_targets_list = read_lines("detect_and_merge_targets.txt")
+      File detect_and_merge_targets_file = "detect_and_merge_targets.txt"
       Array[File] list_files = glob("${output_list_files}")
 
     }
@@ -1103,12 +1112,16 @@ workflow TopMedVariantCaller {
 
 
       echo "Running step2 - joint genotyping"
+      #echo "Running step2 - joint genotyping - removing old output dir if it exists"
+      #if [ -d "$CONTAINER_WORKING_DIR"/paste ]; then rm -Rf "$CONTAINER_WORKING_DIR"/paste; fi
       echo "Running step2 - joint genotyping - generating Makefile"
       perl "$CONTAINER_WORKING_DIR"/scripts/step2-joint-genotyping.pl ${dollar}{formatted_chromosomes_string}
       echo "Running step2 - joint genotyping - running Makefile"
       # Format makefile name to be e.g. "chrchr2_chr15_chrX.Makefile"
       MAKEFILE_NAME="chr"$(j=0; for i in ${chromosomes_to_process}; do printf "chr""$i"; let "j=j+1"; if [ "$j" -lt "$total" ]; then printf "_"; fi done)".Makefile"
 
+      dir=$(pwd)
+      echo "Running in directory: $dir"
       make SHELL='/bin/bash' -f out/paste/"$MAKEFILE_NAME" -j ${num_of_jobs_to_run}
 
       if [[ -n "${PED_file}" ]]; then

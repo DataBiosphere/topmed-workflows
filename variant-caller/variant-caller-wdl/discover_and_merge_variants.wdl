@@ -22,6 +22,12 @@ workflow discoverAndMergeVariants {
   Int? max_retries
   Int max_retries_default = select_first([max_retries, 3])
 
+  # The number of jobs to run is the number of cores to use
+  # Typically we use n1-highmem-64 but with 32 processes (ie, -j 32)
+  # These are hyperthreaded cores, so we hope to get a slight performance boost by over-allocating cpus
+  Int? num_of_jobs
+  Int num_of_jobs_to_run = select_first([num_of_jobs, 32 ])
+
   Boolean? dynamically_calculate_file_size
   Boolean dynamically_calculate_disk_requirement = select_first([dynamically_calculate_file_size, true])
 
@@ -52,7 +58,7 @@ workflow discoverAndMergeVariants {
   Float crai_size = if(dynamically_calculate_disk_requirement) then (if (defined(input_crai_file)) then size(input_crai_file, "GB") else (cram_size * 0.00003)) else CRAI_file_max_disk_size_override_default
 
 
-  Array[String] detect_and_merge_targets_list
+  File detect_and_merge_targets_file
   File detect_and_merge_Makefile
   File gcconfig_pm
   File config_pm
@@ -77,13 +83,13 @@ workflow discoverAndMergeVariants {
               ref_fasta = ref_fasta,
               ref_fasta_index = ref_fasta_index,
 
-              all_sample_targets = detect_and_merge_targets_list,
+              all_sample_targets = detect_and_merge_targets_file,
               sample_id = base_name_wo_extension,
               trio_data_index = trio_data_index,
               gcconfig_pm = gcconfig_pm,
               config_pm = config_pm,
               detect_and_merge_Makefile = detect_and_merge_Makefile,
-
+              num_of_jobs = num_of_jobs_to_run,
 
               disk_size = cram_size + crai_size + reference_size + additional_disk,
               memory = memory_default,
@@ -111,9 +117,15 @@ workflow discoverAndMergeVariants {
      File gcconfig_pm
      File config_pm
      File trio_data_index
-     Array[String] all_sample_targets
+     File all_sample_targets
      String sample_id
      Array[File]? BCFListFiles
+
+     # The number of jobs to run is the number of cores to use
+     # Typically we use n1-highmem-64 but with 32 processes (ie, -j 32)
+     # These are hyperthreaded cores, so we hope to get a slight performance boost by over-allocating cpus
+     Int? num_of_jobs
+     Int num_of_jobs_to_run = select_first([num_of_jobs, 32 ])
 
      Float memory
      Float disk_size
@@ -135,7 +147,7 @@ workflow discoverAndMergeVariants {
       # Make the log directory so the variant caller can output the logs there
       mkdir -p out/log
       # Make the aux directories so the variant caller can create the sample dirs there
-      # Only make the sample ID directory if a CRAM file was input becuase
+      # Only make the sample ID directory if a CRAM file was input because
       # the sample ID is created from the CRAM name. If a directory with no name
       # in it is created then the glob use for output files will try to glob the
       # directory with nothing in it. The Cromwell script hard links the glob contents
@@ -158,12 +170,10 @@ workflow discoverAndMergeVariants {
       import errno
 
       if len("${input_cram}") == 0:
-          #all_BCFS_json_string = ""
           all_BCFs_json = []
           with open("${write_json(sampleBCFs)}", 'r') as all_BCFs_json_file:
               all_BCFs_json = json.load(all_BCFs_json_file)
               print("BCF JSON is:{}".format(all_BCFs_json))
-          #all_BCFs_json = json.loads(all_BCFs_json_string)
           for sample_BCF_output in all_BCFs_json:
               for sampleID, BCF_output_array in sample_BCF_output.items():
                   for BCF_file in BCF_output_array:
@@ -262,10 +272,6 @@ workflow discoverAndMergeVariants {
       ln -s ${ref_fasta}  /root/topmed_freeze3_calling/data/local.org/ref/gotcloud.ref/hg38/hs38DH.fa
       ln -s ${ref_fasta_index}  /root/topmed_freeze3_calling/data/local.org/ref/gotcloud.ref/hg38/hs38DH.fa.fai
 
-      #printf "Search ${ sep=',' all_sample_targets }\n for matches to ${sample_id}\n"
-      # Get the list of Makefile targets for the input CRAM file
-      ALL_CRAM_MAKEFILE_TARGETS="${ sep=',' all_sample_targets }"
-
       ln -s ${detect_and_merge_Makefile} out/aux/Makefile
 
       # If there is no CRAM file then variant discovery should
@@ -281,11 +287,11 @@ workflow discoverAndMergeVariants {
           REG_EX=".*out\/aux\/individual\/"${sample_id}"\/chr[X_0-9]*\.sites\.bcf\.OK"
       fi
 
-      CRAM_MAKEFILE_TARGETS=$(echo ${dollar}{ALL_CRAM_MAKEFILE_TARGETS} | awk -v pat="$REG_EX" 'BEGIN{RS=","} {where = match($1, pat); if (where !=0 ) printf "%s ",$1 }')
+      CRAM_MAKEFILE_TARGETS=$(awk -v pat="$REG_EX" '{where = match($1, pat); if (where !=0 ) printf "%s ",$1 }' "${all_sample_targets}")
 
       printf "Running discovery or merge with targets: ${dollar}{CRAM_MAKEFILE_TARGETS}\n"
       # Run discovery and merge on the target
-      make SHELL='/bin/bash' -f out/aux/Makefile ${dollar}{CRAM_MAKEFILE_TARGETS}
+      make SHELL='/bin/bash' -f out/aux/Makefile ${dollar}{CRAM_MAKEFILE_TARGETS} -j ${num_of_jobs_to_run}
 
       >>>
         output {
