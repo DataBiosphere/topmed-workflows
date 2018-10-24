@@ -1,3 +1,4 @@
+# Does both discovery and merging of variants
 workflow discoverAndMergeVariants {
 
   File? input_crai_file
@@ -45,11 +46,11 @@ workflow discoverAndMergeVariants {
 
 
   # Optional input to increase all disk sizes in case of outlier sample with strange size behavior
-  Int? increase_disk_size
+  Float? increase_disk_size
 
   # Some tasks need wiggle room, and we also need to add a small amount of disk to prevent getting a
   # Cromwell error from asking for 0 disk when the input is less than 1GB
-  Int additional_disk = select_first([increase_disk_size, 20])
+  Float additional_disk = select_first([increase_disk_size, 20])
 
   Float reference_size = if(dynamically_calculate_disk_requirement) then size(ref_fasta, "GB") + size(ref_fasta_index, "GB") else ReferenceGenome_index_disk_size_override_default + ReferenceGenome_disk_size_override_default
 
@@ -101,6 +102,7 @@ workflow discoverAndMergeVariants {
 
   output {
       Map[String, Array[File]] discovery_ID_to_BCF_file_output = runDiscoverVariants.discovery_ID_to_BCF_files
+      Array[String] discovery_ID_to_BCF_file_names_output = runDiscoverVariants.discovery_ID_to_BCF_file_names
   }
 }
 
@@ -296,6 +298,7 @@ workflow discoverAndMergeVariants {
       >>>
         output {
           Map[String, Array[File]] discovery_ID_to_BCF_files = {sample_id : glob("${output_BCF_files}")}
+          Array[String] discovery_ID_to_BCF_file_names = glob("${output_BCF_files}")
        }
       runtime {
          memory: sub(memory, "\\..*", "") + " GB"

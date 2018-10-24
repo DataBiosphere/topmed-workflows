@@ -1,7 +1,6 @@
 import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.30.0/variant-caller/variant-caller-wdl/calculate_contamination.wdl" as getDNAContamination
-
-#import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/feature/variant-discovery-task/variant-caller/variant-caller-wdl/discover_and_merge_variants.wdl" as discoverAndMergeVariants
-import "/home/ubuntu/topmed-workflows/variant-caller/variant-caller-wdl/discover_and_merge_variants.wdl" as discoverAndMergeVariants
+import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/feature/variant-discovery-task/variant-caller/variant-caller-wdl/discover_and_merge_variants.wdl" as discoverAndMergeVariants
+#import "/home/ubuntu/topmed-workflows/variant-caller/variant-caller-wdl/discover_and_merge_variants.wdl" as discoverAndMergeVariants
 
 ## This is the U of Michigan variant caller workflow WDL for the workflow code located here:
 ## https://github.com/statgen/topmed_freeze3_calling
@@ -93,7 +92,7 @@ workflow TopMedVariantCaller {
   #if preemptible is 3 and maxRetries is 3 for a task -- that can be retried upto 6 times
   #https://cromwell.readthedocs.io/en/stable/RuntimeAttributes/#maxretries
   Int? VariantCaller_maxretries_tries
-  Int VariantCaller_maxretries_tries_default = select_first([VariantCaller_maxretries_tries, 0])
+  Int VariantCaller_maxretries_tries_default = select_first([VariantCaller_maxretries_tries, 3])
   Int? VariantCaller_memory
   # Select memory and CPUs to choose a GCP n1-highmem-64 machine
   Int VariantCaller_memory_default = select_first([VariantCaller_memory, 400])
@@ -102,6 +101,13 @@ workflow TopMedVariantCaller {
   # For adding more disk space for the variant caller from an input file
   Int? VariantCaller_additional_disk
   Int VariantCaller_additional_disk_default = select_first([VariantCaller_additional_disk, 1])
+
+  Int? All_discoveryBCFs_disk_size_override
+  Int All_discoveryBCFs_disk_size_override_default = select_first([All_discoveryBCFs_disk_size_override, 100])
+
+  Int? All_mergeBCFs_disk_size_override
+  Int All_mergeBCFs_disk_size_override_default = select_first([All_mergeBCFs_disk_size_override, 100])
+
 
   # The number of jobs to run is the number of cores to use
   # Typically we use n1-highmem-64 but with 32 processes (ie, -j 32)
@@ -255,7 +261,7 @@ workflow TopMedVariantCaller {
       # Use scatter to get the size of each CRAM file:
       # Add 1 GB to size in case size is less than 1 GB
       # Use an array of String instead of File so Cromwell doesn't try to download them
-      scatter(cram_file in input_cram_files_names ) { Float cram_file_size = round(size(cram_file, "GB")) + 1 }
+      scatter(cram_file in input_cram_files_names ) { Float cram_file_size = size(cram_file, "GB")}
       # Gather the sizes of the CRAM files:
       Array[Float] cram_file_sizes = cram_file_size
       # Use a task to sum the array:
@@ -290,11 +296,22 @@ workflow TopMedVariantCaller {
            }
       }
       Array[File] generated_crai_files = scatter_createCRAMIndex.output_crai_file
+      Array[Pair[File,File]] generated_cram_and_crai_file_pairs = scatter_createCRAMIndex.output_cram_and_crai_file
+
   }
 
   # if the CRAM index files were input then capture them otherwise they must have 
   # been created so save those
-  Array[File]? crai_files = if (defined(input_crai_files)) then input_crai_files else generated_crai_files 
+  # Create an empty array to use to get around zip's requirement that
+  # the input arrays not be optional
+  Array[File] no_crai_files = []
+  Array[File] crai_files_cont = select_first([input_crai_files, no_crai_files])
+  Array[Pair[File,File]]? cram_and_crai_file_pairs_maybe = if (defined(input_crai_files)) then zip(input_cram_files, crai_files_cont) else generated_cram_and_crai_file_pairs 
+  # Create an empty array so we can create an array of pairs variable
+  # that is not an optional array. We know that the non empty one must exist
+  # There may be a better way to do this... 
+  Array[Pair[File,File]] no_cram_and_crai_file_pairs = []
+  Array[Pair[File,File]] cram_and_crai_file_pairs = select_first([cram_and_crai_file_pairs_maybe, no_cram_and_crai_file_pairs])
 
   # If there is an array of input CRAM index files then select those
   # otherwise they were generated so save those as an array
@@ -303,11 +320,10 @@ workflow TopMedVariantCaller {
   # sizes of the files so Cromwell doesn't try to download them
   Array[String] crai_files_names_array = crai_files_array
 
-
   if (dynamically_calculate_disk_requirement) {
       # Use scatter to get the size of each CRAI file:
-      # Add 1 GB to size in case size is less than 1 GB
-      scatter(crai_file in crai_files_names_array ) { Float crai_file_size = round(size(crai_file, "GB")) + 1 }
+      scatter(crai_file in crai_files_names_array ) { Float crai_file_size = size(crai_file, "GB")}
+
       # Gather the sizes of the CRAI files:
       Array[Float] crai_file_sizes_array = crai_file_size
       # Use a task to sum the array:
@@ -329,67 +345,32 @@ workflow TopMedVariantCaller {
 
 
   if (calculate_contamination) {
-      if (defined(input_crai_files)) {
-          # Create an empty array to use to get around zip's requirement that
-          # the input arrays not be optional
-          Array[File] no_crai_files = []
-          Array[File] crai_files_cont = select_first([input_crai_files, no_crai_files])
-          Array[Pair[File, File]] cram_and_crai_files = zip(input_cram_files, crai_files_cont)
+      scatter(cram_or_crai_file_pair in cram_and_crai_file_pairs) {
+          call getDNAContamination.calulateDNAContamination as scatter_getContamination {
+            input:
+                input_cram_file = cram_or_crai_file_pair.left,
+                input_crai_file = cram_or_crai_file_pair.right,
 
-          scatter(cram_or_crai_file in cram_and_crai_files) {
-              call getDNAContamination.calulateDNAContamination as scatter_getContamination {
-                input:
-                    input_cram_file = cram_or_crai_file.left,
-                    input_crai_file = cram_or_crai_file.right,
+                ref_fasta = ref_hs38DH_fa,
+                ref_fasta_index = ref_hs38DH_fa_fai,
 
-                    ref_fasta = ref_hs38DH_fa,
-                    ref_fasta_index = ref_hs38DH_fa_fai,
-
-                    dynamically_calculate_file_size = dynamically_calculate_disk_requirement,
-                    CalcContamination_memory = CalcContamination_mem_default,
-                    CalcContamination_CPUs = CalcContamination_CPUs_default,
-                    CalcContamination_preemptible_tries = CalcContamination_preemptible_tries_default,
-                    CalcContamination_max_retries = CalcContamination_maxretries_tries,
-                    docker_image = docker_contamination_image
-              }
+                dynamically_calculate_file_size = dynamically_calculate_disk_requirement,
+                CalcContamination_memory = CalcContamination_mem_default,
+                CalcContamination_CPUs = CalcContamination_CPUs_default,
+                CalcContamination_preemptible_tries = CalcContamination_preemptible_tries_default,
+                CalcContamination_max_retries = CalcContamination_maxretries_tries,
+                docker_image = docker_contamination_image
           }
       }
-
-      # If no CRAM index files were input the contamination calculation
-      # software will generate the index files. We cannot use the array of
-      # generated CRAM index files already created because we cannot be sure
-      # the index file that matches the input CRAM file is in the same location
-      # in the CRAM index array as the CRAM file in its array
-      if (!defined(input_crai_files)) {
-          scatter(cram_file in input_cram_files) {
-              call getDNAContamination.calulateDNAContamination as scatter_getContamination_no_crai {
-                input:
-                    input_cram_file = cram_file,
-
-                    ref_fasta = ref_hs38DH_fa,
-                    ref_fasta_index = ref_hs38DH_fa_fai,
-
-                    dynamically_calculate_file_size = dynamically_calculate_disk_requirement,
-                    CalcContamination_memory = CalcContamination_mem_default,
-                    CalcContamination_CPUs = CalcContamination_CPUs_default,
-                    CalcContamination_preemptible_tries = CalcContamination_preemptible_tries_default,
-                    CalcContamination_max_retries = CalcContamination_maxretries_tries_default,
-                    docker_image = docker_contamination_image
-              }
-          }
-      }
-
-     Array[Array[String]] optional_contamination_scatter_output_files = select_first([scatter_getContamination.calculate_DNA_contamination_output, scatter_getContamination_no_crai.calculate_DNA_contamination_output])
-     Array[String] contamination_output_files = flatten(optional_contamination_scatter_output_files)
+     Array[String] contamination_info_output = flatten(scatter_getContamination.calculate_DNA_contamination_output)
   }
-  Array[String]? optional_contamination_output_files = contamination_output_files
-
+  Array[String]? optional_contamination_info_output = contamination_info_output
 
 
   call setupConfigFiles {
       input:
           input_crams = input_cram_files,
-          contamination_output_files = optional_contamination_output_files,
+          contamination_info = optional_contamination_info_output,
 
           ref_fasta = ref_hs38DH_fa,
           ref_fasta_index = ref_hs38DH_fa_fai,
@@ -402,10 +383,11 @@ workflow TopMedVariantCaller {
           docker_image = docker_image
   }
 
-  scatter(cram_file in input_cram_files) {
+  scatter(cram_or_crai_file_pair in cram_and_crai_file_pairs) {
       call discoverAndMergeVariants.discoverAndMergeVariants as scatter_discoverVariants {
           input:
-              input_cram_file = cram_file,
+              input_cram_file = cram_or_crai_file_pair.left,
+              input_crai_file = cram_or_crai_file_pair.right,
               ref_fasta = ref_hs38DH_fa,
               ref_fasta_index = ref_hs38DH_fa_fai,
 
@@ -428,10 +410,33 @@ workflow TopMedVariantCaller {
 
 
   Array[Map[String, Array[File]]] sampleBCFs = scatter_discoverVariants.discovery_ID_to_BCF_file_output
+  Array[Array[String]] sampleBCFs_names_aa = scatter_discoverVariants.discovery_ID_to_BCF_file_names_output
+  Array[String] sampleBCFs_names = flatten(sampleBCFs_names_aa)
+
+  if (dynamically_calculate_disk_requirement) {
+      # Use scatter to get the size of each CRAI file:
+      # Add 1 GB to size in case size is less than 1 GB
+      scatter(file_name in sampleBCFs_names ) { Float discovery_file_size = size(file_name, "GB")}
+
+      # Gather the sizes of the CRAI files:
+      Array[Float] discovery_file_sizes_array = discovery_file_size
+      # Use a task to sum the array:
+      call sum_file_sizes as sum_discovery_BCF_file_sizes { 
+        input: 
+          file_sizes = discovery_file_sizes_array,
+          preemptible_tries = SumFileSizes_preemptible_tries_default,
+          CPUs = SumFileSizes_CPUs_default,
+          max_retries = SumFileSizes_maxretries_tries_default,
+          disk_size = SumFileSizes_disk_size_default,
+          memory = SumFileSizes_memory_default
+      }
+  }
+  Float discoveryBCF_files_size = select_first([sum_discovery_BCF_file_sizes.total_size, All_discoveryBCFs_disk_size_override_default])
 
   call discoverAndMergeVariants.discoverAndMergeVariants as mergeVariants {
       input:
           BCFFiles = sampleBCFs,
+          increase_disk_size = discoveryBCF_files_size + 20,
 
           ref_fasta = ref_hs38DH_fa,
           ref_fasta_index = ref_hs38DH_fa_fai,
@@ -453,10 +458,31 @@ workflow TopMedVariantCaller {
           docker_image = docker_image
   }
 
+
+  if (dynamically_calculate_disk_requirement) {
+      # Use scatter to get the size of each CRAI file:
+      # Add 1 GB to size in case size is less than 1 GB
+      scatter(file_name in mergeVariants.discovery_ID_to_BCF_file_names_output ) { Float merge_file_size = size(file_name, "GB")}
+
+      # Gather the sizes of the CRAI files:
+      Array[Float] merge_file_sizes_array = merge_file_size
+      # Use a task to sum the array:
+      call sum_file_sizes as sum_merge_BCF_file_sizes { 
+        input: 
+          file_sizes = merge_file_sizes_array,
+          preemptible_tries = SumFileSizes_preemptible_tries_default,
+          CPUs = SumFileSizes_CPUs_default,
+          max_retries = SumFileSizes_maxretries_tries_default,
+          disk_size = SumFileSizes_disk_size_default,
+          memory = SumFileSizes_memory_default
+      }
+  }
+  Float mergeBCF_files_size = select_first([sum_merge_BCF_file_sizes.total_size, All_mergeBCFs_disk_size_override_default])
+
   call jointGenotyping {
 
      input:
-      input_crais = crai_files,
+      input_crais = crai_files_array,
       input_crams = input_cram_files,
 
       sampleBCFFiles = mergeVariants.discovery_ID_to_BCF_file_output,
@@ -466,7 +492,7 @@ workflow TopMedVariantCaller {
       config_pm = setupConfigFiles.config_pm,
 
       num_of_jobs = num_of_jobs_to_run,
-      disk_size = cram_files_size + crai_files_size + reference_size + additional_disk + VariantCaller_additional_disk_default,
+      disk_size = mergeBCF_files_size + cram_files_size + crai_files_size + reference_size + additional_disk + VariantCaller_additional_disk_default,
 
       CPUs = VariantCaller_CPUs_default,
       preemptible_tries = VariantCaller_preemptible_tries_default,
@@ -580,6 +606,7 @@ workflow TopMedVariantCaller {
       >>>
         output {
           File output_crai_file = "${output_crai_file_name}"
+          Pair[File,File] output_cram_and_crai_file = ("${input_cram}", "${output_crai_file_name}")
        }
       runtime {
          memory: sub(memory, "\\..*", "") + " GB"
@@ -604,8 +631,9 @@ workflow TopMedVariantCaller {
     #String docker_image
     Int max_retries
 
+    # Add 1 GB to size in case size is less than 1 GB
     command <<<
-    python -c "print ${sep="+" file_sizes}"
+    python -c "print ${sep=" + " file_sizes} + 1.0"
     >>>
     output {
       Float total_size = read_float(stdout())
@@ -628,7 +656,7 @@ workflow TopMedVariantCaller {
      Int? discoverUnit
      Int? genotypeUnit 
 
-     Array[String]? contamination_output_files
+     Array[String]? contamination_info
      Array[String] input_crams
 
      File ref_fasta
@@ -664,7 +692,7 @@ workflow TopMedVariantCaller {
       # Convert the WDL array of strings to a python list
       # The resulting string will be empty if the contamination values
       # are not calculated
-      contamination_output_file_names_string = "${ sep=',' contamination_output_files }"
+      contamination_output_file_names_string = "${ sep=',' contamination_info }"
       # If DNA contaminiation was calculated for input files (CRAMs)
       if len(contamination_output_file_names_string) > 0:
           contamination_output_file_names_list = contamination_output_file_names_string.split(',')
@@ -866,7 +894,7 @@ workflow TopMedVariantCaller {
      # The CRAM index files are listed as an input because they are required
      # by various tools, e.g. Samtools. They should be in the same location
      # as the CRAM files when specified in the input JSON
-     Array[File]? input_crais
+     Array[File] input_crais
      Array[File] input_crams
 
      Map[String,Array[File]] sampleBCFFiles
