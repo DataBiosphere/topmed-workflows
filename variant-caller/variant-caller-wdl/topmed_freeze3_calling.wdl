@@ -75,11 +75,11 @@ workflow TopMedVariantCaller {
   Int? Discovery_preemptible_tries
   Int Discovery_preemptible_tries_default = select_first([Discovery_preemptible_tries, 3])
   Int? Discovery_maxretries_tries
-  Int Discovery_maxretries_tries_default = select_first([Discovery_maxretries_tries, 0])
+  Int Discovery_maxretries_tries_default = select_first([Discovery_maxretries_tries, 3])
   Int? Discovery_memory
-  Int Discovery_memory_default = select_first([Discovery_memory, 100 ])
+  Int Discovery_memory_default = select_first([Discovery_memory, 400 ])
   Int? Discovery_CPUs
-  Int Discovery_CPUs_default = select_first([Discovery_CPUs, 1])
+  Int Discovery_CPUs_default = select_first([Discovery_CPUs, 64])
 
   # The variant caller typically takes more than 24 hours to run. GCP terminates
   #  preemptible tasks after 24 hours. So by using 0 for preemptible tries the 
