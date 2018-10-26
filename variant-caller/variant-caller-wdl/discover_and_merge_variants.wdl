@@ -102,7 +102,7 @@ workflow discoverAndMergeVariants {
 
   output {
       Map[String, Array[File]] discovery_ID_to_BCF_file_output = runDiscoverVariants.discovery_ID_to_BCF_files
-      Array[String] discovery_ID_to_BCF_file_names_output = runDiscoverVariants.discovery_ID_to_BCF_file_names
+      Array[File] discovery_ID_to_BCF_file_names_output = runDiscoverVariants.discovery_ID_to_BCF_file_names
   }
 }
 
@@ -298,7 +298,7 @@ workflow discoverAndMergeVariants {
       >>>
         output {
           Map[String, Array[File]] discovery_ID_to_BCF_files = {sample_id : glob("${output_BCF_files}")}
-          Array[String] discovery_ID_to_BCF_file_names = glob("${output_BCF_files}")
+          Array[File] discovery_ID_to_BCF_file_names = glob("${output_BCF_files}")
        }
       runtime {
          memory: sub(memory, "\\..*", "") + " GB"
