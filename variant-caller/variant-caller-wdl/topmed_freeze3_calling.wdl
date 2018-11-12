@@ -410,7 +410,7 @@ workflow TopMedVariantCaller {
 
 
   Array[Map[String, Array[File]]] sampleBCFs = scatter_discoverVariants.discovery_ID_to_BCF_file_output
-  Array[Array[File]] sampleBCFs_files_aa = scatter_discoverVariants.discovery_ID_to_BCF_file_names_output
+  Array[Array[String]] sampleBCFs_files_aa = scatter_discoverVariants.discovery_ID_to_BCF_file_names_output
   #Array[File] sampleBCFs_files = flatten(sampleBCFs_files_aa)
   # Cast array of files to strings so files are not downloaded when size is computed
   #Array[String] sampleBCFs_names = sampleBCFs_files
