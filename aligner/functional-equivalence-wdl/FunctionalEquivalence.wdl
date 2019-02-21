@@ -273,6 +273,11 @@ workflow PairedEndSingleSampleWorkflow {
     File output_cram_index = ConvertToCram.output_cram_index
     File output_cram_md5 = ConvertToCram.output_cram_md5
   }
+  meta {
+              author : "Ruchi Munshi"
+              email : "rmunshi@broadinstitute.org"
+              description: "A WDL workflow based on the [CCDG pipeline standards](https://github.com/CCDG/Pipeline-Standardization/blob/master/PipelineStandard.md) for processing high-throughput sequencing data."
+    }
 }
 
 # TASK DEFINITIONS
