@@ -216,6 +216,11 @@ workflow TopMedAligner {
       File aligner_output_cram = PostAlign.output_cram_file
       File aligner_output_crai = PostAlign.output_crai_file
   }
+  meta {
+            author : "Walt Shands"
+            email : "jshands@ucsc.edu"
+            description: "This is the workflow WDL for the [TOPMed/University of Michigan alignment pipeline](https://github.com/statgen/docker-alignment)"
+  }
 }
 
   task PreAlign {
