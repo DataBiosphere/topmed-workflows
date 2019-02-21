@@ -4,6 +4,8 @@ id: topmed_alignment
 doc: >-
   A CWL wrapper of the TopMed alignment workflow described here:
   https://github.com/statgen/docker-alignment
+  Tool Author: Hyun Min Kang (hmkang@umich.edu) and Adrian Tan (atks@umich.edu)
+  Wrapper Author: Marko Zecevic (marko.zecevic@sbgenomics.com)
 label: TOPMed Alignment
 $namespaces:
   sbg: 'https://sevenbridges.com'
