@@ -2,6 +2,8 @@ class: CommandLineTool
 cwlVersion: v1.0
 id: >-
   vladimir_obucina/topmed-freeze-3a-variant-calling-pipeline/topmed_freeze3_calling/25
+doc: >-
+  This is the CWL wrapper for U of Michigan's [TOPMed Freeze 3a Variant Calling Pipeline](https://github.com/statgen/topmed_freeze3_calling)
 baseCommand: []
 inputs:
   - format: 'BAI,CRAI'
@@ -545,4 +547,7 @@ $namespaces:
 'sbg:projectName': TOPMed Freeze 3a Variant Calling Pipeline
 'sbg:createdBy': mikojicic
 'sbg:modifiedBy': vladimir_obucina
+'dct:creator':
+  'foaf:mbox': 'mailto:vladimir.obucina@sbgenomics.com'
+  'foaf:name': Vladimir Obucina
 'sbg:validationErrors': []

@@ -443,6 +443,11 @@ workflow TopMedVariantCaller {
   output {
       File topmed_variant_caller_output = variantCalling.topmed_variant_caller_output_file
   }
+  meta {
+      author : "Walt Shands"
+      email : "jshands@ucsc.edu"
+      description: "This is the workflow WDL for U of Michigan's [TOPMed Freeze 3a Variant Calling Pipeline](https://github.com/statgen/topmed_freeze3_calling)"
+   }
 }
 
  
