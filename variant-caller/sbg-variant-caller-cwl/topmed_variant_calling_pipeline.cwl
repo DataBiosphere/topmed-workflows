@@ -2,6 +2,8 @@ class: Workflow
 cwlVersion: v1.0
 id: >-
   vladimir_obucina/topmed-freeze-3a-variant-calling-pipeline/topmed-variant-calling-pipeline-cwl1/17
+doc: >-
+    This is the CWL wrapper for U of Michigan's [TOPMed Freeze 3a Variant Calling Pipeline](https://github.com/statgen/topmed_freeze3_calling)
 label: TOPMed Variant Calling Pipeline CWL1
 inputs:
   - id: reference
@@ -150,4 +152,7 @@ requirements:
     - class: InlineJavascriptRequirement
 $namespaces:
   sbg: 'https://sevenbridges.com'
+'dct:creator':
+  'foaf:mbox': 'mailto:vladimir.obucina@sbgenomics.com'
+  'foaf:name': Vladimir Obucina
 
