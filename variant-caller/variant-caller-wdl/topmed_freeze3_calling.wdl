@@ -1,4 +1,4 @@
-import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.30.0/variant-caller/variant-caller-wdl/calculate_contamination.wdl" as getDNAContamination
+import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.32.0/variant-caller/variant-caller-wdl/calculate_contamination.wdl" as getDNAContamination
 
 
 ## This is the U of Michigan variant caller workflow WDL for the workflow code located here:
