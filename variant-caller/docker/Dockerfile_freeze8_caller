@@ -1,0 +1,62 @@
+FROM ubuntu:18.04
+
+# Use the revision of the freeze 8 variant caller suggested by Hyun at U of Michigan
+ARG COMMIT=e53ac6983add8da29b07b14f67fac0b2cef41329
+
+#RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys E298A3A825C0D65DFD57CBB651716619E084DAB9
+#RUN add-apt-repository 'deb https://cloud.r-project.org/bin/linux/ubuntu bionic-cran35/'
+
+# Set environment variable so R (r-base) is installed without asking questions
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y \
+    autoconf \
+    curl \
+    ghostscript \
+    git \
+    gnuplot \
+    groff \
+    htop \
+    libcurl3-dev \
+    libssl-dev \
+    python-pip \
+    python \
+    python3.5 \
+    r-base \
+    unzip \
+    vim \
+    wget \
+    zlib1g-dev
+
+
+LABEL maintainer="jshands@ucsc.edu"
+
+WORKDIR root
+
+RUN git clone https://github.com/statgen/topmed_variant_calling
+WORKDIR /root/topmed_variant_calling
+RUN git checkout $COMMIT .
+RUN git submodule init
+RUN git submodule update
+
+WORKDIR /root/topmed_variant_calling/htslib
+RUN autoheader && autoconf && ./configure && make
+WORKDIR /root/topmed_variant_calling/libsvm
+RUN make
+WORKDIR /root/topmed_variant_calling/apigenome
+RUN autoreconf -vfi && ./configure --prefix $PWD && make && make install
+WORKDIR /root/topmed_variant_calling/cramore
+RUN autoreconf -vfi && ./configure && make
+WORKDIR /root/topmed_variant_calling/libStatGen
+RUN make
+WORKDIR /root/topmed_variant_calling/bamUtil
+RUN make
+WORKDIR /root/topmed_variant_calling/invNorm
+RUN make
+WORKDIR /root/topmed_variant_calling/samtools
+RUN autoheader && autoconf -Wno-syntax && ./configure && make
+WORKDIR /root/topmed_variant_calling/bcftools
+RUN make
+WORKDIR /root/topmed_variant_calling/king
+RUN g++ -O3 -c *.cpp && g++ -O3 -o king *.o -lz
+
