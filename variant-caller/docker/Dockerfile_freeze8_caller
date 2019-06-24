@@ -1,7 +1,7 @@
 FROM ubuntu:18.04
 
 # Use the revision of the freeze 8 variant caller suggested by Hyun at U of Michigan
-ARG COMMIT=3727ebd849d416d21134079f98f8154c583b833a
+ARG COMMIT=dacd7be0010354c9a5024ba142947e2f77f6d995
 
 #RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys E298A3A825C0D65DFD57CBB651716619E084DAB9
 #RUN add-apt-repository 'deb https://cloud.r-project.org/bin/linux/ubuntu bionic-cran35/'
