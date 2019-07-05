@@ -1,16 +1,16 @@
-import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.32.0/variant-caller/variant-caller-wdl/calculate_contamination.wdl" as getDNAContamination
 
 
 ## This is the U of Michigan variant caller workflow WDL for the workflow code located here:
-## https://github.com/statgen/topmed_freeze3_calling
+## https://github.com/statgen/topmed_variant_calling
 ##
-## It uses a Docker image built with software tools that can reproduce 
-## variant calls compatible to TopMed Freeze 3a
+## It uses a Docker image built with software tools that can reproduce
+## variant calls compatible to TopMed Freeze 8
 ##
 ## NOTE: This workflow assumes that input CRAM files have been built with the b38
-## human reference genome. In particular for the TopMed CRAM files the 
+## human reference genome. In particular for the TopMed CRAM files the
 ## reference genome files to use are located here:
-## ftp://share.sph.umich.edu/gotcloud/ref/hs38DH-db142-v1.tgz
+## ftp://share.sph.umich.edu/1000genomes/fullProject/hg38_resources
+## wget ftp://share.sph.umich.edu/1000genomes/fullProject/hg38_resources/topmed_variant_calling_example_resources.tar.gz
 ##
 ##
 
@@ -49,16 +49,6 @@ workflow TopMedVariantCaller {
   Int CreateCRAMIndex_memory_default = select_first([CreateCRAMIndex_memory, 7])
   Int? CreateCRAMIndex_CPUs
   Int CreateCRAMIndex_CPUs_default = select_first([CreateCRAMIndex_CPUs, 1])
-
-  Int? CalcContamination_preemptible_tries
-  Int CalcContamination_preemptible_tries_default = select_first([CalcContamination_preemptible_tries, 3])
-  Int? CalcContamination_maxretries_tries
-  Int CalcContamination_maxretries_tries_default = select_first([CalcContamination_maxretries_tries, 3])
-  Int? CalcContamination_mem
-  Int CalcContamination_mem_default = select_first([CalcContamination_mem, 100 ])
-  Int? CalcContamination_CPUs
-  Int CalcContamination_CPUs_default = select_first([CalcContamination_CPUs, 1])
-
 
   # The variant caller typically takes more than 24 hours to run. GCP terminates
   #  preemptible tasks after 24 hours. So by using 0 for preemptible tries the 
@@ -112,6 +102,7 @@ workflow TopMedVariantCaller {
   # Cromwell error from asking for 0 disk when the input is less than 1GB
   Int additional_disk = select_first([increase_disk_size, 20])
 
+  # The number of threads to use in a particular step of the pipeline
   Int? num_of_jobs
   Int num_of_jobs_to_run = select_first([num_of_jobs, 4 ])
 
@@ -121,6 +112,7 @@ workflow TopMedVariantCaller {
   call expandReferenceFileBlob {
      input:
       referenceFileBlob = referenceFilesBlob,
+      referenceFilesExpectedPath = ExpandRefBlob_expected_path_default,
       referenceFilesGlobPath = ExpandRefBlob_glob_path,
       preemptible_tries = ExpandRefBlob_preemptible_tries_default,
       max_retries = ExpandRefBlob_maxretries_tries_default,
@@ -207,7 +199,12 @@ workflow TopMedVariantCaller {
 #  !!!!Why do I need to do this:
   Float crai_files_size = select_first([sum_crai_file_sizes.total_size, All_CRAIs_disk_size_override_default])
 
-  String discoveryCommandsToRun = "cd examples/ && ${variantCallerHomePath_default}/apigenome/bin/cloudify --cmd ${variantCallerHomePath_default}/scripts/run-discovery-local.cmd && make -f log/discover/example-discovery.mk -k -j ${num_of_jobs_to_run}"
+  Array[String] discoveryCommandsToRun = [
+    "cd examples/",
+    "../apigenome/bin/cloudify --cmd ../scripts/run-discovery-local.cmd",
+    "make -f log/discover/example-discovery.mk -k -j ${num_of_jobs_to_run}"
+    ]
+
   String discoveryGlobPath = "examples/out/sm/*/*"
 
   scatter(cram_file in input_cram_files) {
@@ -237,7 +234,40 @@ workflow TopMedVariantCaller {
 
   Array[File] individualCRAMVariants = flatten(scatter_runVariantCallingDiscovery.topmed_variant_caller_output_files)
 
-  String mergeCommandsToRun = "cd examples/ && mkdir -p out/index &&  ${variantCallerHomePath_default}/apigenome/bin/cram-vb-xy-index --index index/list.107.local.crams.index --dir out/sm/ --out out/index/list.107.local.crams.vb_xy.index && ${variantCallerHomePath_default}/apigenome/bin/cloudify --cmd ${variantCallerHomePath_default}/scripts/run-merge-sites-local.cmd && make -f log/merge/example-merge.mk -k -j ${num_of_jobs_to_run}"
+
+  # We have to use a trick to make Cromwell
+  # skip substitution when using the bash ${<variable} syntax
+  # This is necessary to get the <var>=$(<command>) sub shell 
+  # syntax to work and assign the value to a variable when 
+  # running in Cromwell
+  # See https://gatkforums.broadinstitute.org/wdl/discussion/comment/44570#Comment_44570 
+  String dollar = "$"
+  String doubledollar = "${dollar}{dollar}"
+
+  Array[String] mergeCommandsToRun = [
+    "cd examples/",
+    "mkdir -p out/index",
+    "../apigenome/bin/cram-vb-xy-index --index index/list.107.local.crams.index --dir out/sm/ --out out/index/list.107.local.crams.vb_xy.index",
+    "../apigenome/bin/cloudify --cmd ../scripts/run-merge-sites-local.cmd",
+    "make -f log/merge/example-merge.mk -k -j ${num_of_jobs_to_run}",
+    "../apigenome/bin/cloudify --cmd ../scripts/run-batch-genotype-local.cmd",
+    "make -f log/batch-geno/example-batch-genotype.mk -k -j ${num_of_jobs_to_run}",
+    "../apigenome/bin/cloudify --cmd ../scripts/run-paste-genotype-local.cmd",
+    "make -f log/paste-geno/example-paste-genotype.mk -k -j ${num_of_jobs_to_run}",
+    'cut -f 1,4,5 index/intervals/b38.intervals.X.10Mb.1Mb.txt | grep -v ^chrX | awk \'{print "out/genotypes/hgdp/"${dollar}1"/merged."${dollar}1"_"${dollar}2"_"${dollar}3".gtonly.minDP0.hgdp.bcf"}\' > out/index/hgdp.auto.bcflist.txt',
+    "../bcftools/bcftools concat -n -f out/index/hgdp.auto.bcflist.txt -Ob -o out/genotypes/hgdp/merged.autosomes.gtonly.minDP0.hgdp.bcf",
+    "plink-1.9 --bcf out/genotypes/hgdp/merged.autosomes.gtonly.minDP0.hgdp.bcf --make-bed --out out/genotypes/hgdp/merged.autosomes.gtonly.minDP0.hgdp.plink --allow-extra-chr",
+    "../king/king -b out/genotypes/hgdp/merged.autosomes.gtonly.minDP0.hgdp.plink.bed --degree 4 --kinship --prefix out/genotypes/hgdp/merged.autosomes.gtonly.minDP0.hgdp.king",
+    "../apigenome/bin/vcf-infer-ped --kin0 out/genotypes/hgdp/merged.autosomes.gtonly.minDP0.hgdp.king.kin0 --sex out/genotypes/merged/chr1/merged.chr1_1_1000000.sex_map.txt --out out/genotypes/hgdp/merged.autosomes.gtonly.minDP0.hgdp.king.inferred.ped",
+    "../apigenome/bin/cloudify --cmd ../scripts/run-milk-local.cmd",
+    'cut -f 1,4,5 index/intervals/b38.intervals.X.10Mb.1Mb.txt | awk \'{print "out/milk/"${dollar}1"/milk."${dollar}1"_"${dollar}2"_"${dollar}3".sites.vcf.gz"}\' > out/index/milk.autoX.bcflist.txt',
+    "(seq 1 22; echo X;) | xargs -I {} -P 10 bash -c \"grep chr{}_ out/index/milk.autoX.bcflist.txt | ../bcftools/bcftools concat -f /dev/stdin -Oz -o out/milk/milk.chr{}.sites.vcf.gz\"",
+    "(seq 1 22; echo X;) | xargs -I {} -P 10 ../htslib/tabix -f -pvcf out/milk/milk.chr{}.sites.vcf.gz",
+    "mkdir out/svm",
+    "../apigenome/bin/vcf-svm-milk-filter --in-vcf out/milk/milk.chr2.sites.vcf.gz --out out/svm/milk_svm.chr2 --ref resources/ref/hs38DH.fa --dbsnp resources/ref/dbsnp_142.b38.vcf.gz --posvcf resources/ref/hapmap_3.3.b38.sites.vcf.gz --posvcf resources/ref/1000G_omni2.5.b38.sites.PASS.vcf.gz --train --centromere resources/ref/hg38.centromere.bed.gz --bgzip ../htslib/bgzip --tabix ../htslib/tabix --invNorm ${doubledollar}GC/bin/invNorm --svm-train ${doubledollar}GC/bin/svm-train --svm-predict ${doubledollar}GC/bin/svm-predict",
+    "(seq 1 22; echo X;) | grep -v -w 2 | xargs -I {} -P 10 ../apigenome/bin/vcf-svm-milk-filter --in-vcf out/milk/milk.chr{}.sites.vcf.gz --out out/svm/milk_svm.chr{} --ref resources/ref/hs38DH.fa --dbsnp resources/ref/dbsnp_142.b38.vcf.gz --posvcf resources/ref/hapmap_3.3.b38.sites.vcf.gz --posvcf resources/ref/1000G_omni2.5.b38.sites.PASS.vcf.gz --model out/svm/milk_svm.chr2.svm.model --centromere resources/ref/hg38.centromere.bed.gz --bgzip ../htslib/bgzip --tabix ../htslib/tabix --invNorm ${doubledollar}GC/bin/invNorm --svm-train ../libsvm/svm-train --svm-predict ../libsvm/svm-predict"
+    ]
+
   String mergeGlobPath = "examples/out/*/* examples/out/*/*/* examples/out/*/*/*/*"
 
   call  variantCalling as runVariantCallingMerge {
@@ -273,6 +303,7 @@ workflow TopMedVariantCaller {
 
   task expandReferenceFileBlob {
      File? referenceFileBlob
+     String? referenceFilesExpectedPath
      String referenceFilesGlobPath
 
      Float memory
@@ -303,13 +334,16 @@ workflow TopMedVariantCaller {
           echo "Expanding reference files blob"
           printf "Untarring reference blob ${referenceFileBlob}"
           tar xvzf ${referenceFileBlob}
+      else
+          mkdir -p resources
+          ln -s ${referenceFilesExpectedPath} "resources/ref"
       fi
 
-      printf "Globbing reference files at ${referenceFilesGlobPath}"
+      printf "Globbing reference files at resources/ref/*"
 
       >>>
         output {
-          Array[File] outputReferenceFiles = glob("${referenceFilesGlobPath}")
+          Array[File] outputReferenceFiles = glob("resources/ref/*")
        }
       runtime {
          memory: sub(memory, "\\..*", "") + " GB"
@@ -416,7 +450,7 @@ workflow TopMedVariantCaller {
      Array[String] input_cram_files_names
      Array[File]? cramVariants
 
-     String commandsToRun
+     Array[String] commandsToRun
      String globPath
 
      Float memory
@@ -553,30 +587,16 @@ workflow TopMedVariantCaller {
 
       CODE
 
-
+      # Set the exit code of a pipeline to that of the rightmost command
+      # to exit with a non-zero status, or zero if all commands of the pipeline exit 
       set -o pipefail
+      # cause a bash script to exit immediately when a command fails
       set -e
-
-      #echo each line of the script to stdout so we can see what is happening
+      # cause the bash shell to treat unset variables as an error and exit immediately
+      set -u
+      # echo each line of the script to stdout so we can see what is happening
       set -o xtrace
-      #to turn of echo do 'set +o xtrace'
-
-
-      # Make sure the directory where the reference files are supposed to be
-      # located exists in the container
-      #mkdir -p /topmed_variant_calling/examples/resources/ref
-
-      CROMWELL_WORKING_DIR="$(pwd)"
-      printf "Cromwell current working directory is %s\n" "$CROMWELL_WORKING_DIR"
-      # Escape all the forward slashes for use in sed
-      # https://unix.stackexchange.com/questions/379572/escaping-both-forward-slash-and-back-slash-with-sed
-      CROMWELL_WORKING_DIR_ESCAPED="${dollar}{CROMWELL_WORKING_DIR//\//\\\/}"
-
-      WORKING_DIR='/root/topmed_freeze3_calling'
-
-      #cd examples/
-      # {variantCallerHomePath}/apigenome/bin/cloudify --cmd ${variantCallerHomePath}/scripts/run-discovery-local.cmd
-      #make -f log/discover/example-discovery.mk -k -j  {num_of_jobs_to_run}
+      #to turn off echo do 'set +o xtrace'
 
       ln -s ${variantCallerHomePath}/build-all.sh build-all.sh
       ln -s ${variantCallerHomePath}/invNorm ivNorm
@@ -592,10 +612,11 @@ workflow TopMedVariantCaller {
       ln -s ${variantCallerHomePath}/libsvm libsvm
 
       ln -s ${variantCallerHomePath}/examples/index/intervals examples/index/intervals
+      ln -s ${variantCallerHomePath}/scripts scripts
 
-
-
-      ${commandsToRun}
+      # concatenate the array of commands to run in to a bash command line
+      #commandsToRunStr='
+      ${ sep=' && ' commandsToRun }
 
       # Tar up the output directories into the output file provided in the input JSON
       #tar -zcvf topmed_variant_caller_output.tar.gz "$CROMWELL_WORKING_DIR"/out/
