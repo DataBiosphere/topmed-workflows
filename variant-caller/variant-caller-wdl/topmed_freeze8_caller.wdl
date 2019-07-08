@@ -250,6 +250,8 @@ workflow TopMedVariantCaller {
     "../apigenome/bin/cram-vb-xy-index --index index/list.107.local.crams.index --dir out/sm/ --out out/index/list.107.local.crams.vb_xy.index",
     "../apigenome/bin/cloudify --cmd ../scripts/run-merge-sites-local.cmd",
     "make -f log/merge/example-merge.mk -k -j ${num_of_jobs_to_run}",
+    "../apigenome/bin/cloudify --cmd ../scripts/run-union-sites-local.cmd ${num_of_jobs_to_run}",
+    "make -f log/merge/example-union.mk -k -j  ${num_of_jobs_to_run}",
     "../apigenome/bin/cloudify --cmd ../scripts/run-batch-genotype-local.cmd",
     "make -f log/batch-geno/example-batch-genotype.mk -k -j ${num_of_jobs_to_run}",
     "../apigenome/bin/cloudify --cmd ../scripts/run-paste-genotype-local.cmd",
