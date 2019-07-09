@@ -235,6 +235,83 @@ workflow TopMedVariantCaller {
   Array[File] individualCRAMVariants = flatten(scatter_runVariantCallingDiscovery.topmed_variant_caller_output_files)
 
 
+  Array[String] MergeAndConsolidateSiteListCommandsToRun = [
+    "cd examples/",
+    "mkdir -p out/index",
+    "../apigenome/bin/cram-vb-xy-index --index index/list.107.local.crams.index --dir out/sm/ --out out/index/list.107.local.crams.vb_xy.index",
+    "../apigenome/bin/cloudify --cmd ../scripts/run-merge-sites-local.cmd",
+    "make -f log/merge/example-merge.mk -k -j ${num_of_jobs_to_run}",
+    "../apigenome/bin/cloudify --cmd ../scripts/run-union-sites-local.cmd ${num_of_jobs_to_run}",
+    "make -f log/merge/example-union.mk -k -j  ${num_of_jobs_to_run}",
+    ]
+
+  String mergeAndConsolidateGlobPath = "examples/out/union/*"
+
+  call  variantCalling as runMergeAndConsolidateSiteList {
+      input:
+          input_cram_files_names = input_cram_files_names,
+
+          cramVariants = individualCRAMVariants,
+
+          variantCallerHomePath = variantCallerHomePath_default,
+          commandsToRun = MergeAndConsolidateSiteListCommandsToRun,
+          globPath = mergeAndConsolidateGlobPath,
+
+          disk_size = cram_files_size + crai_files_size + reference_size + additional_disk + VariantCaller_additional_disk_default,
+
+          CPUs = VariantCaller_CPUs_default,
+          preemptible_tries = VariantCaller_preemptible_tries_default,
+          max_retries = VariantCaller_maxretries_tries_default,
+          memory = VariantCaller_memory_default,
+          docker_image = docker_image_default,
+
+          referenceFiles = expandReferenceFileBlob.outputReferenceFiles,
+          referenceFileExpectedPath = ExpandRefBlob_expected_path_default
+  }
+
+
+  Array[File] mergedAndConsolidatedSiteList = runMergeAndConsolidateSiteList.topmed_variant_caller_output_files
+
+
+
+  Array[String] batchGenotypeCommandsToRun = [
+    "cd examples/",
+    "../apigenome/bin/cloudify --cmd ../scripts/run-batch-genotype-local.cmd",
+    "make -f log/batch-geno/example-batch-genotype.mk -k -j ${num_of_jobs_to_run}",
+    ]
+
+  String batchGenotypeGlobPath = "examples/out/genotypes/batches/*/*"
+
+  scatter(cram_file in input_cram_files) {
+      Array[File] batchGenotypesCRAMFiles = [cram_file]
+      call variantCalling as scatter_runVariantCallingBatchGenotype {
+         input:
+          input_crais = crai_files,
+          input_crams = batchGenotypesCRAMFiles,
+          input_cram_files_names = batchGenotypesCRAMFiles,
+
+          mergeAndConsolidatedSiteList = mergedAndConsolidatedSiteList,
+
+          variantCallerHomePath = variantCallerHomePath_default,
+          commandsToRun = batchGenotypeCommandsToRun,
+          globPath = batchGenotypeGlobPath,
+
+          disk_size = cram_files_size + crai_files_size + reference_size + additional_disk + VariantCaller_additional_disk_default,
+
+          CPUs = VariantCaller_CPUs_default,
+          preemptible_tries = VariantCaller_preemptible_tries_default,
+          max_retries = VariantCaller_maxretries_tries_default,
+          memory = VariantCaller_memory_default,
+          docker_image = docker_image_default,
+
+          referenceFiles = expandReferenceFileBlob.outputReferenceFiles,
+          referenceFileExpectedPath = ExpandRefBlob_expected_path_default
+      }
+  }
+
+  Array[File] batchedGenotypes = flatten(scatter_runVariantCallingBatchGenotype.topmed_variant_caller_output_files)
+
+
   # We have to use a trick to make Cromwell
   # skip substitution when using the bash ${<variable} syntax
   # This is necessary to get the <var>=$(<command>) sub shell 
@@ -244,16 +321,9 @@ workflow TopMedVariantCaller {
   String dollar = "$"
   String doubledollar = "${dollar}{dollar}"
 
+
   Array[String] mergeCommandsToRun = [
     "cd examples/",
-    "mkdir -p out/index",
-    "../apigenome/bin/cram-vb-xy-index --index index/list.107.local.crams.index --dir out/sm/ --out out/index/list.107.local.crams.vb_xy.index",
-    "../apigenome/bin/cloudify --cmd ../scripts/run-merge-sites-local.cmd",
-    "make -f log/merge/example-merge.mk -k -j ${num_of_jobs_to_run}",
-    "../apigenome/bin/cloudify --cmd ../scripts/run-union-sites-local.cmd ${num_of_jobs_to_run}",
-    "make -f log/merge/example-union.mk -k -j  ${num_of_jobs_to_run}",
-    "../apigenome/bin/cloudify --cmd ../scripts/run-batch-genotype-local.cmd",
-    "make -f log/batch-geno/example-batch-genotype.mk -k -j ${num_of_jobs_to_run}",
     "../apigenome/bin/cloudify --cmd ../scripts/run-paste-genotype-local.cmd",
     "make -f log/paste-geno/example-paste-genotype.mk -k -j ${num_of_jobs_to_run}",
     'cut -f 1,4,5 index/intervals/b38.intervals.X.10Mb.1Mb.txt | grep -v ^chrX | awk \'{print "out/genotypes/hgdp/"${dollar}1"/merged."${dollar}1"_"${dollar}2"_"${dollar}3".gtonly.minDP0.hgdp.bcf"}\' > out/index/hgdp.auto.bcflist.txt',
@@ -275,7 +345,8 @@ workflow TopMedVariantCaller {
   call  variantCalling as runVariantCallingMerge {
       input:
           input_cram_files_names = input_cram_files_names,
-          cramVariants = individualCRAMVariants,
+
+          batchedGenotypes = batchedGenotypes,
 
           variantCallerHomePath = variantCallerHomePath_default,
           commandsToRun = mergeCommandsToRun,
@@ -451,6 +522,8 @@ workflow TopMedVariantCaller {
      Array[File]? input_crams
      Array[String] input_cram_files_names
      Array[File]? cramVariants
+     Array[File]? mergeAndConsolidatedSiteList
+     Array[File]? batchedGenotypes
 
      Array[String] commandsToRun
      String globPath
@@ -587,10 +660,41 @@ workflow TopMedVariantCaller {
             print("variantCalling: Creating symlink {} for CRAM variant file {}".format(cwd + "/examples/out/sm/" + cram_variant_base_name_wo_extension + "/" + cram_variant_file_basename, cram_variant_file))
             os.symlink(cram_variant_file, cwd + "/examples/out/sm/" + cram_variant_base_name_wo_extension + "/" + cram_variant_file_basename)
 
+      # Create the path to where the symlinks to the reference files will be
+      pathlib.Path("examples/out/union").mkdir(parents=True, exist_ok=True)
+      # Symlink the CRAM variant files to the Cromwell working dir so the variant
+      # caller can find them
+      input_merged_sites_file_names_string = "${ sep=' ' mergeAndConsolidatedSiteList }"
+      input_merged_sites_file_names_list = input_merged_sites_file_names_string.split()
+      print("variantCalling: Input CRAM merged and consolidated sites files names list is {}".format(input_merged_sites_file_names_list))
+      for merged_site_file in input_merged_sites_file_names_list:
+            merged_site_file_basename = os.path.basename(merged_site_file)
+            # Create the path to where the pipeline code will be executed
+            pathlib.Path(cwd + "/examples/out/union/").mkdir(parents=True, exist_ok=True)
+            print("variantCalling: Creating symlink {} for merged and consolidated sites file {}".format(cwd + "/examples/out/union/" + merged_site_file_basename, merged_site_file))
+            os.symlink(merged_site_file, cwd + "/examples/out/union/" + merged_site_file_basename)
+
+      # Create the path to where the symlinks to the reference files will be
+      pathlib.Path("examples/out/genotypes/batches").mkdir(parents=True, exist_ok=True)
+      # Symlink the CRAM variant files to the Cromwell working dir so the variant
+      # caller can find them
+      input_batched_genotypes_file_names_string = "${ sep=' ' batchedGenotypes }"
+      input_batched_genotypes_file_names_list = input_batched_genotypes_file_names_string.split()
+      print("variantCalling: Input CRAM variants files names list is {}".format(input_batched_genotypes_file_names_list))
+      for batched_genotype_file in input_batched_genotypes_file_names_list:
+            batched_genotype_file_basename = os.path.basename(batched_genotype_file)
+            batched_genotype_batch_number = batched_genotype_file_basename.split('.')[0][1:]
+
+            # Create the path to where the pipeline code will be executed
+            pathlib.Path(cwd + "/examples/out/genotypes/batches/" + batched_genotype_batch_number).mkdir(parents=True, exist_ok=True)
+            print("variantCalling: Creating symlink {} for batched genotype file {}".format(cwd + "/examples/out/genotypes/batches/" + batched_genotype_batch_number + "/" + batched_genotype_file_basename, batched_genotype_file))
+            os.symlink(batched_genotype_file, cwd + "/examples/out/genotypes/batches/" + batched_genotype_batch_number + "/" + batched_genotype_file_basename)
+
+
       CODE
 
       # Set the exit code of a pipeline to that of the rightmost command
-      # to exit with a non-zero status, or zero if all commands of the pipeline exit 
+      # to exit with a non-zero status, or zero if all commands of the pipeline exit
       set -o pipefail
       # cause a bash script to exit immediately when a command fails
       set -e
