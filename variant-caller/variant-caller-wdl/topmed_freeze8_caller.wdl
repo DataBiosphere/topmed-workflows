@@ -92,7 +92,7 @@ workflow TopMedVariantCaller {
   Array[String] input_cram_files_names = input_cram_files
 
   String? docker_image
-  String  docker_image_default = select_first([docker_image, "statgen/topmed-variant-calling:v8.0.2"])
+  String  docker_image_default = select_first([docker_image, "statgen/topmed-variant-calling:v8.0.3"])
 
   File? referenceFilesBlob
 
@@ -238,6 +238,22 @@ workflow TopMedVariantCaller {
 
   Array[File] individualCRAMVariants = flatten(scatter_runVariantCallingDiscovery.topmed_variant_caller_output_files)
 
+  call createBatchedFileSet {
+      input:
+        input_cram_files_names = input_cram_files_names,
+
+        list_crams_vb_xy_index = list_crams_vb_xy_index,
+        batchSize = batchSize,
+
+        preemptible_tries = SumFileSizes_preemptible_tries_default,
+        max_retries = SumFileSizes_maxretries_tries_default,
+        CPUs = SumFileSizes_CPUs_default,
+        disk_size = SumFileSizes_disk_size_default,
+        memory = SumFileSizes_memory_default,
+        docker_image = docker_image_default
+  }
+  Array[Array[File]] batchedInputFilesSet = createBatchedFileSet.outputBatchedFileSet
+
 
   Array[String] MergeAndConsolidateSiteListCommandsToRun = [
     "cd examples/",
@@ -257,6 +273,7 @@ workflow TopMedVariantCaller {
           batchSize = batchSize,
 
           cramVariants = individualCRAMVariants,
+          seqOfBatchNumbersFile = createBatchedFileSet.seqOfBatchNumbersFile,
 
           variantCallerHomePath = variantCallerHomePath_default,
           commandsToRun = MergeAndConsolidateSiteListCommandsToRun,
@@ -279,22 +296,6 @@ workflow TopMedVariantCaller {
   File? list_crams_vb_xy_index = runMergeAndConsolidateSiteList.crams_vb_xy_index
 
 
-  call createBatchedFileSet {
-      input:
-        input_cram_files_names = input_cram_files_names,
-
-        list_crams_vb_xy_index = list_crams_vb_xy_index,
-        batchSize = batchSize,
-
-        preemptible_tries = SumFileSizes_preemptible_tries_default,
-        max_retries = SumFileSizes_maxretries_tries_default,
-        CPUs = SumFileSizes_CPUs_default,
-        disk_size = SumFileSizes_disk_size_default,
-        memory = SumFileSizes_memory_default,
-        docker_image = docker_image_default
-  }
-  Array[Array[File]] batchedInputFilesSet = createBatchedFileSet.outputBatchedFileSet
-
   Array[String] batchGenotypeCommandsToRun = [
     "cd examples/",
     "../apigenome/bin/cloudify --cmd ../scripts/run-batch-genotype-local.cmd",
@@ -302,7 +303,6 @@ workflow TopMedVariantCaller {
     ]
 
   String batchGenotypeGlobPath = "examples/out/genotypes/batches/*/*"
-
 
   Array[Int] input_cram_range = range(length(batchedInputFilesSet))
 
@@ -373,6 +373,7 @@ workflow TopMedVariantCaller {
       input:
           input_cram_files_names = input_cram_files_names,
           batchSize = batchSize,
+          seqOfBatchNumbersFile = createBatchedFileSet.seqOfBatchNumbersFile,
 
           batchedGenotypes = batchedGenotypes,
           list_crams_vb_xy_index = list_crams_vb_xy_index,
@@ -495,11 +496,23 @@ workflow TopMedVariantCaller {
           for files_list in aaFileNames:
               writer.writerow(files_list)
 
+      # Create the sequence of batch numbers that will become the seq.batches.by.20.txt file
+      # E.g. if the batch size is 2 and the number of batches is 5 then the numbers
+      # should be '1, 3, 5, 7, 9' 
+      numOfBatches = len(aaFileNames)
+      aSeqOfBatchNumbers = list(range(1, ${batchSize} * numOfBatches, ${batchSize}))
+      strSeqOfBatchNumber = "\n".join(str(i) for i in aSeqOfBatchNumbers)
+
+      # Write the seq batch file to disk so it can be passed to other tasks
+      with open("seq.batches.by.20.txt", "w") as seq_batches_file:
+          seq_batches_file.write(strSeqOfBatchNumber)
+
       CODE
 
      >>>
         output {
           Array[Array[File]] outputBatchedFileSet = read_tsv("batchedInputFileNames.txt")
+          File seqOfBatchNumbersFile = "seq.batches.by.20.txt"
        }
       runtime {
          memory: sub(memory, "\\..*", "") + " GB"
@@ -669,6 +682,7 @@ workflow TopMedVariantCaller {
      Array[File]? mergeAndConsolidatedSiteList
      Array[File]? batchedGenotypes
 
+     File? seqOfBatchNumbersFile
      Int batchNumber = 1
      Int batchSize
 
@@ -713,10 +727,18 @@ workflow TopMedVariantCaller {
       pathlib.Path("examples/index").mkdir(parents=True, exist_ok=True)
       #os.symlink("examples", "${variantCallerHomePath}/examples")
 
-      # Erase the existing sequence batch file
-      with open("examples/index/seq.batches.by.20.txt", 'w') as the_file:
-          seqBatchNum = ${batchNumber-1} * ${batchSize} + 1
-          the_file.write(str(seqBatchNum))
+      if ("${seqOfBatchNumbersFile}"):
+          # Remove the file in case it is already there
+          #os.remove(cwd + "/examples/index/seq.batches.by.20.txt")
+          # Symlink the seq batch file to the Cromwell working dir so the variant
+          # caller can find it
+          os.symlink("${seqOfBatchNumbersFile}", cwd + "/examples/index/seq.batches.by.20.txt")
+      else:
+          # Create or erase the existing sequence batch file and write the single 
+          #batch number to be processed in it
+          with open("examples/index/seq.batches.by.20.txt", 'w') as the_file:
+              seqBatchNum = ${batchNumber-1} * ${batchSize} + 1
+              the_file.write(str(seqBatchNum))
 
       # If a list of cram file names is input, then create the list that
       # will become the examples/index/list.107.local.crams.index file
