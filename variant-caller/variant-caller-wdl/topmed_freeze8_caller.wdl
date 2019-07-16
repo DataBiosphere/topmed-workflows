@@ -238,22 +238,6 @@ workflow TopMedVariantCaller {
 
   Array[File] individualCRAMVariants = flatten(scatter_runVariantCallingDiscovery.topmed_variant_caller_output_files)
 
-  call createBatchedFileSet {
-      input:
-        input_cram_files_names = input_cram_files_names,
-
-        list_crams_vb_xy_index = list_crams_vb_xy_index,
-        batchSize = batchSize,
-
-        preemptible_tries = SumFileSizes_preemptible_tries_default,
-        max_retries = SumFileSizes_maxretries_tries_default,
-        CPUs = SumFileSizes_CPUs_default,
-        disk_size = SumFileSizes_disk_size_default,
-        memory = SumFileSizes_memory_default,
-        docker_image = docker_image_default
-  }
-  Array[Array[File]] batchedInputFilesSet = createBatchedFileSet.outputBatchedFileSet
-
 
   Array[String] MergeAndConsolidateSiteListCommandsToRun = [
     "cd examples/",
@@ -273,7 +257,6 @@ workflow TopMedVariantCaller {
           batchSize = batchSize,
 
           cramVariants = individualCRAMVariants,
-          seqOfBatchNumbersFile = createBatchedFileSet.seqOfBatchNumbersFile,
 
           variantCallerHomePath = variantCallerHomePath_default,
           commandsToRun = MergeAndConsolidateSiteListCommandsToRun,
@@ -337,6 +320,26 @@ workflow TopMedVariantCaller {
   }
 
   Array[File] batchedGenotypes = flatten(scatter_runVariantCallingBatchGenotype.topmed_variant_caller_output_files)
+
+
+
+
+
+  call createBatchedFileSet {
+      input:
+        input_cram_files_names = input_cram_files_names,
+
+        list_crams_vb_xy_index = list_crams_vb_xy_index,
+        batchSize = batchSize,
+
+        preemptible_tries = SumFileSizes_preemptible_tries_default,
+        max_retries = SumFileSizes_maxretries_tries_default,
+        CPUs = SumFileSizes_CPUs_default,
+        disk_size = SumFileSizes_disk_size_default,
+        memory = SumFileSizes_memory_default,
+        docker_image = docker_image_default
+  }
+  Array[Array[File]] batchedInputFilesSet = createBatchedFileSet.outputBatchedFileSet
 
 
   # We have to use a trick to make Cromwell
