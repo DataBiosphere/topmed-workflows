@@ -239,10 +239,69 @@ workflow TopMedVariantCaller {
   Array[File] individualCRAMVariants = flatten(scatter_runVariantCallingDiscovery.topmed_variant_caller_output_files)
 
 
-  Array[String] MergeAndConsolidateSiteListCommandsToRun = [
+  Array[String] CreateVbXyIndexCommandsToRun = [
     "cd examples/",
     "mkdir -p out/index",
     "../apigenome/bin/cram-vb-xy-index --index index/list.107.local.crams.index --dir out/sm/ --out out/index/list.107.local.crams.vb_xy.index",
+    ]
+
+  String createVbXYIndexGlobPath = "examples/out/index/*"
+
+  call  variantCalling as runCreateVbXyIndex {
+      input:
+          input_cram_files_names = input_cram_files_names,
+          batchSize = batchSize,
+
+          cramVariants = individualCRAMVariants,
+
+          variantCallerHomePath = variantCallerHomePath_default,
+          commandsToRun = CreateVbXyIndexCommandsToRun,
+          globPath = createVbXYIndexGlobPath,
+
+          disk_size = additional_disk + VariantCaller_additional_disk_default,
+
+          CPUs = VariantCaller_CPUs_default,
+          preemptible_tries = VariantCaller_preemptible_tries_default,
+          max_retries = VariantCaller_maxretries_tries_default,
+          memory = VariantCaller_memory_default,
+          docker_image = docker_image_default,
+
+          referenceFiles = expandReferenceFileBlob.outputReferenceFiles,
+          referenceFileExpectedPath = ExpandRefBlob_expected_path_default
+  }
+
+  File? list_crams_vb_xy_index = runCreateVbXyIndex.crams_vb_xy_index
+
+
+
+
+
+
+
+  call createBatchedFileSet {
+      input:
+        input_cram_files_names = input_cram_files_names,
+
+        list_crams_vb_xy_index = list_crams_vb_xy_index,
+        batchSize = batchSize,
+
+        preemptible_tries = SumFileSizes_preemptible_tries_default,
+        max_retries = SumFileSizes_maxretries_tries_default,
+        CPUs = SumFileSizes_CPUs_default,
+        disk_size = SumFileSizes_disk_size_default,
+        memory = SumFileSizes_memory_default,
+        docker_image = docker_image_default
+  }
+  Array[Array[File]] batchedInputFilesSet = createBatchedFileSet.outputBatchedFileSet
+
+
+
+
+
+
+  Array[String] MergeAndConsolidateSiteListCommandsToRun = [
+    "cd examples/",
+    "mkdir -p out/index",
     "../apigenome/bin/cloudify --cmd ../scripts/run-merge-sites-local.cmd",
     "make -f log/merge/example-merge.mk -k -j ${num_of_jobs_to_run}",
     "../apigenome/bin/cloudify --cmd ../scripts/run-union-sites-local.cmd ${num_of_jobs_to_run}",
@@ -256,7 +315,9 @@ workflow TopMedVariantCaller {
           input_cram_files_names = input_cram_files_names,
           batchSize = batchSize,
 
+          list_crams_vb_xy_index = list_crams_vb_xy_index,
           cramVariants = individualCRAMVariants,
+          seqOfBatchNumbersFile = createBatchedFileSet.seqOfBatchNumbersFile,
 
           variantCallerHomePath = variantCallerHomePath_default,
           commandsToRun = MergeAndConsolidateSiteListCommandsToRun,
@@ -275,8 +336,47 @@ workflow TopMedVariantCaller {
   }
 
 
+
+
+
+
+#  Array[String] MergeAndConsolidateSiteListCommandsToRun = [
+#    "cd examples/",
+#    "mkdir -p out/index",
+#    "../apigenome/bin/cram-vb-xy-index --index index/list.107.local.crams.index --dir out/sm/ --out out/index/list.107.local.crams.vb_xy.index",
+#    "../apigenome/bin/cloudify --cmd ../scripts/run-merge-sites-local.cmd",
+#    "make -f log/merge/example-merge.mk -k -j ${num_of_jobs_to_run}",
+#    "../apigenome/bin/cloudify --cmd ../scripts/run-union-sites-local.cmd ${num_of_jobs_to_run}",
+#    "make -f log/merge/example-union.mk -k -j  ${num_of_jobs_to_run}",
+#    ]
+#
+#  String mergeAndConsolidateGlobPath = "examples/out/union/*"
+#
+#  call  variantCalling as runMergeAndConsolidateSiteList {
+#      input:
+#          input_cram_files_names = input_cram_files_names,
+#          batchSize = batchSize,
+#
+#          cramVariants = individualCRAMVariants,
+#
+#          variantCallerHomePath = variantCallerHomePath_default,
+#          commandsToRun = MergeAndConsolidateSiteListCommandsToRun,
+#          globPath = mergeAndConsolidateGlobPath,
+#
+#          disk_size = additional_disk + VariantCaller_additional_disk_default,
+#
+#          CPUs = VariantCaller_CPUs_default,
+#          preemptible_tries = VariantCaller_preemptible_tries_default,
+#          max_retries = VariantCaller_maxretries_tries_default,
+#          memory = VariantCaller_memory_default,
+#          docker_image = docker_image_default,
+#
+#          referenceFiles = expandReferenceFileBlob.outputReferenceFiles,
+#          referenceFileExpectedPath = ExpandRefBlob_expected_path_default
+#  }
+#
+
   Array[File] mergedAndConsolidatedSiteList = runMergeAndConsolidateSiteList.topmed_variant_caller_output_files
-  File? list_crams_vb_xy_index = runMergeAndConsolidateSiteList.crams_vb_xy_index
 
 
   Array[String] batchGenotypeCommandsToRun = [
@@ -324,24 +424,6 @@ workflow TopMedVariantCaller {
 
 
 
-
-  call createBatchedFileSet {
-      input:
-        input_cram_files_names = input_cram_files_names,
-
-        list_crams_vb_xy_index = list_crams_vb_xy_index,
-        batchSize = batchSize,
-
-        preemptible_tries = SumFileSizes_preemptible_tries_default,
-        max_retries = SumFileSizes_maxretries_tries_default,
-        CPUs = SumFileSizes_CPUs_default,
-        disk_size = SumFileSizes_disk_size_default,
-        memory = SumFileSizes_memory_default,
-        docker_image = docker_image_default
-  }
-  Array[Array[File]] batchedInputFilesSet = createBatchedFileSet.outputBatchedFileSet
-
-
   # We have to use a trick to make Cromwell
   # skip substitution when using the bash ${<variable} syntax
   # This is necessary to get the <var>=$(<command>) sub shell 
@@ -362,6 +444,7 @@ workflow TopMedVariantCaller {
     "../king/king -b out/genotypes/hgdp/merged.autosomes.gtonly.minDP0.hgdp.plink.bed --degree 4 --kinship --prefix out/genotypes/hgdp/merged.autosomes.gtonly.minDP0.hgdp.king",
     "../apigenome/bin/vcf-infer-ped --kin0 out/genotypes/hgdp/merged.autosomes.gtonly.minDP0.hgdp.king.kin0 --sex out/genotypes/merged/chr1/merged.chr1_1_1000000.sex_map.txt --out out/genotypes/hgdp/merged.autosomes.gtonly.minDP0.hgdp.king.inferred.ped",
     "../apigenome/bin/cloudify --cmd ../scripts/run-milk-local.cmd",
+    "make -f log/milk/example-milk.mk -k -j ${num_of_jobs_to_run}",
     'cut -f 1,4,5 index/intervals/b38.intervals.X.10Mb.1Mb.txt | awk \'{print "out/milk/"${dollar}1"/milk."${dollar}1"_"${dollar}2"_"${dollar}3".sites.vcf.gz"}\' > out/index/milk.autoX.bcflist.txt',
     "(seq 1 22; echo X;) | xargs -I {} -P 10 bash -c \"grep chr{}_ out/index/milk.autoX.bcflist.txt | ../bcftools/bcftools concat -f /dev/stdin -Oz -o out/milk/milk.chr{}.sites.vcf.gz\"",
     "(seq 1 22; echo X;) | xargs -I {} -P 10 ../htslib/tabix -f -pvcf out/milk/milk.chr{}.sites.vcf.gz",
@@ -406,6 +489,13 @@ workflow TopMedVariantCaller {
       description: "This is the workflow WDL for U of Michigan's [TOPMed Freeze 8 Variant Calling Pipeline](https://github.com/statgen/topmed_variant_calling)"
    }
 }
+
+
+
+
+
+
+
 
 
   task createBatchedFileSet {
