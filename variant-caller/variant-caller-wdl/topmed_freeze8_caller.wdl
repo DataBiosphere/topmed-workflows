@@ -121,7 +121,7 @@ workflow TopMedVariantCaller {
       max_retries = ExpandRefBlob_maxretries_tries_default,
       docker_image = docker_image_default,
       CPUs = ExpandRefBlob_CPUs_default,
-      disk_size = reference_size,
+      disk_size = reference_size  + additional_disk,
       memory = ExpandRefBlob_memory_default
   }
 
@@ -218,21 +218,18 @@ workflow TopMedVariantCaller {
           input_crams = batchCRAMFiles,
           input_cram_files_names = batchCRAMFiles,
           batchSize = batchSize,
+          referenceFiles = expandReferenceFileBlob.outputReferenceFiles,
 
           variantCallerHomePath = variantCallerHomePath_default,
           commandsToRun = discoveryCommandsToRun,
           globPath = discoveryGlobPath,
 
           disk_size = cram_files_size + crai_files_size + reference_size + additional_disk + VariantCaller_additional_disk_default,
-
           CPUs = VariantCaller_CPUs_default,
           preemptible_tries = VariantCaller_preemptible_tries_default,
           max_retries = VariantCaller_maxretries_tries_default,
           memory = VariantCaller_memory_default,
-          docker_image = docker_image_default,
-
-          referenceFiles = expandReferenceFileBlob.outputReferenceFiles,
-          referenceFileExpectedPath = ExpandRefBlob_expected_path_default
+          docker_image = docker_image_default
       }
   }
 
@@ -244,9 +241,7 @@ workflow TopMedVariantCaller {
     "mkdir -p out/index",
     "../apigenome/bin/cram-vb-xy-index --index index/list.107.local.crams.index --dir out/sm/ --out out/index/list.107.local.crams.vb_xy.index",
     ]
-
   String createVbXYIndexGlobPath = "examples/out/index/*"
-
   call  variantCalling as runCreateVbXyIndex {
       input:
           input_cram_files_names = input_cram_files_names,
@@ -259,23 +254,14 @@ workflow TopMedVariantCaller {
           globPath = createVbXYIndexGlobPath,
 
           disk_size = additional_disk + VariantCaller_additional_disk_default,
-
           CPUs = VariantCaller_CPUs_default,
           preemptible_tries = VariantCaller_preemptible_tries_default,
           max_retries = VariantCaller_maxretries_tries_default,
           memory = VariantCaller_memory_default,
           docker_image = docker_image_default,
 
-          referenceFiles = expandReferenceFileBlob.outputReferenceFiles,
-          referenceFileExpectedPath = ExpandRefBlob_expected_path_default
   }
-
   File? list_crams_vb_xy_index = runCreateVbXyIndex.crams_vb_xy_index
-
-
-
-
-
 
 
   call createBatchedFileSet {
@@ -296,9 +282,6 @@ workflow TopMedVariantCaller {
 
 
 
-
-
-
   Array[String] MergeAndConsolidateSiteListCommandsToRun = [
     "cd examples/",
     "mkdir -p out/index",
@@ -307,13 +290,12 @@ workflow TopMedVariantCaller {
     "../apigenome/bin/cloudify --cmd ../scripts/run-union-sites-local.cmd ${num_of_jobs_to_run}",
     "make -f log/merge/example-union.mk -k -j  ${num_of_jobs_to_run}",
     ]
-
   String mergeAndConsolidateGlobPath = "examples/out/union/*"
-
   call  variantCalling as runMergeAndConsolidateSiteList {
       input:
           input_cram_files_names = input_cram_files_names,
           batchSize = batchSize,
+          referenceFiles = expandReferenceFileBlob.outputReferenceFiles,
 
           list_crams_vb_xy_index = list_crams_vb_xy_index,
           cramVariants = individualCRAMVariants,
@@ -323,59 +305,14 @@ workflow TopMedVariantCaller {
           commandsToRun = MergeAndConsolidateSiteListCommandsToRun,
           globPath = mergeAndConsolidateGlobPath,
 
-          disk_size = additional_disk + VariantCaller_additional_disk_default,
+          disk_size = additional_disk + reference_size + VariantCaller_additional_disk_default,
 
           CPUs = VariantCaller_CPUs_default,
           preemptible_tries = VariantCaller_preemptible_tries_default,
           max_retries = VariantCaller_maxretries_tries_default,
           memory = VariantCaller_memory_default,
-          docker_image = docker_image_default,
-
-          referenceFiles = expandReferenceFileBlob.outputReferenceFiles,
-          referenceFileExpectedPath = ExpandRefBlob_expected_path_default
+          docker_image = docker_image_default
   }
-
-
-
-
-
-
-#  Array[String] MergeAndConsolidateSiteListCommandsToRun = [
-#    "cd examples/",
-#    "mkdir -p out/index",
-#    "../apigenome/bin/cram-vb-xy-index --index index/list.107.local.crams.index --dir out/sm/ --out out/index/list.107.local.crams.vb_xy.index",
-#    "../apigenome/bin/cloudify --cmd ../scripts/run-merge-sites-local.cmd",
-#    "make -f log/merge/example-merge.mk -k -j ${num_of_jobs_to_run}",
-#    "../apigenome/bin/cloudify --cmd ../scripts/run-union-sites-local.cmd ${num_of_jobs_to_run}",
-#    "make -f log/merge/example-union.mk -k -j  ${num_of_jobs_to_run}",
-#    ]
-#
-#  String mergeAndConsolidateGlobPath = "examples/out/union/*"
-#
-#  call  variantCalling as runMergeAndConsolidateSiteList {
-#      input:
-#          input_cram_files_names = input_cram_files_names,
-#          batchSize = batchSize,
-#
-#          cramVariants = individualCRAMVariants,
-#
-#          variantCallerHomePath = variantCallerHomePath_default,
-#          commandsToRun = MergeAndConsolidateSiteListCommandsToRun,
-#          globPath = mergeAndConsolidateGlobPath,
-#
-#          disk_size = additional_disk + VariantCaller_additional_disk_default,
-#
-#          CPUs = VariantCaller_CPUs_default,
-#          preemptible_tries = VariantCaller_preemptible_tries_default,
-#          max_retries = VariantCaller_maxretries_tries_default,
-#          memory = VariantCaller_memory_default,
-#          docker_image = docker_image_default,
-#
-#          referenceFiles = expandReferenceFileBlob.outputReferenceFiles,
-#          referenceFileExpectedPath = ExpandRefBlob_expected_path_default
-#  }
-#
-
   Array[File] mergedAndConsolidatedSiteList = runMergeAndConsolidateSiteList.topmed_variant_caller_output_files
 
 
@@ -384,11 +321,9 @@ workflow TopMedVariantCaller {
     "../apigenome/bin/cloudify --cmd ../scripts/run-batch-genotype-local.cmd",
     "make -f log/batch-geno/example-batch-genotype.mk -k -j ${num_of_jobs_to_run}",
     ]
-
   String batchGenotypeGlobPath = "examples/out/genotypes/batches/*/*"
 
   Array[Int] input_cram_range = range(length(batchedInputFilesSet))
-
   scatter(cram_files_set_index in input_cram_range) {
       Array[File] batchOfCRAMFiles = batchedInputFilesSet[cram_files_set_index]
       call variantCalling as scatter_runVariantCallingBatchGenotype {
@@ -406,19 +341,14 @@ workflow TopMedVariantCaller {
           commandsToRun = batchGenotypeCommandsToRun,
           globPath = batchGenotypeGlobPath,
 
-          disk_size = cram_files_size + crai_files_size + reference_size + additional_disk + VariantCaller_additional_disk_default,
-
+          disk_size = cram_files_size + crai_files_size + additional_disk + VariantCaller_additional_disk_default,
           CPUs = VariantCaller_CPUs_default,
           preemptible_tries = VariantCaller_preemptible_tries_default,
           max_retries = VariantCaller_maxretries_tries_default,
           memory = VariantCaller_memory_default,
-          docker_image = docker_image_default,
-
-          referenceFiles = expandReferenceFileBlob.outputReferenceFiles,
-          referenceFileExpectedPath = ExpandRefBlob_expected_path_default
+          docker_image = docker_image_default
       }
   }
-
   Array[File] batchedGenotypes = flatten(scatter_runVariantCallingBatchGenotype.topmed_variant_caller_output_files)
 
 
@@ -460,6 +390,7 @@ workflow TopMedVariantCaller {
           input_cram_files_names = input_cram_files_names,
           batchSize = batchSize,
           seqOfBatchNumbersFile = createBatchedFileSet.seqOfBatchNumbersFile,
+          referenceFiles = expandReferenceFileBlob.outputReferenceFiles,
 
           batchedGenotypes = batchedGenotypes,
           list_crams_vb_xy_index = list_crams_vb_xy_index,
@@ -468,16 +399,12 @@ workflow TopMedVariantCaller {
           commandsToRun = mergeCommandsToRun,
           globPath = mergeGlobPath,
 
-          disk_size = additional_disk + VariantCaller_additional_disk_default,
-
+          disk_size = additional_disk + reference_size + VariantCaller_additional_disk_default,
           CPUs = VariantCaller_CPUs_default,
           preemptible_tries = VariantCaller_preemptible_tries_default,
           max_retries = VariantCaller_maxretries_tries_default,
           memory = VariantCaller_memory_default,
-          docker_image = docker_image_default,
-
-          referenceFiles = expandReferenceFileBlob.outputReferenceFiles,
-          referenceFileExpectedPath = ExpandRefBlob_expected_path_default
+          docker_image = docker_image_default
   }
 
   output {
@@ -578,9 +505,6 @@ workflow TopMedVariantCaller {
       # batchSize is how many elements each list should have
       aaFileNames = [batchCRAMFileList[i * ${batchSize}:(i + 1) * ${batchSize}] for i in \
               range((len(batchCRAMFileList) + ${batchSize} - 1) // ${batchSize} )]
-
-      #aaFileNames = [cram_files[i * ${batchSize}:(i + 1) * ${batchSize}] for i in \
-      #        range((len(cram_files) + ${batchSize} - 1) // ${batchSize} )]
 
       print ("The array of arrays of file names is {}".format(aaFileNames))
 
@@ -792,8 +716,7 @@ workflow TopMedVariantCaller {
      String docker_image
      Int max_retries
 
-     Array[File] referenceFiles
-     String referenceFileExpectedPath
+     Array[File]? referenceFiles
      String variantCallerHomePath
 
      String indexFileName = "examples/index/list.107.local.crams.index"
@@ -818,11 +741,8 @@ workflow TopMedVariantCaller {
       cwd = os.getcwd()
       # Create the path to where the pipeline code will be executed
       pathlib.Path("examples/index").mkdir(parents=True, exist_ok=True)
-      #os.symlink("examples", "${variantCallerHomePath}/examples")
 
       if ("${seqOfBatchNumbersFile}"):
-          # Remove the file in case it is already there
-          #os.remove(cwd + "/examples/index/seq.batches.by.20.txt")
           # Symlink the seq batch file to the Cromwell working dir so the variant
           # caller can find it
           os.symlink("${seqOfBatchNumbersFile}", cwd + "/examples/index/seq.batches.by.20.txt")
@@ -1001,9 +921,6 @@ workflow TopMedVariantCaller {
       # concatenate the array of commands to run in to a bash command line
       #commandsToRunStr='
       ${ sep=' && ' commandsToRun }
-
-      # Tar up the output directories into the output file provided in the input JSON
-      #tar -zcvf topmed_variant_caller_output.tar.gz "$CROMWELL_WORKING_DIR"/out/
 
     >>>
      output {
