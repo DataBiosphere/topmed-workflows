@@ -381,7 +381,7 @@ workflow TopMedVariantCaller {
     "(seq 1 22; echo X;) | grep -v -w 2 | xargs -I {} -P 10 ../apigenome/bin/vcf-svm-milk-filter --in-vcf out/milk/milk.chr{}.sites.vcf.gz --out out/svm/milk_svm.chr{} --ref resources/ref/hs38DH.fa --dbsnp resources/ref/dbsnp_142.b38.vcf.gz --posvcf resources/ref/hapmap_3.3.b38.sites.vcf.gz --posvcf resources/ref/1000G_omni2.5.b38.sites.PASS.vcf.gz --model out/svm/milk_svm.chr2.svm.model --centromere resources/ref/hg38.centromere.bed.gz --bgzip ../htslib/bgzip --tabix ../htslib/tabix --invNorm ../invNorm/bin/invNorm --svm-train ../libsvm/svm-train --svm-predict ../libsvm/svm-predict"
     ]
 
-  String mergeGlobPath = "examples/out/*/* examples/out/*/*/* examples/out/*/*/*/*"
+  String mergeGlobPath = "examples/out/*/*.gz"
 
   call  variantCalling as runVariantCallingMerge {
       input:
