@@ -4,6 +4,6 @@
   "https://storage.googleapis.com/topmed_workflow_testing/topmed_aligner/input_files/NWD176325.recab.cram",
   "https://storage.googleapis.com/topmed_workflow_testing/topmed_aligner/input_files/NWD759405.recab.cram"
   ],
-  "TopMedVariantCaller.referenceFilesBlob": "/mnt/topmed_workflow_testing/topmed_variant_caller/reference_files/topmed_variant_calling_example_resources.tar.gz"
+  "TopMedVariantCaller.referenceFilesBlob": "https://storage.googleapis.com/topmed_workflow_testing/topmed_variant_caller/reference_files/topmed_variant_calling_example_resources.tar.gz"
 }
 
