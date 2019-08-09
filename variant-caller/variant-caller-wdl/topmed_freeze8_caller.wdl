@@ -211,7 +211,7 @@ workflow TopMedVariantCaller {
   String discoveryGlobPath = "examples/out/sm/*/*"
 
   scatter(cram_file in input_cram_files) {
-      Float cram_file_size = round(size(cram_file, "GB")) + 1
+      Float discovery_cram_file_size = round(size(cram_file, "GB")) + 1
       Array[File] batchCRAMFiles = [cram_file]
       call variantCalling as scatter_runVariantCallingDiscovery {
          input:
@@ -225,7 +225,7 @@ workflow TopMedVariantCaller {
           commandsToRun = discoveryCommandsToRun,
           globPath = discoveryGlobPath,
 
-          disk_size = cram_file_size + crai_file_size + reference_size + additional_disk + VariantCaller_additional_disk_default,
+          disk_size = discovery_cram_file_size + crai_files_size + reference_size + additional_disk + VariantCaller_additional_disk_default,
           CPUs = VariantCaller_CPUs_default,
           preemptible_tries = VariantCaller_preemptible_tries_default,
           max_retries = VariantCaller_maxretries_tries_default,
@@ -235,6 +235,25 @@ workflow TopMedVariantCaller {
   }
 
   Array[File] individualCRAMVariants = flatten(scatter_runVariantCallingDiscovery.topmed_variant_caller_output_files)
+
+  if (dynamically_calculate_disk_requirement) {
+      # Use scatter to get the size of each CRAI file:
+      # Add 1 GB to size in case size is less than 1 GB
+      scatter(variant_file in individualCRAMVariants ) { Float variant_file_size = round(size(variant_file, "GB")) + 1 }
+      # Gather the sizes of the CRAI files:
+      Array[Float] variant_file_sizes_array = variant_file_size
+      # Use a task to sum the array:
+      call sum_file_sizes as sum_variant_file_sizes {
+        input:
+          file_sizes = variant_file_sizes_array,
+          preemptible_tries = SumFileSizes_preemptible_tries_default,
+          CPUs = SumFileSizes_CPUs_default,
+          max_retries = SumFileSizes_maxretries_tries_default,
+          disk_size = SumFileSizes_disk_size_default,
+          memory = SumFileSizes_memory_default
+      }
+  }
+  Float variant_files_size = select_first([sum_variant_file_sizes.total_size, All_CRAIs_disk_size_override_default])
 
 
   Array[String] CreateVbXyIndexCommandsToRun = [
@@ -254,7 +273,7 @@ workflow TopMedVariantCaller {
           commandsToRun = CreateVbXyIndexCommandsToRun,
           globPath = createVbXYIndexGlobPath,
 
-          disk_size = additional_disk + VariantCaller_additional_disk_default,
+          disk_size = variant_files_size + additional_disk + VariantCaller_additional_disk_default,
           CPUs = VariantCaller_CPUs_default,
           preemptible_tries = VariantCaller_preemptible_tries_default,
           max_retries = VariantCaller_maxretries_tries_default,
@@ -306,7 +325,7 @@ workflow TopMedVariantCaller {
           commandsToRun = MergeAndConsolidateSiteListCommandsToRun,
           globPath = mergeAndConsolidateGlobPath,
 
-          disk_size = additional_disk + reference_size + VariantCaller_additional_disk_default,
+          disk_size = variant_files_size + additional_disk + reference_size + VariantCaller_additional_disk_default,
 
           CPUs = VariantCaller_CPUs_default,
           preemptible_tries = VariantCaller_preemptible_tries_default,
@@ -328,28 +347,29 @@ workflow TopMedVariantCaller {
   scatter(cram_files_set_index in input_cram_range) {
       Array[File] batchOfCRAMFiles = batchedInputFilesSet[cram_files_set_index]
 
-
-      if (dynamically_calculate_disk_requirement) {
-          # Use scatter to get the size of each CRAM file:
-          # Add 1 GB to size in case size is less than 1 GB
-          # Use an array of String instead of File so Cromwell doesn't try to download them
-          scatter(cram_file in batchOfCRAMFiles ) { Float cram_file_size = round(size(cram_file, "GB")) + 1 }
-          # Gather the sizes of the CRAM files:
-          Array[Float] cram_file_sizes = cram_file_size
-          # Use a task to sum the array:
-          call sum_file_sizes as sum_batched_cram_file_sizes {
-            input:
-              file_sizes = cram_file_sizes,
-              preemptible_tries = SumFileSizes_preemptible_tries_default,
-              max_retries = SumFileSizes_maxretries_tries_default,
-              CPUs = SumFileSizes_CPUs_default,
-              disk_size = SumFileSizes_disk_size_default,
-              memory = SumFileSizes_memory_default
-          }
-      }
-
-      #Float cram_files_size = if (dynamically_calculate_disk_requirement) then sum_cram_file_sizes.total_size else All_CRAMs_disk_size_override_default
-      Float batched_cram_files_size = select_first([sum_batched_cram_file_sizes.total_size, All_CRAMs_disk_size_override_default])
+      # Nested scatters are not supported yet in Cromwell so we must set
+      # CRAM_file_max_disk_size_override_default large enough for the largest CRAM used
+      # in a batch
+      #  if (dynamically_calculate_disk_requirement) {
+      #        # Use scatter to get the size of each CRAM file:
+      #        # Add 1 GB to size in case size is less than 1 GB
+      #        # Use an array of String instead of File so Cromwell doesn't try to download them
+      #      scatter(cram_file in batchOfCRAMFiles ) { Float batch_cram_file_size = round(size(cram_file, "GB")) + 1 }
+      #        # Gather the sizes of the CRAM files:
+      #      Array[Float] batch_cram_file_sizes = batch_cram_file_size
+      #        # Use a task to sum the array:
+      #      call sum_file_sizes as sum_batched_cram_file_sizes {
+      #        input:
+      #          file_sizes = batch_cram_file_sizes,
+      #          preemptible_tries = SumFileSizes_preemptible_tries_default,
+      #          max_retries = SumFileSizes_maxretries_tries_default,
+      #          CPUs = SumFileSizes_CPUs_default,
+      #          disk_size = SumFileSizes_disk_size_default,
+      #          memory = SumFileSizes_memory_default
+      #      }
+      #  }
+      #
+      #Float batched_cram_files_size = select_first([sum_batched_cram_file_sizes.total_size, All_CRAMs_disk_size_override_default])
 
       call variantCalling as scatter_runVariantCallingBatchGenotype {
          input:
@@ -366,7 +386,8 @@ workflow TopMedVariantCaller {
           commandsToRun = batchGenotypeCommandsToRun,
           globPath = batchGenotypeGlobPath,
 
-          disk_size = batched_cram_files_size + crai_files_size + additional_disk + VariantCaller_additional_disk_default,
+          #disk_size = batched_cram_files_size + crai_files_size + additional_disk + VariantCaller_additional_disk_default,
+          disk_size = length(batchOfCRAMFiles)*CRAM_file_max_disk_size_override_default + crai_files_size + additional_disk + VariantCaller_additional_disk_default,
           CPUs = VariantCaller_CPUs_default,
           preemptible_tries = VariantCaller_preemptible_tries_default,
           max_retries = VariantCaller_maxretries_tries_default,
@@ -376,6 +397,25 @@ workflow TopMedVariantCaller {
   }
   Array[File] batchedGenotypes = flatten(scatter_runVariantCallingBatchGenotype.topmed_variant_caller_output_files)
 
+
+  if (dynamically_calculate_disk_requirement) {
+      # Use scatter to get the size of each CRAI file:
+      # Add 1 GB to size in case size is less than 1 GB
+      scatter(genotype_file in batchedGenotypes ) { Float genotype_file_size = round(size(genotype_file, "GB")) + 1 }
+      # Gather the sizes of the CRAI files:
+      Array[Float] genotype_file_sizes_array = genotype_file_size
+      # Use a task to sum the array:
+      call sum_file_sizes as sum_genotype_file_sizes {
+        input:
+          file_sizes = genotype_file_sizes_array,
+          preemptible_tries = SumFileSizes_preemptible_tries_default,
+          CPUs = SumFileSizes_CPUs_default,
+          max_retries = SumFileSizes_maxretries_tries_default,
+          disk_size = SumFileSizes_disk_size_default,
+          memory = SumFileSizes_memory_default
+      }
+  }
+  Float genotype_files_size = select_first([sum_genotype_file_sizes.total_size, All_CRAIs_disk_size_override_default])
 
 
 
@@ -422,7 +462,7 @@ workflow TopMedVariantCaller {
           commandsToRun = mergeCommandsToRun,
           globPath = mergeGlobPath,
 
-          disk_size = additional_disk + reference_size + VariantCaller_additional_disk_default,
+          disk_size = genotype_files_size + additional_disk + reference_size + VariantCaller_additional_disk_default,
           CPUs = VariantCaller_CPUs_default,
           preemptible_tries = VariantCaller_preemptible_tries_default,
           max_retries = VariantCaller_maxretries_tries_default,
@@ -605,14 +645,12 @@ workflow TopMedVariantCaller {
           ln -s ${referenceFilesExpectedPath} "resources/ref"
       fi
 
-      #printf "Globbing reference files at resources/ref/*"
       printf "Globbing reference files at ${referenceFilesGlobPath}"
 
 
       >>>
         output {
-          # Array[File] outputReferenceFiles = glob("${referenceFilesGlobPath}")
-          Array[File] outputReferenceFiles = glob("resources/ref/*")
+          Array[File] outputReferenceFiles = glob("${referenceFilesGlobPath}")
        }
       runtime {
          memory: sub(memory, "\\..*", "") + " GB"
