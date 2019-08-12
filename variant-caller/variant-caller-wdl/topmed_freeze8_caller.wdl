@@ -74,7 +74,6 @@ workflow TopMedVariantCaller {
   String? VariantCallerHomePath
   String variantCallerHomePath_default = select_first([VariantCallerHomePath, "/topmed_variant_calling" ])
 
-
   Int? ExpandRefBlob_preemptible_tries
   Int ExpandRefBlob_preemptible_tries_default = select_first([ExpandRefBlob_preemptible_tries, 3])
   Int? ExpandRefBlob_maxretries_tries
@@ -83,10 +82,9 @@ workflow TopMedVariantCaller {
   Int ExpandRefBlob_memory_default = select_first([ExpandRefBlob_memory, 100 ])
   Int? ExpandRefBlob_CPUs
   Int ExpandRefBlob_CPUs_default = select_first([ExpandRefBlob_CPUs, 1])
-  String? ExpandRefBlob_expected_path
-  String ExpandRefBlob_expected_path_default = select_first([ExpandRefBlob_expected_path, "resources/ref"])
-  String ExpandRefBlob_glob_path = ExpandRefBlob_expected_path_default + "/*"
-
+  String ExpandRefBlob_glob_path = "resources/ref/*"
+  File referenceFilesBlob
+ 
   Array[File]? input_crai_files
   Array[File] input_cram_files
   Array[String] input_cram_files_names = input_cram_files
@@ -94,7 +92,6 @@ workflow TopMedVariantCaller {
   String? docker_image
   String  docker_image_default = select_first([docker_image, "statgen/topmed-variant-calling:v8.0.3"])
 
-  File? referenceFilesBlob
 
   # Optional input to increase all disk sizes in case of outlier sample with strange size behavior
   Int? increase_disk_size
@@ -115,7 +112,6 @@ workflow TopMedVariantCaller {
   call expandReferenceFileBlob {
      input:
       referenceFileBlob = referenceFilesBlob,
-      referenceFilesExpectedPath = ExpandRefBlob_expected_path_default,
       referenceFilesGlobPath = ExpandRefBlob_glob_path,
       preemptible_tries = ExpandRefBlob_preemptible_tries_default,
       max_retries = ExpandRefBlob_maxretries_tries_default,
@@ -608,8 +604,7 @@ workflow TopMedVariantCaller {
 
 
   task expandReferenceFileBlob {
-     File? referenceFileBlob
-     String? referenceFilesExpectedPath
+     File referenceFileBlob
      String referenceFilesGlobPath
 
      Float memory
@@ -636,17 +631,11 @@ workflow TopMedVariantCaller {
       set -o xtrace
       #to turn off echo do 'set +o xtrace'
 
-      if [[ -n "${referenceFileBlob}" ]]; then
-          echo "Expanding reference files blob"
-          printf "Untarring reference blob ${referenceFileBlob}"
-          tar xvzf ${referenceFileBlob}
-      else
-          mkdir -p resources
-          ln -s ${referenceFilesExpectedPath} "resources/ref"
-      fi
+      echo "Expanding reference files blob"
+      printf "Untarring reference blob ${referenceFileBlob}"
+      tar xvzf ${referenceFileBlob}
 
       printf "Globbing reference files at ${referenceFilesGlobPath}"
-
 
       >>>
         output {
