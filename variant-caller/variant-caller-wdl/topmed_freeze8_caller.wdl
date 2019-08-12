@@ -257,7 +257,7 @@ workflow TopMedVariantCaller {
     "mkdir -p out/index",
     "../apigenome/bin/cram-vb-xy-index --index index/list.107.local.crams.index --dir out/sm/ --out out/index/list.107.local.crams.vb_xy.index",
     ]
-  String createVbXYIndexGlobPath = "examples/out/index/*"
+  String createVbXYIndexGlobPath = "examples/out/index/list.107.local.crams.vb_xy.index"
   call  variantCalling as runCreateVbXyIndex {
       input:
           input_cram_files_names = input_cram_files_names,
@@ -277,8 +277,8 @@ workflow TopMedVariantCaller {
           docker_image = docker_image_default,
 
   }
-  File? list_crams_vb_xy_index = runCreateVbXyIndex.crams_vb_xy_index
-
+  Array[File] array_list_crams_vb_xy_index = runCreateVbXyIndex.topmed_variant_caller_output_files
+  File list_crams_vb_xy_index = array_list_crams_vb_xy_index[0]
 
   call createBatchedFileSet {
       input:
@@ -974,7 +974,6 @@ workflow TopMedVariantCaller {
     >>>
      output {
       Array[File] topmed_variant_caller_output_files = glob("${globPath}")
-      File? crams_vb_xy_index = "${list_crams_vb_xy_index_file_name}"
     }
    runtime {
       preemptible: preemptible_tries
