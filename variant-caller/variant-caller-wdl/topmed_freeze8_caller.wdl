@@ -204,13 +204,15 @@ workflow TopMedVariantCaller {
     "make -f log/discover/example-discovery.mk -k -j ${num_of_jobs_to_run}"
     ]
 
-  String discoveryGlobPath = "examples/out/sm/*/*"
+  #String discoveryGlobPath = "examples/out/sm/*/*"
 
   scatter(cram_file in input_cram_files) {
       Float discovery_cram_file_size = round(size(cram_file, "GB")) + 1
       Array[File] batchCRAMFiles = [cram_file]
       call variantCalling as scatter_runVariantCallingDiscovery {
          input:
+          outputTarGzPath =  "out/sm",
+
           input_crais = crai_files,
           input_crams = batchCRAMFiles,
           input_cram_files_names = batchCRAMFiles,
@@ -219,7 +221,7 @@ workflow TopMedVariantCaller {
 
           variantCallerHomePath = variantCallerHomePath_default,
           commandsToRun = discoveryCommandsToRun,
-          globPath = discoveryGlobPath,
+          #globPath = discoveryGlobPath,
 
           disk_size = discovery_cram_file_size + crai_files_size + reference_size + additional_disk + VariantCaller_additional_disk_default,
           CPUs = VariantCaller_CPUs_default,
@@ -229,13 +231,14 @@ workflow TopMedVariantCaller {
           docker_image = docker_image_default
       }
   }
-
-  Array[File] individualCRAMVariants = flatten(scatter_runVariantCallingDiscovery.topmed_variant_caller_output_files)
+  #Array[String] individualCRAMVariants = flatten(scatter_runVariantCallingDiscovery.topmed_variant_caller_output_files)
+  Array[File] individualCRAMVariantsTarGzFiles = scatter_runVariantCallingDiscovery.topmed_variant_caller_output_tar_gz_file 
+  Array[String] individualCRAMVariantsTarGzNames = individualCRAMVariantsTarGzFiles
 
   if (dynamically_calculate_disk_requirement) {
       # Use scatter to get the size of each CRAI file:
       # Add 1 GB to size in case size is less than 1 GB
-      scatter(variant_file in individualCRAMVariants ) { Float variant_file_size = round(size(variant_file, "GB")) + 1 }
+      scatter(variant_file in individualCRAMVariantsTarGzNames ) { Float variant_file_size = round(size(variant_file, "GB")) + 1 }
       # Gather the sizes of the CRAI files:
       Array[Float] variant_file_sizes_array = variant_file_size
       # Use a task to sum the array:
@@ -257,17 +260,21 @@ workflow TopMedVariantCaller {
     "mkdir -p out/index",
     "../apigenome/bin/cram-vb-xy-index --index index/list.107.local.crams.index --dir out/sm/ --out out/index/list.107.local.crams.vb_xy.index",
     ]
-  String createVbXYIndexGlobPath = "examples/out/index/list.107.local.crams.vb_xy.index"
+  #String createVbXYIndexGlobPath = "examples/out/index/list.107.local.crams.vb_xy.index"
   call  variantCalling as runCreateVbXyIndex {
       input:
+          inputTarGzFiles = individualCRAMVariantsTarGzFiles,
+          inputTarGzExtractionPath = "examples/out/sm",
+          outputTarGzPath = "out/index/list.107.local.crams.vb_xy.index",
+
           input_cram_files_names = input_cram_files_names,
           batchSize = batchSize,
 
-          cramVariants = individualCRAMVariants,
+          #cramVariants = individualCRAMVariants,
 
           variantCallerHomePath = variantCallerHomePath_default,
           commandsToRun = CreateVbXyIndexCommandsToRun,
-          globPath = createVbXYIndexGlobPath,
+          #globPath = createVbXYIndexGlobPath,
 
           disk_size = variant_files_size + additional_disk + VariantCaller_additional_disk_default,
           CPUs = VariantCaller_CPUs_default,
@@ -277,14 +284,18 @@ workflow TopMedVariantCaller {
           docker_image = docker_image_default,
 
   }
-  Array[File] array_list_crams_vb_xy_index = runCreateVbXyIndex.topmed_variant_caller_output_files
-  File list_crams_vb_xy_index = array_list_crams_vb_xy_index[0]
+  #Array[File] array_list_crams_vb_xy_index = runCreateVbXyIndex.topmed_variant_caller_output_files
+  #File list_crams_vb_xy_index = array_list_crams_vb_xy_index[0]
+  Array[File] createVbXyIndexTarGzFiles = [runCreateVbXyIndex.topmed_variant_caller_output_tar_gz_file]
+  
 
   call createBatchedFileSet {
       input:
         input_cram_files_names = input_cram_files_names,
 
-        list_crams_vb_xy_index = list_crams_vb_xy_index,
+        inputTarGzFiles = createVbXyIndexTarGzFiles,
+        inputTarGzExtractionPath = "examples/out/index",
+        #list_crams_vb_xy_index = list_crams_vb_xy_index,
         batchSize = batchSize,
 
         preemptible_tries = SumFileSizes_preemptible_tries_default,
@@ -298,6 +309,8 @@ workflow TopMedVariantCaller {
 
 
 
+  Array[Array[File]] combinedInputTarGzFilesForMergeAndConsolidateSiteList = [individualCRAMVariantsTarGzFiles, createVbXyIndexTarGzFiles] 
+  Array[File] inputTarGzFilesForMergeAndConsolidateSiteList = flatten(combinedInputTarGzFilesForMergeAndConsolidateSiteList)
   Array[String] MergeAndConsolidateSiteListCommandsToRun = [
     "cd examples/",
     "mkdir -p out/index",
@@ -306,20 +319,24 @@ workflow TopMedVariantCaller {
     "../apigenome/bin/cloudify --cmd ../scripts/run-union-sites-local.cmd ${num_of_jobs_to_run}",
     "make -f log/merge/example-union.mk -k -j  ${num_of_jobs_to_run}",
     ]
-  String mergeAndConsolidateGlobPath = "examples/out/union/*"
+  #String mergeAndConsolidateGlobPath = "examples/out/union/*"
   call  variantCalling as runMergeAndConsolidateSiteList {
       input:
+          inputTarGzFiles = inputTarGzFilesForMergeAndConsolidateSiteList,
+          inputTarGzExtractionPath = "examples/out/sm",
+          outputTarGzPath =  "out/union",          
+
           input_cram_files_names = input_cram_files_names,
           batchSize = batchSize,
           referenceFiles = expandReferenceFileBlob.outputReferenceFiles,
 
-          list_crams_vb_xy_index = list_crams_vb_xy_index,
-          cramVariants = individualCRAMVariants,
+          #list_crams_vb_xy_index = list_crams_vb_xy_index,
+          #cramVariants = individualCRAMVariants,
           seqOfBatchNumbersFile = createBatchedFileSet.seqOfBatchNumbersFile,
 
           variantCallerHomePath = variantCallerHomePath_default,
           commandsToRun = MergeAndConsolidateSiteListCommandsToRun,
-          globPath = mergeAndConsolidateGlobPath,
+          #globPath = mergeAndConsolidateGlobPath,
 
           disk_size = variant_files_size + additional_disk + reference_size + VariantCaller_additional_disk_default,
 
@@ -329,15 +346,22 @@ workflow TopMedVariantCaller {
           memory = VariantCaller_memory_default,
           docker_image = docker_image_default
   }
-  Array[File] mergedAndConsolidatedSiteList = runMergeAndConsolidateSiteList.topmed_variant_caller_output_files
+  #Array[File] mergedAndConsolidatedSiteList = runMergeAndConsolidateSiteList.topmed_variant_caller_output_files
+  Float mergeAndConsolidateSiteListSize = round(size(runMergeAndConsolidateSiteList.topmed_variant_caller_output_tar_gz_file, "GB")) + 1
+  Array[File] mergedAndConsolidatedSiteListTarGzFiles = [runMergeAndConsolidateSiteList.topmed_variant_caller_output_tar_gz_file]
 
+
+
+
+  Array[Array[File]] combinedInputTarGzFilesForBatchGenotype = [mergedAndConsolidatedSiteListTarGzFiles, createVbXyIndexTarGzFiles] 
+  Array[File] inputTarGzFilesForBatchGenotype = flatten(combinedInputTarGzFilesForBatchGenotype)
 
   Array[String] batchGenotypeCommandsToRun = [
     "cd examples/",
     "../apigenome/bin/cloudify --cmd ../scripts/run-batch-genotype-local.cmd",
     "make -f log/batch-geno/example-batch-genotype.mk -k -j ${num_of_jobs_to_run}",
     ]
-  String batchGenotypeGlobPath = "examples/out/genotypes/batches/*/*"
+  #String batchGenotypeGlobPath = "examples/out/genotypes/batches/*/*"
 
   Array[Int] input_cram_range = range(length(batchedInputFilesSet))
   scatter(cram_files_set_index in input_cram_range) {
@@ -369,21 +393,26 @@ workflow TopMedVariantCaller {
 
       call variantCalling as scatter_runVariantCallingBatchGenotype {
          input:
+          inputTarGzFiles = inputTarGzFilesForBatchGenotype,
+          inputTarGzExtractionPath = "examples/out/union",
+          outputTarGzPath =  "out/genotypes/batches",          
+
+
           input_crais = crai_files,
           input_crams = batchOfCRAMFiles,
           input_cram_files_names = input_cram_files_names,
 
           batchNumber = cram_files_set_index + 1,
           batchSize = batchSize,
-          mergeAndConsolidatedSiteList = mergedAndConsolidatedSiteList,
-          list_crams_vb_xy_index = list_crams_vb_xy_index,
+          #mergeAndConsolidatedSiteList = mergedAndConsolidatedSiteList,
+          #list_crams_vb_xy_index = list_crams_vb_xy_index,
 
           variantCallerHomePath = variantCallerHomePath_default,
           commandsToRun = batchGenotypeCommandsToRun,
-          globPath = batchGenotypeGlobPath,
+          #globPath = batchGenotypeGlobPath,
 
           #disk_size = batched_cram_files_size + crai_files_size + additional_disk + VariantCaller_additional_disk_default,
-          disk_size = length(batchOfCRAMFiles)*CRAM_file_max_disk_size_override_default + crai_files_size + additional_disk + VariantCaller_additional_disk_default,
+          disk_size = mergeAndConsolidateSiteListSize + length(batchOfCRAMFiles)*CRAM_file_max_disk_size_override_default + crai_files_size + additional_disk + VariantCaller_additional_disk_default,
           CPUs = VariantCaller_CPUs_default,
           preemptible_tries = VariantCaller_preemptible_tries_default,
           max_retries = VariantCaller_maxretries_tries_default,
@@ -391,13 +420,14 @@ workflow TopMedVariantCaller {
           docker_image = docker_image_default
       }
   }
-  Array[File] batchedGenotypes = flatten(scatter_runVariantCallingBatchGenotype.topmed_variant_caller_output_files)
-
+  #Array[File] batchedGenotypes = flatten(scatter_runVariantCallingBatchGenotype.topmed_variant_caller_output_files)
+  Array[File] batchedGenotypesTarGzFile = scatter_runVariantCallingBatchGenotype.topmed_variant_caller_output_tar_gz_file
+  Array[String] batchedGenotypesTarGzNames = batchedGenotypesTarGzFile
 
   if (dynamically_calculate_disk_requirement) {
       # Use scatter to get the size of each CRAI file:
       # Add 1 GB to size in case size is less than 1 GB
-      scatter(genotype_file in batchedGenotypes ) { Float genotype_file_size = round(size(genotype_file, "GB")) + 1 }
+      scatter(genotype_file in batchedGenotypesTarGzNames ) { Float genotype_file_size = round(size(genotype_file, "GB")) + 1 }
       # Gather the sizes of the CRAI files:
       Array[Float] genotype_file_sizes_array = genotype_file_size
       # Use a task to sum the array:
@@ -442,21 +472,30 @@ workflow TopMedVariantCaller {
     "(seq 1 22; echo X;) | grep -v -w 2 | xargs -I {} -P 10 ../apigenome/bin/vcf-svm-milk-filter --in-vcf out/milk/milk.chr{}.sites.vcf.gz --out out/svm/milk_svm.chr{} --ref resources/ref/hs38DH.fa --dbsnp resources/ref/dbsnp_142.b38.vcf.gz --posvcf resources/ref/hapmap_3.3.b38.sites.vcf.gz --posvcf resources/ref/1000G_omni2.5.b38.sites.PASS.vcf.gz --model out/svm/milk_svm.chr2.svm.model --centromere resources/ref/hg38.centromere.bed.gz --bgzip ../htslib/bgzip --tabix ../htslib/tabix --invNorm ../invNorm/bin/invNorm --svm-train ../libsvm/svm-train --svm-predict ../libsvm/svm-predict"
     ]
 
-  String mergeGlobPath = "examples/out/*/*.gz"
+
+  Array[Array[File]] combinedInputTarGzFilesForVariantCallingMerge = [batchedGenotypesTarGzFile, createVbXyIndexTarGzFiles] 
+  Array[File] inputTarGzFilesForVariantCallingMerge = flatten(combinedInputTarGzFilesForVariantCallingMerge)
+
+  #String mergeGlobPath = "examples/out/*/*.gz"
 
   call  variantCalling as runVariantCallingMerge {
       input:
+          inputTarGzFiles = inputTarGzFilesForVariantCallingMerge,
+          inputTarGzExtractionPath = "examples/out/genotypes/batches",
+          outputTarGzPath =  "out/svm out/milk",          
+
+
           input_cram_files_names = input_cram_files_names,
           batchSize = batchSize,
           seqOfBatchNumbersFile = createBatchedFileSet.seqOfBatchNumbersFile,
           referenceFiles = expandReferenceFileBlob.outputReferenceFiles,
 
-          batchedGenotypes = batchedGenotypes,
-          list_crams_vb_xy_index = list_crams_vb_xy_index,
+          #batchedGenotypes = batchedGenotypes,
+          #list_crams_vb_xy_index = list_crams_vb_xy_index,
 
           variantCallerHomePath = variantCallerHomePath_default,
           commandsToRun = mergeCommandsToRun,
-          globPath = mergeGlobPath,
+          #globPath = mergeGlobPath,
 
           disk_size = genotype_files_size + additional_disk + reference_size + VariantCaller_additional_disk_default,
           CPUs = VariantCaller_CPUs_default,
@@ -467,7 +506,8 @@ workflow TopMedVariantCaller {
   }
 
   output {
-      Array[File] topmed_variant_caller_output = runVariantCallingMerge.topmed_variant_caller_output_files
+      #Array[File] topmed_variant_caller_output = runVariantCallingMerge.topmed_variant_caller_output_files
+      File topmed_variant_caller_output = runVariantCallingMerge.topmed_variant_caller_output_tar_gz_file
   }
   meta {
       author : "Walt Shands"
@@ -487,7 +527,10 @@ workflow TopMedVariantCaller {
   task createBatchedFileSet {
      Array[String] input_cram_files_names
 
-     File list_crams_vb_xy_index
+     Array[File]? inputTarGzFiles
+     String? inputTarGzExtractionPath
+
+     #File list_crams_vb_xy_index
      Int batchSize
 
      Float memory
@@ -522,6 +565,24 @@ workflow TopMedVariantCaller {
       import os
       import sys
       import csv
+      import pathlib
+      import tarfile
+ 
+      # If a tar input file was input 
+      if ("${ sep=' ' inputTarGzFiles }" and "${inputTarGzExtractionPath}"):
+          # Make sure out output directory exists
+          pathlib.Path("${inputTarGzExtractionPath}").mkdir(parents=True, exist_ok=True)
+          # Convert the WDL array of File names to a python list
+          input_targzs_file_names_string = "${ sep=' ' inputTarGzFiles }"
+          input_targzs_file_names_list = input_targzs_file_names_string.split()
+          print("createBatchedFileSet: Input tar gz files names list is {}".format(input_targzs_file_names_list))
+          for targz_file in input_targzs_file_names_list:
+              # Extract the files to the output directory
+              #tar -xvcf targz_file
+              tar = tarfile.open(targz_file)
+              tar.extractall(path="examples")
+              tar.close()
+
 
       # Open the file with verifyBamID2 results and X/Y depth results
       # and read the CRAM file symlink location and names in order
@@ -534,7 +595,9 @@ workflow TopMedVariantCaller {
       # use in processing the location of which must be resolved down to
       # the VM used in Terra
       vb_xy_ids = []
-      with open("${list_crams_vb_xy_index}", 'r') as original_vb_xy_index_file:
+
+      #with open("$###{list_crams_vb_xy_index}", 'r') as original_vb_xy_index_file:
+      with open("examples/out/index/list.107.local.crams.vb_xy.index", 'r') as original_vb_xy_index_file:
           tsvin = csv.reader(original_vb_xy_index_file, delimiter='\t')
           # Skip the row with column headers
           next(tsvin)
@@ -738,25 +801,26 @@ workflow TopMedVariantCaller {
      # Typically we use n1-highmem-64 but with 32 processes (ie, -j 32)
      # These are hyperthreaded cores, so we hope to get a slight performance boost by over-allocating cpus
 
+     Array[File]? inputTarGzFiles
+     String? inputTarGzExtractionPath
+     String outputTarGzPath
+     
      # The CRAM index files are listed as an input because they are required
      # by various tools, e.g. Samtools. They should be in the same location
      # as the CRAM files when specified in the input JSON
      Array[File]? input_crais
      Array[File]? input_crams
      Array[String] input_cram_files_names
-     Array[File]? cramVariants
-     Array[File]? mergeAndConsolidatedSiteList
-     Array[File]? batchedGenotypes
 
      File? seqOfBatchNumbersFile
      Int batchNumber = 1
      Int batchSize
 
-     String list_crams_vb_xy_index_file_name = "examples/out/index/list.107.local.crams.vb_xy.index"
-     File? list_crams_vb_xy_index
+     #String list_crams_vb_xy_index_file_name = "examples/out/index/list.107.local.crams.vb_xy.index"
+     #File? list_crams_vb_xy_index
 
      Array[String] commandsToRun
-     String globPath
+     #String globPath
 
      Float memory
      Float disk_size
@@ -781,6 +845,8 @@ workflow TopMedVariantCaller {
      command <<<
       python3.5 <<CODE
 
+
+      import tarfile
       import csv
       import os
       from shutil import copy
@@ -788,6 +854,25 @@ workflow TopMedVariantCaller {
       import pathlib
 
       cwd = os.getcwd()
+
+      # Create the path to where the pipeline code will be executed
+      pathlib.Path("examples").mkdir(parents=True, exist_ok=True)
+
+      # If a tar input file was input 
+      if ("${ sep=' ' inputTarGzFiles }" and "${inputTarGzExtractionPath}"):
+          # Make sure out output directory exists
+          pathlib.Path("${inputTarGzExtractionPath}").mkdir(parents=True, exist_ok=True)
+          # Convert the WDL array of File names to a python list
+          input_targzs_file_names_string = "${ sep=' ' inputTarGzFiles }"
+          input_targzs_file_names_list = input_targzs_file_names_string.split()
+          print("variantCalling: Input tar gz files names list is {}".format(input_targzs_file_names_list))
+          for targz_file in input_targzs_file_names_list:
+              # Extract the files to the output directory
+              #tar -xvcf targz_file
+              tar = tarfile.open(targz_file)
+              tar.extractall(path="examples")
+              tar.close()
+
       # Create the path to where the pipeline code will be executed
       pathlib.Path("examples/index").mkdir(parents=True, exist_ok=True)
 
@@ -879,57 +964,12 @@ workflow TopMedVariantCaller {
             print("variantCalling: Creating symlink {} for reference file {}".format(reference_file_basename, reference_file))
             os.symlink(reference_file, cwd + "/examples/resources/ref/" + reference_file_basename)
 
-      # Create the path to where the symlinks to the CRAM variants files will be
-      pathlib.Path("examples/out/sm").mkdir(parents=True, exist_ok=True)
-      # Symlink the CRAM variant files to the Cromwell working dir so the variant
-      # caller can find them
-      input_cram_variants_file_names_string = "${ sep=' ' cramVariants }"
-      input_cram_variants_file_names_list = input_cram_variants_file_names_string.split()
-      print("variantCalling: Input CRAM variants files names list is {}".format(input_cram_variants_file_names_list))
-      for cram_variant_file in input_cram_variants_file_names_list:
-            cram_variant_file_basename = os.path.basename(cram_variant_file)
-            cram_variant_base_name_wo_extension = cram_variant_file_basename.split('.')[0]
-            # Create the path to where the pipeline code will be executed
-            pathlib.Path(cwd + "/examples/out/sm/" + cram_variant_base_name_wo_extension).mkdir(parents=True, exist_ok=True)
-            print("variantCalling: Creating symlink {} for CRAM variant file {}".format(cwd + "/examples/out/sm/" + cram_variant_base_name_wo_extension + "/" + cram_variant_file_basename, cram_variant_file))
-            os.symlink(cram_variant_file, cwd + "/examples/out/sm/" + cram_variant_base_name_wo_extension + "/" + cram_variant_file_basename)
-
-      # Create the path to where the symlinks to the merge and consolidate output files will be
-      pathlib.Path("examples/out/union").mkdir(parents=True, exist_ok=True)
-      # Symlink the CRAM variant files to the Cromwell working dir so the variant
-      # caller can find them
-      input_merged_sites_file_names_string = "${ sep=' ' mergeAndConsolidatedSiteList }"
-      input_merged_sites_file_names_list = input_merged_sites_file_names_string.split()
-      print("variantCalling: Input CRAM merged and consolidated sites files names list is {}".format(input_merged_sites_file_names_list))
-      for merged_site_file in input_merged_sites_file_names_list:
-            merged_site_file_basename = os.path.basename(merged_site_file)
-            # Create the path to where the pipeline code will be executed
-            pathlib.Path(cwd + "/examples/out/union/").mkdir(parents=True, exist_ok=True)
-            print("variantCalling: Creating symlink {} for merged and consolidated sites file {}".format(cwd + "/examples/out/union/" + merged_site_file_basename, merged_site_file))
-            os.symlink(merged_site_file, cwd + "/examples/out/union/" + merged_site_file_basename)
-
-      # Create the path to where the symlinks to the genotype batch output files will be
-      pathlib.Path("examples/out/genotypes/batches").mkdir(parents=True, exist_ok=True)
-      # Symlink the CRAM variant files to the Cromwell working dir so the variant
-      # caller can find them
-      input_batched_genotypes_file_names_string = "${ sep=' ' batchedGenotypes }"
-      input_batched_genotypes_file_names_list = input_batched_genotypes_file_names_string.split()
-      print("variantCalling: Input CRAM genotype batch files names list is {}".format(input_batched_genotypes_file_names_list))
-      for batched_genotype_file in input_batched_genotypes_file_names_list:
-            batched_genotype_file_basename = os.path.basename(batched_genotype_file)
-            batched_genotype_batch_number = batched_genotype_file_basename.split('.')[0][1:]
-
-            # Create the path to where the pipeline code will be executed
-            pathlib.Path(cwd + "/examples/out/genotypes/batches/" + batched_genotype_batch_number).mkdir(parents=True, exist_ok=True)
-            print("variantCalling: Creating symlink {} for batched genotype file {}".format(cwd + "/examples/out/genotypes/batches/" + batched_genotype_batch_number + "/" + batched_genotype_file_basename, batched_genotype_file))
-            os.symlink(batched_genotype_file, cwd + "/examples/out/genotypes/batches/" + batched_genotype_batch_number + "/" + batched_genotype_file_basename)
-
-      if ("${list_crams_vb_xy_index}"):
-          # Create the path to where the symlinks to the genotype batch output files will be
-          pathlib.Path("examples/out/index").mkdir(parents=True, exist_ok=True)
-          # Symlink the CRAM variant files to the Cromwell working dir so the variant
-          # caller can find them
-          os.symlink("${list_crams_vb_xy_index}", cwd + "/examples/out/index/list.107.local.crams.vb_xy.index")
+      #if ("$###{list_crams_vb_xy_index}"):
+      #    # Create the path to where the symlinks to the genotype batch output files will be
+      #    pathlib.Path("examples/out/index").mkdir(parents=True, exist_ok=True)
+      #    # Symlink the CRAM variant files to the Cromwell working dir so the variant
+      #    # caller can find them
+      #    os.symlink("$###{list_crams_vb_xy_index}", cwd + "/examples/out/index/list.107.local.crams.vb_xy.index")
 
       CODE
 
@@ -943,6 +983,9 @@ workflow TopMedVariantCaller {
       # echo each line of the script to stdout so we can see what is happening
       set -o xtrace
       #to turn off echo do 'set +o xtrace'
+
+      # Get the current working directory for Cromwell
+      CROMWELL_CWD=$(pwd)
 
       ln -s ${variantCallerHomePath}/build-all.sh build-all.sh
       ln -s ${variantCallerHomePath}/invNorm invNorm
@@ -966,14 +1009,15 @@ workflow TopMedVariantCaller {
       sed -i 's/head -n 20/head -n ${batchSize}/g' ${variantCallerHomePath}/scripts/run-batch-genotype-local.cmd
       sed -i 's/head -n 20/head -n ${batchSize}/g' ${variantCallerHomePath}/scripts/run-merge-sites-local.cmd
 
-
       # concatenate the array of commands to run in to a bash command line
-      #commandsToRunStr='
       ${ sep=' && ' commandsToRun }
+      
+      tar -zvcf topmed_variant_caller_output_file.tar.gz ${outputTarGzPath}
 
     >>>
      output {
-      Array[File] topmed_variant_caller_output_files = glob("${globPath}")
+      #Array[File] topmed_variant_caller_output_files = glob("${globPath}")
+      File topmed_variant_caller_output_tar_gz_file = ("examples/topmed_variant_caller_output_file.tar.gz")
     }
    runtime {
       preemptible: preemptible_tries
