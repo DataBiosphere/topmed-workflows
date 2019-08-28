@@ -1,0 +1,11 @@
+{
+  "checkerWorkflow.input_cram_files": [
+  "https://storage.googleapis.com/topmed_workflow_testing/topmed_variant_caller/input_files/NWD119836.recab.cram",
+  "https://storage.googleapis.com/topmed_workflow_testing/topmed_variant_caller/input_files/NWD176325.recab.cram",
+  "https://storage.googleapis.com/topmed_workflow_testing/topmed_variant_caller/input_files/NWD759405.recab.cram"
+  ],
+  "checkerWorkflow.referenceFilesBlob": "https://storage.googleapis.com/topmed_workflow_testing/topmed_variant_caller/reference_files/topmed_variant_calling_example_resources.tar.gz",
+  "checkerWorkflow.inputTruthVCFFile": "https://storage.googleapis.com/topmed_workflow_testing/topmed_variant_caller_checker/topmed_variant_caller_NWD119836_NWD176325_NWD759405_output_file.tar.gz"
+
+}
+
