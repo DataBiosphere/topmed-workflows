@@ -1,6 +1,7 @@
 version 1.0
 
-import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.32.0/variant-caller/variant-caller-wdl/topmed_freeze8_caller.wdl" as TopMed_variantcaller
+import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.33.0/variant-caller/variant-caller-wdl/topmed_freeze8_caller.wdl" as TopMed_variantcaller
+#import "/mnt/gitroot/topmed-workflows/variant-caller/variant-caller-wdl/topmed_freeze8_caller.wdl" as TopMed_variantcaller
 
 
 workflow checkerWorkflow {
@@ -9,7 +10,6 @@ workflow checkerWorkflow {
 
     String? docker_image
     String docker_concordance_image = "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.2-1510681135"
-    String? docker_create_index_image
 
     Array[File]? input_crai_files
     Array[File] input_cram_files
@@ -39,26 +39,29 @@ workflow checkerWorkflow {
 
 task checkerTask {
   input {
-    File inputTruthVCFFile
-    File inputTestVCFFile
+      File inputTruthVCFFile
+      File inputTestVCFFile
 
-    File referenceFileBlob
-    Float reference_disk_size
+      File referenceFileBlob
+      Float reference_disk_size
 
-    String genomeReferenceFileNameAndPath
-    String docker_concordance_image
+      String genomeReferenceFileNameAndPath
+      String docker_concordance_image
 
-
+      Int additional_disk = 20
+  }
     # Optional input to increase all disk sizes in case of outlier sample with strange size behavior
-    Int? increase_disk_size
+    #Int? increase_disk_size
 
     # Some tasks need wiggle room, and we also need to add a small amount of disk to prevent getting a
     # Cromwell error from asking for 0 disk when the input is less than 1GB
-    Int additional_disk = select_first([increase_disk_size, 500])
+    #Int additional_disk = select_first([increase_disk_size, 500])
 
-    #Float disk_size = reference_disk_size + size(inputTruthVCFFile, "GB") + size(inputTestVCFFile, "GB") + additional_disk
-    Float disk_size = reference_disk_size + size(inputTruthVCFFile, "GB") + size(inputTestVCFFile, "GB")
-  }
+
+  # For some reason additional_disk generates a Cromwell error
+  Float disk_size = reference_disk_size + size(inputTruthVCFFile, "GB") + size(inputTestVCFFile, "GB") + additional_disk
+    #Float disk_size = reference_disk_size + size(inputTruthVCFFile, "GB") + size(inputTestVCFFile, "GB")
+
 
   command <<<
     python3 <<CODE
