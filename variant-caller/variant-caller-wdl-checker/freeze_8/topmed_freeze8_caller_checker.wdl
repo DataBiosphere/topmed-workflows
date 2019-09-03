@@ -1,6 +1,6 @@
 version 1.0
 
-import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.33.0/variant-caller/variant-caller-wdl/topmed_freeze8_caller.wdl" as TopMed_variantcaller
+import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.32.0/variant-caller/variant-caller-wdl/topmed_freeze8_caller.wdl" as TopMed_variantcaller
 #import "/mnt/gitroot/topmed-workflows/variant-caller/variant-caller-wdl/topmed_freeze8_caller.wdl" as TopMed_variantcaller
 
 
@@ -34,6 +34,13 @@ workflow checkerWorkflow {
           referenceFileBlob = referenceFilesBlob,
           reference_disk_size = 20.0
   }
+
+  meta {
+      author : "Walt Shands"
+      email : "jshands@ucsc.edu"
+      description: "This is the workflow WDL for U of Michigan's [TOPMed Freeze 8 Variant Calling Pipeline](https://github.com/statgen/topmed_variant_calling)"
+   }
+
 }
 
 
