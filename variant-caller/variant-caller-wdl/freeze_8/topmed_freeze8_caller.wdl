@@ -16,7 +16,8 @@ version 1.0
 
 workflow TopMedVariantCaller {
     input {
-      Boolean dynamically_calculate_file_size= true
+      Boolean dynamically_calculate_disk_requirement = true
+
       Float All_CRAMs_disk_size_override = 1000.0
       Float All_CRAIs_disk_size_override = 100.0
       Float CRAM_file_max_disk_size_override = 200.0
@@ -49,7 +50,7 @@ workflow TopMedVariantCaller {
       # For adding more disk space for the variant caller from an input file
       Int VariantCaller_additional_disk = 1
 
-      String VariantCallerHomePath =  "/topmed_variant_calling"
+      String variantCallerHomePath =  "/topmed_variant_calling"
 
       Int ExpandRefBlob_preemptible_tries = 3
       Int ExpandRefBlob_maxretries_tries = 3
@@ -70,7 +71,7 @@ workflow TopMedVariantCaller {
       # Cromwell error from asking for 0 disk when the input is less than 1GB
       Int additional_disk = 20
       # The number of threads to use in a particular step of the pipeline
-      Int num_of_jobs = 4
+      Int num_of_jobs_to_run = 4
 
       # The number of CRAM files to be processed on a VM in variant caller tasks except for the Discovery
       # task where each CRAM is processed on a single VM via a scatter
