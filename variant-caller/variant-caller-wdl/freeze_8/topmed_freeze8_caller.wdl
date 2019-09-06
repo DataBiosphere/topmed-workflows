@@ -16,110 +16,80 @@ version 1.0
 
 workflow TopMedVariantCaller {
     input {
-  Boolean? dynamically_calculate_file_size
-  Boolean dynamically_calculate_disk_requirement = select_first([dynamically_calculate_file_size, true])
+      Boolean dynamically_calculate_file_size= true
+      Float All_CRAMs_disk_size_override = 1000.0
+      Float All_CRAIs_disk_size_override = 100.0
+      Float CRAM_file_max_disk_size_override = 200.0
+      Float ReferenceGenome_disk_size_override= 30.0
 
-  Float? All_CRAMs_disk_size_override
-  Float All_CRAMs_disk_size_override_default = select_first([All_CRAMs_disk_size_override, 1000.0])
+      Int SumFileSizes_preemptible_tries = 3
+      Int SumFileSizes_maxretries_tries = 3
+      Int SumFileSizes_memory = 7
+      Int SumFileSizes_CPUs = 1
+      Int SumFileSizes_disk_size = 1
 
-  Float? All_CRAIs_disk_size_override
-  Float All_CRAIs_disk_size_override_default = select_first([All_CRAIs_disk_size_override, 100.0])
+      Int CreateCRAMIndex_preemptible_tries = 3
+      Int CreateCRAMIndex_maxretries_tries = 3
+      Int CreateCRAMIndex_memory = 7
+      Int CreateCRAMIndex_CPUs = 1
 
-  Float? CRAM_file_max_disk_size_override
-  Float CRAM_file_max_disk_size_override_default = select_first([CRAM_file_max_disk_size_override, 200.0])
+      # The variant caller could take more than 24 hours to run. GCP terminates
+      #  preemptible tasks after 24 hours. So by using 0 for preemptible tries the
+      #  task is non preemtible
+      #  if preemptible is set to 0 -- then its set to false
+      #  if preemptible is set to a positive integer -- its automatically true
+      Int VariantCaller_preemptible_tries = 1
+      #if preemptible is 0 and maxRetries is 3 -- then that task can be retried upto 3 times
+      #if preemptible is 3 and maxRetries is 3 for a task -- that can be retried upto 6 times
+      #https://cromwell.readthedocs.io/en/stable/RuntimeAttributes/#maxretries
+      Int VariantCaller_maxretries_tries = 3
+      # Select memory and CPUs to choose a GCP n1-highmem-64 machine
+      Int VariantCaller_CPUs = 64
+      Int VariantCaller_memory = 400
+      # For adding more disk space for the variant caller from an input file
+      Int VariantCaller_additional_disk = 1
 
-  Float? ReferenceGenome_disk_size_override
-  Float ReferenceGenome_disk_size_override_default = select_first([ReferenceGenome_disk_size_override, 30.0])
+      String VariantCallerHomePath =  "/topmed_variant_calling"
 
-  Int? SumFileSizes_preemptible_tries
-  Int  SumFileSizes_preemptible_tries_default = select_first([SumFileSizes_preemptible_tries, 3])
-  Int? SumFileSizes_maxretries_tries
-  Int SumFileSizes_maxretries_tries_default = select_first([SumFileSizes_maxretries_tries, 3])
-  Int? SumFileSizes_memory
-  Int SumFileSizes_memory_default = select_first([SumFileSizes_memory, 7])
-  Int? SumFileSizes_CPUs
-  Int SumFileSizes_CPUs_default = select_first([SumFileSizes_CPUs, 1])
-  Int? SumFileSizes_disk_size
-  Int SumFileSizes_disk_size_default = select_first([SumFileSizes_disk_size, 1])
+      Int ExpandRefBlob_preemptible_tries = 3
+      Int ExpandRefBlob_maxretries_tries = 3
+      Int ExpandRefBlob_memory = 100
+      Int ExpandRefBlob_CPUs = 1
+      String ExpandRefBlob_glob_path = "resources/ref/*"
+      File referenceFilesBlob
 
-  Int? CreateCRAMIndex_preemptible_tries
-  Int CreateCRAMIndex_preemptible_tries_default = select_first([CreateCRAMIndex_preemptible_tries, 3])
-  Int? CreateCRAMIndex_maxretries_tries
-  Int CreateCRAMIndex_maxretries_tries_default = select_first([CreateCRAMIndex_maxretries_tries, 3])
-  Int? CreateCRAMIndex_memory
-  Int CreateCRAMIndex_memory_default = select_first([CreateCRAMIndex_memory, 7])
-  Int? CreateCRAMIndex_CPUs
-  Int CreateCRAMIndex_CPUs_default = select_first([CreateCRAMIndex_CPUs, 1])
+      Array[File]? input_crai_files
+      Array[File] input_cram_files
+      Array[String] input_cram_files_names = input_cram_files
 
-  # The variant caller typically takes more than 24 hours to run. GCP terminates
-  #  preemptible tasks after 24 hours. So by using 0 for preemptible tries the
-  #  task is non preemtible
-  #  if preemptible is set to 0 -- then its set to false
-  #  if preemptible is set to a positive integer -- its automatically true
-  Int? VariantCaller_preemptible_tries
-  Int VariantCaller_preemptible_tries_default = select_first([VariantCaller_preemptible_tries, 0])
-  #if preemptible is 0 and maxRetries is 3 -- then that task can be retried upto 3 times
-  #if preemptible is 3 and maxRetries is 3 for a task -- that can be retried upto 6 times
-  #https://cromwell.readthedocs.io/en/stable/RuntimeAttributes/#maxretries
-  Int? VariantCaller_maxretries_tries
-  Int VariantCaller_maxretries_tries_default = select_first([VariantCaller_maxretries_tries, 3])
-  Int? VariantCaller_memory
-  # Select memory and CPUs to choose a GCP n1-highmem-64 machine
-  Int VariantCaller_memory_default = select_first([VariantCaller_memory, 400])
-  Int? VariantCaller_CPUs
-  Int VariantCaller_CPUs_default = select_first([VariantCaller_CPUs, 64])
-  # For adding more disk space for the variant caller from an input file
-  Int? VariantCaller_additional_disk
-  Int VariantCaller_additional_disk_default = select_first([VariantCaller_additional_disk, 1])
-
-  String? VariantCallerHomePath
-  String variantCallerHomePath_default = select_first([VariantCallerHomePath, "/topmed_variant_calling" ])
-
-  Int? ExpandRefBlob_preemptible_tries
-  Int ExpandRefBlob_preemptible_tries_default = select_first([ExpandRefBlob_preemptible_tries, 3])
-  Int? ExpandRefBlob_maxretries_tries
-  Int ExpandRefBlob_maxretries_tries_default = select_first([ExpandRefBlob_maxretries_tries, 3])
-  Int? ExpandRefBlob_memory
-  Int ExpandRefBlob_memory_default = select_first([ExpandRefBlob_memory, 100 ])
-  Int? ExpandRefBlob_CPUs
-  Int ExpandRefBlob_CPUs_default = select_first([ExpandRefBlob_CPUs, 1])
-  String ExpandRefBlob_glob_path = "resources/ref/*"
-  File referenceFilesBlob
-
-  Array[File]? input_crai_files
-  Array[File] input_cram_files
-  Array[String] input_cram_files_names = input_cram_files
-
-  String? docker_image
-  String  docker_image_default = select_first([docker_image, "statgen/topmed-variant-calling:v8.0.3"])
+      String docker_image = "statgen/topmed-variant-calling:v8.0.4"
 
 
-  # Optional input to increase all disk sizes in case of outlier sample with strange size behavior
-  Int? increase_disk_size
-  # Some tasks need wiggle room, and we also need to add a small amount of disk to prevent getting a
-  # Cromwell error from asking for 0 disk when the input is less than 1GB
-  Int additional_disk = select_first([increase_disk_size, 20])
+      # Optional input to increase all disk sizes in case of outlier sample with strange size behavior
+      # Some tasks need wiggle room, and we also need to add a small amount of disk to prevent getting a
+      # Cromwell error from asking for 0 disk when the input is less than 1GB
+      Int additional_disk = 20
+      # The number of threads to use in a particular step of the pipeline
+      Int num_of_jobs = 4
 
-  # The number of threads to use in a particular step of the pipeline
-  Int? num_of_jobs
-  Int num_of_jobs_to_run = select_first([num_of_jobs, 4 ])
-
-  Int batchSize = 20
+      # The number of CRAM files to be processed on a VM in variant caller tasks except for the Discovery
+      # task where each CRAM is processed on a single VM via a scatter
+      Int batchSize = 20
     }
 
   Float reference_size = if (dynamically_calculate_disk_requirement) then size(referenceFilesBlob, "GB") * 3
-  else ReferenceGenome_disk_size_override_default
+  else ReferenceGenome_disk_size_override
 
   call expandReferenceFileBlob {
      input:
       referenceFileBlob = referenceFilesBlob,
       referenceFilesGlobPath = ExpandRefBlob_glob_path,
-      preemptible_tries = ExpandRefBlob_preemptible_tries_default,
-      max_retries = ExpandRefBlob_maxretries_tries_default,
-      docker_image = docker_image_default,
-      CPUs = ExpandRefBlob_CPUs_default,
+      preemptible_tries = ExpandRefBlob_preemptible_tries,
+      max_retries = ExpandRefBlob_maxretries_tries,
+      docker_image = docker_image,
+      CPUs = ExpandRefBlob_CPUs,
       disk_size = reference_size  + additional_disk,
-      memory = ExpandRefBlob_memory_default
+      memory = ExpandRefBlob_memory
   }
 
 
@@ -134,16 +104,16 @@ workflow TopMedVariantCaller {
       call sum_file_sizes as sum_cram_file_sizes {
         input:
           file_sizes = cram_file_sizes,
-          preemptible_tries = SumFileSizes_preemptible_tries_default,
-          max_retries = SumFileSizes_maxretries_tries_default,
-          CPUs = SumFileSizes_CPUs_default,
-          disk_size = SumFileSizes_disk_size_default,
-          memory = SumFileSizes_memory_default
+          preemptible_tries = SumFileSizes_preemptible_tries,
+          max_retries = SumFileSizes_maxretries_tries,
+          CPUs = SumFileSizes_CPUs,
+          disk_size = SumFileSizes_disk_size,
+          memory = SumFileSizes_memory
       }
   }
 
-  #Float cram_files_size = if (dynamically_calculate_disk_requirement) then sum_cram_file_sizes.total_size else All_CRAMs_disk_size_override_default
-  Float cram_files_size = select_first([sum_cram_file_sizes.total_size, All_CRAMs_disk_size_override_default])
+  #Float cram_files_size = if (dynamically_calculate_disk_requirement) then sum_cram_file_sizes.total_size else All_CRAMs_disk_size_override
+  Float cram_files_size = select_first([sum_cram_file_sizes.total_size, All_CRAMs_disk_size_override])
 
   Array[String] no_names = []
   Array[String] crai_files_names_array = select_first([input_crai_files, no_names])
@@ -159,18 +129,18 @@ workflow TopMedVariantCaller {
       call sum_file_sizes as sum_crai_file_sizes {
         input:
           file_sizes = crai_file_sizes_array,
-          preemptible_tries = SumFileSizes_preemptible_tries_default,
-          CPUs = SumFileSizes_CPUs_default,
-          max_retries = SumFileSizes_maxretries_tries_default,
-          disk_size = SumFileSizes_disk_size_default,
-          memory = SumFileSizes_memory_default
+          preemptible_tries = SumFileSizes_preemptible_tries,
+          CPUs = SumFileSizes_CPUs,
+          max_retries = SumFileSizes_maxretries_tries,
+          disk_size = SumFileSizes_disk_size,
+          memory = SumFileSizes_memory
       }
     }
   }
 
-#  Float crai_files_size = if (dynamically_calculate_disk_requirement) then sum_crai_file_sizes.total_size else  All_CRAIs_disk_size_override_default
+#  Float crai_files_size = if (dynamically_calculate_disk_requirement) then sum_crai_file_sizes.total_size else  All_CRAIs_disk_size_override
 #  !!!!Why do I need to do this:
-  Float crai_files_size = select_first([sum_crai_file_sizes.total_size, All_CRAIs_disk_size_override_default])
+  Float crai_files_size = select_first([sum_crai_file_sizes.total_size, All_CRAIs_disk_size_override])
 
   Array[String] discoveryCommandsToRun = [
     "cd examples/",
@@ -191,15 +161,15 @@ workflow TopMedVariantCaller {
           batchSize = batchSize,
           referenceFiles = expandReferenceFileBlob.outputReferenceFiles,
 
-          variantCallerHomePath = variantCallerHomePath_default,
+          variantCallerHomePath = variantCallerHomePath,
           commandsToRun = discoveryCommandsToRun,
 
-          disk_size = discovery_cram_file_size + crai_files_size + reference_size + additional_disk + VariantCaller_additional_disk_default,
-          CPUs = VariantCaller_CPUs_default,
-          preemptible_tries = VariantCaller_preemptible_tries_default,
-          max_retries = VariantCaller_maxretries_tries_default,
-          memory = VariantCaller_memory_default,
-          docker_image = docker_image_default
+          disk_size = discovery_cram_file_size + crai_files_size + reference_size + additional_disk + VariantCaller_additional_disk,
+          CPUs = VariantCaller_CPUs,
+          preemptible_tries = VariantCaller_preemptible_tries,
+          max_retries = VariantCaller_maxretries_tries,
+          memory = VariantCaller_memory,
+          docker_image = docker_image
       }
   }
   Array[File] individualCRAMVariantsTarGzFiles = scatter_runVariantCallingDiscovery.topmed_variant_caller_output_tar_gz_file
@@ -215,14 +185,14 @@ workflow TopMedVariantCaller {
       call sum_file_sizes as sum_variant_file_sizes {
         input:
           file_sizes = variant_file_sizes_array,
-          preemptible_tries = SumFileSizes_preemptible_tries_default,
-          CPUs = SumFileSizes_CPUs_default,
-          max_retries = SumFileSizes_maxretries_tries_default,
-          disk_size = SumFileSizes_disk_size_default,
-          memory = SumFileSizes_memory_default
+          preemptible_tries = SumFileSizes_preemptible_tries,
+          CPUs = SumFileSizes_CPUs,
+          max_retries = SumFileSizes_maxretries_tries,
+          disk_size = SumFileSizes_disk_size,
+          memory = SumFileSizes_memory
       }
   }
-  Float variant_files_size = select_first([sum_variant_file_sizes.total_size, All_CRAIs_disk_size_override_default])
+  Float variant_files_size = select_first([sum_variant_file_sizes.total_size, All_CRAIs_disk_size_override])
 
 
   Array[String] CreateVbXyIndexCommandsToRun = [
@@ -239,15 +209,15 @@ workflow TopMedVariantCaller {
           input_cram_files_names = input_cram_files_names,
           batchSize = batchSize,
 
-          variantCallerHomePath = variantCallerHomePath_default,
+          variantCallerHomePath = variantCallerHomePath,
           commandsToRun = CreateVbXyIndexCommandsToRun,
 
-          disk_size = variant_files_size + additional_disk + VariantCaller_additional_disk_default,
-          CPUs = VariantCaller_CPUs_default,
-          preemptible_tries = VariantCaller_preemptible_tries_default,
-          max_retries = VariantCaller_maxretries_tries_default,
-          memory = VariantCaller_memory_default,
-          docker_image = docker_image_default,
+          disk_size = variant_files_size + additional_disk + VariantCaller_additional_disk,
+          CPUs = VariantCaller_CPUs,
+          preemptible_tries = VariantCaller_preemptible_tries,
+          max_retries = VariantCaller_maxretries_tries,
+          memory = VariantCaller_memory,
+          docker_image = docker_image,
 
   }
   Array[File] createVbXyIndexTarGzFiles = [runCreateVbXyIndex.topmed_variant_caller_output_tar_gz_file]
@@ -260,12 +230,12 @@ workflow TopMedVariantCaller {
         inputTarGzFiles = createVbXyIndexTarGzFiles,
         batchSize = batchSize,
 
-        preemptible_tries = SumFileSizes_preemptible_tries_default,
-        max_retries = SumFileSizes_maxretries_tries_default,
-        CPUs = SumFileSizes_CPUs_default,
-        disk_size = SumFileSizes_disk_size_default,
-        memory = SumFileSizes_memory_default,
-        docker_image = docker_image_default
+        preemptible_tries = SumFileSizes_preemptible_tries,
+        max_retries = SumFileSizes_maxretries_tries,
+        CPUs = SumFileSizes_CPUs,
+        disk_size = SumFileSizes_disk_size,
+        memory = SumFileSizes_memory,
+        docker_image = docker_image
   }
   Array[Array[File]] batchedInputFilesSet = createBatchedFileSet.outputBatchedFileSet
 
@@ -293,16 +263,16 @@ workflow TopMedVariantCaller {
 
           seqOfBatchNumbersFile = createBatchedFileSet.seqOfBatchNumbersFile,
 
-          variantCallerHomePath = variantCallerHomePath_default,
+          variantCallerHomePath = variantCallerHomePath,
           commandsToRun = MergeAndConsolidateSiteListCommandsToRun,
 
-          disk_size = variant_files_size + additional_disk + reference_size + VariantCaller_additional_disk_default,
+          disk_size = variant_files_size + additional_disk + reference_size + VariantCaller_additional_disk,
 
-          CPUs = VariantCaller_CPUs_default,
-          preemptible_tries = VariantCaller_preemptible_tries_default,
-          max_retries = VariantCaller_maxretries_tries_default,
-          memory = VariantCaller_memory_default,
-          docker_image = docker_image_default
+          CPUs = VariantCaller_CPUs,
+          preemptible_tries = VariantCaller_preemptible_tries,
+          max_retries = VariantCaller_maxretries_tries,
+          memory = VariantCaller_memory,
+          docker_image = docker_image
   }
   Float mergeAndConsolidateSiteListSize = round(size(runMergeAndConsolidateSiteList.topmed_variant_caller_output_tar_gz_file, "GB")) + 1
   Array[File] mergedAndConsolidatedSiteListTarGzFiles = [runMergeAndConsolidateSiteList.topmed_variant_caller_output_tar_gz_file]
@@ -334,14 +304,14 @@ workflow TopMedVariantCaller {
           call sum_file_sizes as sum_batched_cram_file_sizes {
             input:
               file_sizes = batch_cram_file_sizes,
-              preemptible_tries = SumFileSizes_preemptible_tries_default,
-              max_retries = SumFileSizes_maxretries_tries_default,
-              CPUs = SumFileSizes_CPUs_default,
-              disk_size = SumFileSizes_disk_size_default,
-              memory = SumFileSizes_memory_default
+              preemptible_tries = SumFileSizes_preemptible_tries,
+              max_retries = SumFileSizes_maxretries_tries,
+              CPUs = SumFileSizes_CPUs,
+              disk_size = SumFileSizes_disk_size,
+              memory = SumFileSizes_memory
           }
       }
-      Float batched_cram_files_size = select_first([sum_batched_cram_file_sizes.total_size, All_CRAMs_disk_size_override_default])
+      Float batched_cram_files_size = select_first([sum_batched_cram_file_sizes.total_size, All_CRAMs_disk_size_override])
 
       call variantCalling as scatter_runVariantCallingBatchGenotype {
          input:
@@ -356,15 +326,15 @@ workflow TopMedVariantCaller {
           batchNumber = cram_files_set_index + 1,
           batchSize = batchSize,
 
-          variantCallerHomePath = variantCallerHomePath_default,
+          variantCallerHomePath = variantCallerHomePath,
           commandsToRun = batchGenotypeCommandsToRun,
 
-          disk_size = mergeAndConsolidateSiteListSize + batched_cram_files_size + crai_files_size + additional_disk + VariantCaller_additional_disk_default,
-          CPUs = VariantCaller_CPUs_default,
-          preemptible_tries = VariantCaller_preemptible_tries_default,
-          max_retries = VariantCaller_maxretries_tries_default,
-          memory = VariantCaller_memory_default,
-          docker_image = docker_image_default
+          disk_size = mergeAndConsolidateSiteListSize + batched_cram_files_size + crai_files_size + additional_disk + VariantCaller_additional_disk,
+          CPUs = VariantCaller_CPUs,
+          preemptible_tries = VariantCaller_preemptible_tries,
+          max_retries = VariantCaller_maxretries_tries,
+          memory = VariantCaller_memory,
+          docker_image = docker_image
       }
   }
   Array[File] batchedGenotypesTarGzFile = scatter_runVariantCallingBatchGenotype.topmed_variant_caller_output_tar_gz_file
@@ -380,14 +350,14 @@ workflow TopMedVariantCaller {
       call sum_file_sizes as sum_genotype_file_sizes {
         input:
           file_sizes = genotype_file_sizes_array,
-          preemptible_tries = SumFileSizes_preemptible_tries_default,
-          CPUs = SumFileSizes_CPUs_default,
-          max_retries = SumFileSizes_maxretries_tries_default,
-          disk_size = SumFileSizes_disk_size_default,
-          memory = SumFileSizes_memory_default
+          preemptible_tries = SumFileSizes_preemptible_tries,
+          CPUs = SumFileSizes_CPUs,
+          max_retries = SumFileSizes_maxretries_tries,
+          disk_size = SumFileSizes_disk_size,
+          memory = SumFileSizes_memory
       }
   }
-  Float genotype_files_size = select_first([sum_genotype_file_sizes.total_size, All_CRAIs_disk_size_override_default])
+  Float genotype_files_size = select_first([sum_genotype_file_sizes.total_size, All_CRAIs_disk_size_override])
 
 
 
@@ -432,15 +402,15 @@ workflow TopMedVariantCaller {
           seqOfBatchNumbersFile = createBatchedFileSet.seqOfBatchNumbersFile,
           referenceFiles = expandReferenceFileBlob.outputReferenceFiles,
 
-          variantCallerHomePath = variantCallerHomePath_default,
+          variantCallerHomePath = variantCallerHomePath,
           commandsToRun = mergeCommandsToRun,
 
-          disk_size = genotype_files_size + additional_disk + reference_size + VariantCaller_additional_disk_default,
-          CPUs = VariantCaller_CPUs_default,
-          preemptible_tries = VariantCaller_preemptible_tries_default,
-          max_retries = VariantCaller_maxretries_tries_default,
-          memory = VariantCaller_memory_default,
-          docker_image = docker_image_default
+          disk_size = genotype_files_size + additional_disk + reference_size + VariantCaller_additional_disk,
+          CPUs = VariantCaller_CPUs,
+          preemptible_tries = VariantCaller_preemptible_tries,
+          max_retries = VariantCaller_maxretries_tries,
+          memory = VariantCaller_memory,
+          docker_image = docker_image
   }
 
   output {
