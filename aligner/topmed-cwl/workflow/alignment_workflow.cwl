@@ -12,6 +12,9 @@ doc: |
       - reads are provided in query-sorted order
       - all reads must have an RG tag
     - Reference genome must be Hg38 with ALT contigs
+'dct:creator':
+  'foaf:mbox': 'mailto:yilinxu@uchicago.edu'
+  'foaf:name': Yilin Xu
 
 class: Workflow
 id: alignment_pipeline
@@ -40,7 +43,6 @@ inputs:
     type: File
     secondaryFiles: [^.gz.tbi]
   compression_level: int
-  expected_num_reads: int
 
 outputs:
   duplicates_marked_bam:
@@ -172,10 +174,3 @@ steps:
       reference: indexed_reference_fasta
       input_bam: SortBam/output_sorted_bam
     out: [output]
-
-   Checker:
-    run: ../tasks/checker.yaml
-    in:
-      cram: ConvertToCram/output
-      expected_num_reads: expected_num_reads
-    out: []

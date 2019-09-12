@@ -1,0 +1,20 @@
+{
+  "checkerWorkflow.input_cram_file": "./inputs/NWD176325.0005.recab.cram",
+  "checkerWorkflow.input_crai_file": "./inputs/NWD176325.0005.recab.cram.crai",
+
+  "checkerWorkflow.inputTruthCRAMFile": "inputs/truth_NWD176325.0005.recab.cram",
+
+  "checkerWorkflow.ref_alt": "inputs/hs38DH.fa.alt",
+  "checkerWorkflow.ref_bwt": "inputs/hs38DH.fa.bwt",
+  "checkerWorkflow.ref_pac": "inputs/hs38DH.fa.pac",
+  "checkerWorkflow.ref_ann": "inputs/hs38DH.fa.ann",
+  "checkerWorkflow.ref_amb": "inputs/hs38DH.fa.amb",
+  "checkerWorkflow.ref_sa": "inputs/hs38DH.fa.sa",
+  "checkerWorkflow.ref_fasta": "inputs/hs38DH.fa",
+  "checkerWorkflow.ref_fasta_index": "inputs/hs38DH.fa.fai",
+
+  "checkerWorkflow.dbSNP_vcf": "inputs/Homo_sapiens_assembly38.dbsnp138.vcf.gz",
+  "checkerWorkflow.dbSNP_vcf_index": "inputs/Homo_sapiens_assembly38.dbsnp138.vcf.gz.tbi",
+
+  "checkerWorkflow.docker_image": "statgen/alignment:1.0.0"
+}

@@ -1,0 +1,18 @@
+{
+  "input_file": {
+        "class": "File",
+        "path": "../tests/inputs/NWD119836.0005.recab.cram"
+    },
+  "reference_file": {
+        "class": "File",
+        "path": "../tests/inputs/hs38DH.fa"
+    },
+  "reference_index_file": {
+        "class": "File",
+        "path": "../tests/inputs/hs38DH.fa.fai"
+    },
+  "truth_md5sum_file": {
+        "class": "File",
+        "path": "../tests/inputs/NWD119836.0005.recab.cram.md5sum.txt"
+    }
+}
