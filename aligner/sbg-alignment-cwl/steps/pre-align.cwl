@@ -24,21 +24,21 @@ inputs:
     type: File
     label: Reference for output CRAM compressing
     'sbg:fileTypes': 'FASTA, FA'
-  - 'sbg:toolDefaultValue': '1'
+  - default: 1
+    'sbg:toolDefaultValue': '1'
     id: threads
     type: int?
     label: Number of threads
-    default: 1
-  - 'sbg:toolDefaultValue': '7500'
+  - default: 7500
+    'sbg:toolDefaultValue': '7500'
     id: ram_min
     type: int?
     label: Minimum amount of RAM
-    default: 7500
-  - 'sbg:toolDefaultValue': '8'
+  - default: 8
+    'sbg:toolDefaultValue': '2'
     id: cores_min
     type: int?
     label: Minimum number of cores
-    default: 8
 outputs:
   - id: fastq
     type: 'File[]?'
@@ -160,6 +160,3 @@ requirements:
             }
             return o1;
         };
-hints:
-  - class: 'sbg:AWSInstanceType'
-    value: m5.large;ebs-gp2;512

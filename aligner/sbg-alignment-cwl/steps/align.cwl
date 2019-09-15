@@ -20,16 +20,16 @@ inputs:
     inputBinding:
       position: 9
       shellQuote: false
-  - 'sbg:toolDefaultValue': '14000'
+  - default: 14000
+    'sbg:toolDefaultValue': '14000'
     id: ram_min
     type: int?
     label: Minimum amount of RAM
-    default: 14000
-  - 'sbg:toolDefaultValue': '8'
+  - default: 8
+    'sbg:toolDefaultValue': '8'
     id: cores_min
     type: int?
     label: Minimum number of cores
-    default: 8
 outputs:
   - id: cram
     type: File?
@@ -198,6 +198,3 @@ requirements:
             else
                 return files.reverse();
         };
-hints:
-  - class: 'sbg:AWSInstanceType'
-    value: c5.4xlarge;ebs-gp2;512
