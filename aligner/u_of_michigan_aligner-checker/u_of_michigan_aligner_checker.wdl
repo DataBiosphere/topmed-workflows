@@ -1,5 +1,5 @@
-import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.19.0/aligner/u_of_michigan_aligner/u_of_michigan_aligner.wdl" as TopMed_aligner
-import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.19.0/aligner/u_of_michigan_aligner-checker/u_of_michigan_aligner_checker_calculation.wdl" as checker
+import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.32.0/aligner/u_of_michigan_aligner/u_of_michigan_aligner.wdl" as TopMed_aligner
+import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.32.0/aligner/u_of_michigan_aligner-checker/u_of_michigan_aligner_checker_calculation.wdl" as checker
 
 workflow checkerWorkflow {
   String docker_image
@@ -22,12 +22,12 @@ workflow checkerWorkflow {
   File dbSNP_vcf
   File dbSNP_vcf_index
 
- call TopMed_aligner.TopMedAligner as aligner { 
+ call TopMed_aligner.TopMedAligner as aligner {
    input:
 
      input_crai_file = input_crai_file,
      input_cram_file = input_cram_file,
-     
+
      docker_image = docker_image,
 
      ref_fasta = ref_fasta,
@@ -45,9 +45,9 @@ workflow checkerWorkflow {
  }
 
 
- call checker.checkerTask { 
-    input: 
-        inputCRAMFile = aligner.aligner_output, 
+ call checker.checkerTask {
+    input:
+        inputCRAMFile = aligner.aligner_output_cram,
         inputTruthCRAMFile = inputTruthCRAMFile,
         referenceFile = ref_fasta,
         docker_image = docker_image }

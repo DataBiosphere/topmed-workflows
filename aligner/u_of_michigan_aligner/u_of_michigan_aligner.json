@@ -1,18 +1,18 @@
 {
-  "TopMedAligner.input_cram_file": "gs://topmed_workflow_testing/topmed_aligner/input_files/NWD176325.0005.recab.cram",
-  "TopMedAligner.input_crai_file": "gs://topmed_workflow_testing/topmed_aligner/input_files/NWD176325.0005.recab.cram.crai",
+  "TopMedAligner.input_cram_file": "https://storage.googleapis.com/topmed_workflow_testing/topmed_aligner/input_files/NWD176325.25reads.cram",
+  "TopMedAligner.input_crai_file": "https://storage.googleapis.com/topmed_workflow_testing/topmed_aligner/input_files/NWD176325.25reads.cram.crai",
 
-  "TopMedAligner.ref_alt":  "gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa.alt",
-  "TopMedAligner.ref_bwt":  "gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa.bwt",
-  "TopMedAligner.ref_pac":  "gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa.pac",
-  "TopMedAligner.ref_ann":  "gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa.ann",
-  "TopMedAligner.ref_amb":  "gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa.amb",
-  "TopMedAligner.ref_sa":  "gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa.sa",
-  "TopMedAligner.ref_fasta":  "gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa",
-  "TopMedAligner.ref_fasta_index":  "gs://topmed_workflow_testing/topmed_variant_caller/reference_files/hg38/hs38DH.fa.fai",
+  "TopMedAligner.ref_alt":  "https://storage.googleapis.com/topmed_workflow_testing/topmed_aligner/reference_files/hg38/hs38DH.fa.alt",
+  "TopMedAligner.ref_bwt":  "https://storage.googleapis.com/topmed_workflow_testing/topmed_aligner/reference_files/hg38/hs38DH.fa.bwt",
+  "TopMedAligner.ref_pac":  "https://storage.googleapis.com/topmed_workflow_testing/topmed_aligner/reference_files/hg38/hs38DH.fa.pac",
+  "TopMedAligner.ref_ann":  "https://storage.googleapis.com/topmed_workflow_testing/topmed_aligner/reference_files/hg38/hs38DH.fa.ann",
+  "TopMedAligner.ref_amb":  "https://storage.googleapis.com/topmed_workflow_testing/topmed_aligner/reference_files/hg38/hs38DH.fa.amb",
+  "TopMedAligner.ref_sa":  "https://storage.googleapis.com/topmed_workflow_testing/topmed_aligner/reference_files/hg38/hs38DH.fa.sa",
+  "TopMedAligner.ref_fasta":  "https://storage.googleapis.com/topmed_workflow_testing/topmed_aligner/reference_files/hg38/hs38DH.fa",
+  "TopMedAligner.ref_fasta_index":  "https://storage.googleapis.com/topmed_workflow_testing/topmed_aligner/reference_files/hg38/hs38DH.fa.fai",
 
-  "TopMedAligner.dbSNP_vcf": "gs://topmed_workflow_testing/topmed_aligner/reference_files/hg38/Homo_sapiens_assembly38.dbsnp138.vcf.gz",
-  "TopMedAligner.dbSNP_vcf_index": "gs://topmed_workflow_testing/topmed_aligner/reference_files/hg38/Homo_sapiens_assembly38.dbsnp138.vcf.gz.tbi",
+  "TopMedAligner.dbSNP_vcf": "https://storage.googleapis.com/topmed_workflow_testing/topmed_aligner/reference_files/hg38/Homo_sapiens_assembly38.dbsnp138.vcf.gz",
+  "TopMedAligner.dbSNP_vcf_index": "https://storage.googleapis.com/topmed_workflow_testing/topmed_aligner/reference_files/hg38/Homo_sapiens_assembly38.dbsnp138.vcf.gz.tbi",
 
   "TopMedAligner.docker_image": "statgen/alignment:1.0.0"
 }

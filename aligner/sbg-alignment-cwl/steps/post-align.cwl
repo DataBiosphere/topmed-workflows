@@ -21,11 +21,20 @@ inputs:
   - id: threads
     type: int?
     label: Number of threads
+    default: 1
   - id: input_cram
     type: File
     label: Input CRAM
     doc: Input CRAM is passed to Post-align for output naming.
     'sbg:fileTypes': CRAM
+  - id: ram_min
+    type: int?
+    label: Minimum amount of RAM
+    default: 7500
+  - id: cores_min
+    type: int?
+    label: Minimum number of cores
+    default: 8
 outputs:
   - id: output
     type: File?
@@ -99,8 +108,8 @@ arguments:
 requirements:
   - class: ShellCommandRequirement
   - class: ResourceRequirement
-    ramMin: 7500
-    coresMin: 2
+    ramMin: $(inputs.ram_min)
+    coresMin: $(inputs.cores_min)
   - class: DockerRequirement
     dockerPull: 'statgen/alignment:1.0.0'
   - class: InitialWorkDirRequirement

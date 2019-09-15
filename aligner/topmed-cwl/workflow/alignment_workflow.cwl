@@ -12,6 +12,9 @@ doc: |
       - reads are provided in query-sorted order
       - all reads must have an RG tag
     - Reference genome must be Hg38 with ALT contigs
+'dct:creator':
+  'foaf:mbox': 'mailto:yilinxu@uchicago.edu'
+  'foaf:name': Yilin Xu
 
 class: Workflow
 id: alignment_pipeline

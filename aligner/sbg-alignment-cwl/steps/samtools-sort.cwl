@@ -18,6 +18,18 @@ inputs:
     inputBinding:
       position: 4
       shellQuote: false
+  - id: threads
+    type: int?
+    label: Number of threads
+    default: 1
+  - id: ram_min
+    type: int?
+    label: Minimum amount of RAM
+    default: 7000
+  - id: cores_min
+    type: int?
+    label: Minimum number of cores
+    default: 2
 outputs:
   - id: output
     type: File?
@@ -29,7 +41,7 @@ arguments:
   - position: 1
     prefix: '--threads'
     shellQuote: false
-    valueFrom: '1'
+    valueFrom: $(inputs.threads)
   - position: 3
     prefix: '-o'
     shellQuote: false
@@ -41,8 +53,8 @@ arguments:
 requirements:
   - class: ShellCommandRequirement
   - class: ResourceRequirement
-    ramMin: 7000
-    coresMin: 2
+    ramMin: $(inputs.ram_min)
+    coresMin: $(inputs.cores_min)
   - class: DockerRequirement
     dockerPull: 'statgen/alignment:1.0.0'
   - class: InitialWorkDirRequirement

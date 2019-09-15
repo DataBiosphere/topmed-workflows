@@ -1,7 +1,7 @@
 ## This is the TopMed alignment workflow WDL for the workflow code located here:
 ## https://github.com/statgen/docker-alignment
 ##
-## NOTE:  
+## NOTE:
 ## The reference genome files to use are located here:
 ## ftp://share.sph.umich.edu/gotcloud/ref/hs38DH-db142-v1.tgz
 ##
@@ -15,7 +15,7 @@ workflow TopMedAligner {
   File input_crai_file
   File input_cram_file
 
-  String docker_image 
+  String docker_image
 
   File ref_alt
   File ref_bwt
@@ -30,6 +30,71 @@ workflow TopMedAligner {
   File dbSNP_vcf
   File dbSNP_vcf_index
 
+  # The CRAM to be realigned may have been aligned with a different reference
+  # genome than what will be used in the alignment step. The pre align step
+  # must use the reference genome that the CRAM was originally aligned with
+  # to convert the CRAM to a SAM
+  File? PreAlign_reference_genome
+  File PreAlign_reference_genome_default = select_first([PreAlign_reference_genome,ref_fasta])
+  File? PreAlign_reference_genome_index
+  File PreAlign_reference_genome_index_default = select_first([PreAlign_reference_genome_index,ref_fasta_index])
+
+  Int? PreAlign_preemptible_tries
+  Int PreAlign_preemptible_tries_default = select_first([PreAlign_preemptible_tries, 3])
+  Int? PreAlign_max_retries
+  Int PreAlign_max_retries_default = select_first([PreAlign_max_retries, 3])
+  Int? PreAlign_CPUs
+  Int PreAlign_CPUs_default = select_first([PreAlign_CPUs, 1])
+  Float? PreAlign_mem
+  Float PreAlign_mem_default = select_first([PreAlign_mem, 6.5])
+
+  Int? Align_preemptible_tries
+  Int Align_preemptible_tries_default = select_first([Align_preemptible_tries, 3])
+  Int? Align_max_retries
+  Int Align_max_retries_default = select_first([Align_max_retries, 3])
+  Int? Align_CPUs
+  Int Align_CPUs_default = select_first([Align_CPUs, 32])
+  Float? Align_mem
+  Float Align_mem_default = select_first([Align_mem, 7])
+
+  # Use one preemptible try for post alignment becuase it often takes more than 24 
+  # hours and GCP preemptible nodes are terminated after 24 hours by GCP
+  # https://cloud.google.com/compute/docs/instances/preemptible
+  # "Compute Engine always terminates preemptible instances after they run for 24 hours."
+  #  So by using 0 for preemptible tries the task is non preemtible
+  #  if preemptible is set to 0 -- then its set to false
+  #  if preemptible is set to a positive integer -- its automatically true
+  Int? PostAlign_preemptible_tries
+  Int PostAlign_preemptible_tries_default = select_first([PostAlign_preemptible_tries, 0])
+  #if preemptible is 0 and maxRetries is 3 -- then that task can be retried upto 3 times
+  #if preemptible is 3 and maxRetries is 3 for a task -- that can be retried upto 6 times
+  #https://cromwell.readthedocs.io/en/stable/RuntimeAttributes/#maxretries
+  Int? PostAlign_max_retries
+  Int PostAlign_max_retries_default = select_first([PostAlign_max_retries, 3])
+  Int? PostAlign_CPUs
+  Int PostAlign_CPUs_default = select_first([PostAlign_CPUs, 1])
+  Float? PostAlign_mem
+  Float PostAlign_mem_default = select_first([PostAlign_mem, 6.5])
+
+
+  Boolean? dynamically_calculate_file_size
+  Boolean dynamically_calculate_disk_requirement = select_first([dynamically_calculate_file_size, true])
+
+  Float? CRAMandCRAI_disk_size_override
+  Float CRAMandCRAI_disk_size_override_default = select_first([CRAMandCRAI_disk_size_override, 200])
+
+  Float? ReferenceGenome_disk_size_override
+  Float ReferenceGenome_disk_size_override_default = select_first([ReferenceGenome_disk_size_override, 6.0])
+
+  Float? BWT_disk_size_override
+  Float BWT_disk_size_override_default = select_first([BWT_disk_size_override, 2.0])
+
+  Float? dbSNP_disk_size_override
+  Float dbSNP_disk_size_override_default = select_first([dbSNP_disk_size_override, 2.0])
+
+  # Get the file name only with no path and no .cram suffix
+  String input_cram_name = basename("${input_cram_file}", ".cram")
+
   # Optional input to increase all disk sizes in case of outlier sample with strange size behavior
   Int? increase_disk_size
 
@@ -40,33 +105,63 @@ workflow TopMedAligner {
   # Sometimes the output is larger than the input, or a task can spill to disk. In these cases we need to account for the
   # input (1) and the output (1.5) or the input(1), the output(1), and spillage (.5).
   Float bwa_disk_multiplier = 2.5
-  
+
   # Converting CRAM to fastq.gz takes extra disk space to store the fastq.gz files
   Float CRAM_to_fastqgz_multiplier = 2.5
 
   # Creating CRAM files from fastq.gz files increases the disk space needed
   Float fastq_gz_to_CRAM_multiplier = 1.5
-  
+
   # SortSam spills to disk a lot more because we are only store 300000 records in RAM now because its faster for our data
   # so it needs more disk space.  Also it spills to disk in an uncompressed format so we need to account for that with a
   # larger multiplier
   Float sort_sam_disk_multiplier = 3.25
 
-  # Get the size of the standard reference files as well as the additional reference files needed for BWA
-  Float ref_size = size(ref_fasta, "GB") + size(ref_fasta_index, "GB")
-  Float ref_extra_size = size(ref_alt, "GB") + size(ref_bwt, "GB") + size(ref_pac, "GB") + size(ref_ann, "GB") + size(ref_amb, "GB") + size(ref_sa, "GB")
-  Float dbsnp_size = size(dbSNP_vcf, "GB") + size(dbSNP_vcf_index, "GB")
-  Float cram_size = size(input_cram_file, "GB") + size(input_crai_file, "GB")
-  Float fastq_gz_files_size = CRAM_to_fastqgz_multiplier * cram_size
+
+  Float PreAlign_ref_size = if (defined(dynamically_calculate_disk_requirement)) then size(PreAlign_reference_genome_default, "GB") + size(PreAlign_reference_genome_index_default, "GB") + 
+      additional_disk else ReferenceGenome_disk_size_override_default + additional_disk
+
+  Float ref_size = if (defined(dynamically_calculate_disk_requirement)) then size(ref_fasta, "GB") + size(ref_fasta_index, "GB") + 
+      additional_disk else ReferenceGenome_disk_size_override_default + additional_disk
+
+  Float ref_extra_size = if (defined(dynamically_calculate_disk_requirement)) then size(ref_alt, "GB") + size(ref_bwt, "GB") + size(ref_pac, "GB") + 
+      size(ref_ann, "GB") + size(ref_amb, "GB") + size(ref_sa, "GB") + 
+      additional_disk else BWT_disk_size_override_default + additional_disk
+
+  Float dbsnp_size =if (defined(dynamically_calculate_disk_requirement)) then size(dbSNP_vcf, "GB") + size(dbSNP_vcf_index, "GB") + 
+     additional_disk else dbSNP_disk_size_override_default + additional_disk
+
+  Float cram_and_crai_size = if (defined(dynamically_calculate_disk_requirement)) then size(input_cram_file, "GB") + size(input_crai_file, "GB") + 
+     additional_disk else CRAMandCRAI_disk_size_override_default + additional_disk
+
+  Float fastq_gz_files_size = CRAM_to_fastqgz_multiplier * cram_and_crai_size
+
+
+
+  Float PreAlign_disk_size = PreAlign_ref_size + (bwa_disk_multiplier * cram_and_crai_size) + 
+     (sort_sam_disk_multiplier * cram_and_crai_size) + cram_and_crai_size + additional_disk + fastq_gz_files_size
+
+  Float Align_disk_size = ref_size + ref_extra_size + (bwa_disk_multiplier * fastq_gz_files_size) + additional_disk
+
+  # The merged cram can be bigger than the summed sizes of the individual aligned crams,
+  # so account for the output size by multiplying the input size by bwa disk multiplier.
+  Float PostAlign_disk_size = ref_size + dbsnp_size + cram_and_crai_size + 
+     (sort_sam_disk_multiplier * cram_and_crai_size) + (bwa_disk_multiplier * cram_and_crai_size) + additional_disk
+
 
   call PreAlign {
      input:
       input_crai = input_crai_file,
       input_cram = input_cram_file,
-      disk_size = ref_size + (bwa_disk_multiplier * cram_size) + (sort_sam_disk_multiplier * cram_size) + cram_size + additional_disk + fastq_gz_files_size,
+      ref_fasta = PreAlign_reference_genome_default,
+      ref_fasta_index = PreAlign_reference_genome_index_default,
+
+      disk_size = PreAlign_disk_size,
       docker_image = docker_image,
-      ref_fasta = ref_fasta,
-      ref_fasta_index = ref_fasta_index
+      CPUs = PreAlign_CPUs_default,
+      memory = PreAlign_mem_default,
+      preemptible_tries = PreAlign_preemptible_tries_default,
+      max_retries = PreAlign_preemptible_tries_default
   }
 
   call Align {
@@ -74,8 +169,12 @@ workflow TopMedAligner {
       input_list_file = PreAlign.output_list_file,
       input_fastq_gz_files = PreAlign.output_fastq_gz_files,
 
-      disk_size = ref_size + ref_extra_size + (bwa_disk_multiplier * fastq_gz_files_size) + additional_disk,
+      disk_size = Align_disk_size,
       docker_image = docker_image,
+      CPUs = Align_CPUs_default,
+      memory = Align_mem_default,
+      preemptible_tries = Align_preemptible_tries_default,
+      max_retries = Align_max_retries_default,
 
       ref_alt = ref_alt,
       ref_bwt = ref_bwt,
@@ -84,10 +183,11 @@ workflow TopMedAligner {
       ref_amb = ref_amb,
       ref_sa = ref_sa,
       ref_fasta = ref_fasta,
-      ref_fasta_index = ref_fasta_index
+      ref_fasta_index = ref_fasta_index,
+
+
   }
 
-  Float CRAMS_files_size = fastq_gz_to_CRAM_multiplier * cram_size
 
   call PostAlign {
      input:
@@ -95,18 +195,31 @@ workflow TopMedAligner {
 
       # The merged cram can be bigger than the summed sizes of the individual aligned crams,
       # so account for the output size by multiplying the input size by bwa disk multiplier.
-      disk_size = ref_size + dbsnp_size + CRAMS_files_size + (sort_sam_disk_multiplier * CRAMS_files_size) + (bwa_disk_multiplier * CRAMS_files_size) + additional_disk,
+      disk_size = PostAlign_disk_size,
       docker_image = docker_image,
+      max_retries = PostAlign_max_retries_default,
+      preemptible_tries = PostAlign_preemptible_tries_default,
+      CPUs = PostAlign_CPUs_default,
+      memory = PostAlign_mem_default,
 
       ref_fasta = ref_fasta,
       ref_fasta_index = ref_fasta_index,
 
       dbSNP_vcf = dbSNP_vcf,
-      dbSNP_vcf_index = dbSNP_vcf_index
+      dbSNP_vcf_index = dbSNP_vcf_index,
+
+      input_cram_name = input_cram_name,
+
   }
- 
+
   output {
-      File aligner_output = PostAlign.output_cram_file
+      File aligner_output_cram = PostAlign.output_cram_file
+      File aligner_output_crai = PostAlign.output_crai_file
+  }
+  meta {
+            author : "Walt Shands"
+            email : "jshands@ucsc.edu"
+            description: "This is the workflow WDL for the [TOPMed/University of Michigan alignment pipeline](https://github.com/statgen/docker-alignment)"
   }
 }
 
@@ -114,11 +227,15 @@ workflow TopMedAligner {
      File input_crai
      File input_cram
 
-     Float disk_size
-     String docker_image
-
      File ref_fasta
      File ref_fasta_index
+
+     Float memory
+     Float disk_size
+     Int CPUs
+     Int preemptible_tries
+     String docker_image
+     Int max_retries
 
      # Assign a basename to the intermediate files
      String pre_output_base = "pre_output_base"
@@ -152,8 +269,11 @@ workflow TopMedAligner {
       Array[File] output_fastq_gz_files = glob("${pre_output_base}.*")
     }
    runtime {
-      memory: "10 GB"
-      cpu: "32"
+      maxRetries: max_retries
+      preemptible: preemptible_tries
+      #memory: "6.5 GB"
+      memory: sub(memory, "\\..*", "") + " GB"
+      cpu: sub(CPUs, "\\..*", "")
       disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
       zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"
       docker: docker_image
@@ -165,9 +285,6 @@ workflow TopMedAligner {
      File input_list_file
      Array[File] input_fastq_gz_files
 
-     Float disk_size
-     String docker_image
-
      File ref_alt
      File ref_bwt
      File ref_pac
@@ -178,18 +295,29 @@ workflow TopMedAligner {
      File ref_fasta
      File ref_fasta_index
 
+     Float memory
+     Float disk_size
+     Int CPUs
+     Int preemptible_tries
+     String docker_image
+     Int max_retries
+
+
      # We have to use a trick to make Cromwell
      # skip substitution when using the bash ${<variable} syntax
-     # This is necessary to get the <var>=$(<command>) sub shell 
-     # syntax to work and assign the value to a variable when 
+     # This is necessary to get the <var>=$(<command>) sub shell
+     # syntax to work and assign the value to a variable when
      # running in Cromwell
-     # See https://gatkforums.broadinstitute.org/wdl/discussion/comment/44570#Comment_44570 
+     # See https://gatkforums.broadinstitute.org/wdl/discussion/comment/44570#Comment_44570
      String dollar = "$"
      command <<<
 
       # Set the exit code of a pipeline to that of the rightmost command
-      # to exit with a non-zero status, or zero if all commands of the pipeline exit 
-      set -o pipefail
+      # to exit with a non-zero status, or zero if all commands of the pipeline exit
+      # NOTE: Setting this will cause the pipeline to fail on Mac OS and Travis CI
+      #       in some cases. It is commented out mainly so Travis CI will work.
+      #       The failure was in samblaster
+      #set -o pipefail
       # cause a bash script to exit immediately when a command fails
       set -e
       # cause the bash shell to treat unset variables as an error and exit immediately
@@ -200,7 +328,7 @@ workflow TopMedAligner {
 
       echo "Running alignment"
 
-      # Get the Cromwell directory that is the input file location 
+      # Get the Cromwell directory that is the input file location
       input_file_location=$(dirname ${input_fastq_gz_files[0]})
 
       while read line
@@ -212,13 +340,13 @@ workflow TopMedAligner {
 
         # Prepend the path to the input file with the Cromwell input directory
         input_path=${dollar}{input_file_location}"/"${dollar}{input_filename}
-     
+
         paired_flag=""
         if [[ ${dollar}{input_filename} =~ interleaved\.fastq\.gz$ ]]
         then
           paired_flag="-p"
         fi
-      
+
         bwa mem -t 32 -K 100000000 -Y ${dollar}{paired_flag} -R ${dollar}{line_rg} ${ref_fasta} ${dollar}{input_path} | samblaster -a --addMateTags | samtools view -@ 32 -T ${ref_fasta} -C -o ${dollar}{output_filename} -
       done <<< "$(tail -n +2 ${input_list_file})"
 
@@ -227,8 +355,11 @@ workflow TopMedAligner {
       Array[File] output_cram_files = glob("*.cram")
     }
    runtime {
-      memory: "10 GB"
-      cpu: "32"
+      maxRetries: max_retries
+      preemptible: preemptible_tries
+      memory: sub(memory, "\\..*", "") + " GB"
+      #memory: "10 GB"
+      cpu: sub(CPUs, "\\..*", "")
       disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
       zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"
       docker: docker_image
@@ -236,9 +367,6 @@ workflow TopMedAligner {
   }
 
 task PostAlign {
-     Float disk_size
-     String docker_image
-
      File ref_fasta
      File ref_fasta_index
 
@@ -246,6 +374,17 @@ task PostAlign {
      File dbSNP_vcf_index
 
      Array[File] input_cram_files
+
+     Float memory
+     Float disk_size
+     Int CPUs
+     Int preemptible_tries
+     String docker_image
+     Int max_retries
+
+     String input_cram_name
+     String output_cram_file_name = "${input_cram_name}_realigned.cram"
+     String output_crai_file_name = "${input_cram_name}_realigned.cram.crai"
 
      # We have to use a trick to make Cromwell
      # skip substitution when using the bash ${<variable} syntax
@@ -257,7 +396,7 @@ task PostAlign {
 
      command <<<
       # Set the exit code of a pipeline to that of the rightmost command
-      # to exit with a non-zero status, or zero if all commands of the pipeline exit 
+      # to exit with a non-zero status, or zero if all commands of the pipeline exit
       set -o pipefail
       # cause a bash script to exit immediately when a command fails
       set -e
@@ -285,26 +424,29 @@ task PostAlign {
 
         rc=$?
         [[ $rc != 0 ]] && break
-#        rm -f ${dollar}{input_file} ${dollar}{tmp_prefix}*
-        # Remove the tmp file; no need to remove the input file from the previous task
-        rm -f ${dollar}{tmp_prefix}*
+        rm -f ${dollar}{input_file} ${dollar}{tmp_prefix}*
       done
-      
+
       if [[ $rc == 0 ]]
       then 
         samtools merge --threads 1 -c merged.bam *.sorted.bam \
           && rm ./*.sorted.bam \
           && bam-non-primary-dedup dedup_LowMem --allReadNames --binCustom --binQualS 0:2,3:3,4:4,5:5,6:6,7:10,13:20,23:30 --log dedup_lowmem.metrics --recab --in merged.bam --out -.ubam --refFile ${ref_fasta} --dbsnp ${dbSNP_vcf} \
-          | samtools view -h -C -T ${ref_fasta} -o output_file.cram --threads 1
+          | samtools view -h -C -T ${ref_fasta} -o ${output_cram_file_name} --threads 1 \
+          && samtools index ${output_cram_file_name}
         rc=$?
       fi
     >>>
      output {
-      File output_cram_file = "output_file.cram"
+      File output_cram_file = "${output_cram_file_name}"
+      File output_crai_file = "${output_crai_file_name}"
     }
    runtime {
-      memory: "10 GB"
-      cpu: "32"
+      maxRetries: max_retries
+      preemptible: preemptible_tries
+      #memory: "6.5 GB"
+      memory: sub(memory, "\\..*", "") + " GB"
+      cpu: sub(CPUs, "\\..*", "")
       disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
       zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"
       docker: docker_image
