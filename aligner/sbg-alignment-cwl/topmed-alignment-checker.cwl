@@ -5,6 +5,9 @@ doc: Checker for the TopMed alignment workflow.
 label: TOPMed Alignment - checker
 $namespaces:
   sbg: 'https://sevenbridges.com/'
+  dct: http://purl.org/dc/terms/
+  foaf: http://xmlns.com/foaf/0.1/
+
 inputs:
   - id: reference_genome
     'sbg:fileTypes': 'FA, FASTA'

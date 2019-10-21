@@ -1,6 +1,10 @@
 cwlVersion: v1.0
 class: Workflow
 
+$namespaces:
+  dct: http://purl.org/dc/terms/
+  foaf: http://xmlns.com/foaf/0.1/
+
 dct:creator:
   '@id':  https://orcid.org/0000-0001-5173-4627
   foaf:name: Walter Shands
