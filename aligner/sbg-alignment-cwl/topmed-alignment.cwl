@@ -8,7 +8,7 @@ doc: >-
   Wrapper Author: Marko Zecevic (marko.zecevic@sbgenomics.com)
 label: TOPMed Alignment
 $namespaces:
-  sbg: 'https://sevenbridges.com'
+  sbg: 'https://sevenbridges.com/'
 inputs:
   - id: input_file
     'sbg:fileTypes': CRAM

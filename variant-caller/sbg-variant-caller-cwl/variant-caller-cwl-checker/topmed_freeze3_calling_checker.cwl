@@ -85,4 +85,4 @@ steps:
 requirements:
   - class: SubworkflowFeatureRequirement
 $namespaces:
-  sbg: 'https://sevenbridges.com'
+  sbg: 'https://sevenbridges.com/'

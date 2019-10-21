@@ -253,7 +253,7 @@ requirements:
     'sbg:modifiedBy': vladimir_obucina
     'sbg:revisionNotes': 'UPDATE: GRCh37 instead of hg19'
 $namespaces:
-  sbg: 'https://sevenbridges.com'
+  sbg: 'https://sevenbridges.com/'
 'sbg:cmdPreview': >-
   export PATH=$PATH:/VerifyBamID/bin/ && VerifyBamID  --UDPath
   /VerifyBamID/resource/1000g.phase3.100k.b37.vcf.gz.dat.UD  --BedPath

@@ -175,4 +175,4 @@ requirements:
           read_and_compare_vcfs_from_tar_gz(test_vcf, truth_vcf)
   - class: InlineJavascriptRequirement
 $namespaces:
-  sbg: 'https://sevenbridges.com'
+  sbg: 'https://sevenbridges.com/'

@@ -1,7 +1,7 @@
 class: CommandLineTool
 cwlVersion: v1.0
 $namespaces:
-  sbg: 'https://sevenbridges.com'
+  sbg: 'https://sevenbridges.com/'
 id: alignment_validation
 baseCommand:
   - '{'
