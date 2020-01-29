@@ -12,7 +12,7 @@
 
 workflow TopMedAligner {
 
-  File input_crai_file
+  File? input_crai_file
   File input_cram_file
 
   String docker_image
@@ -224,7 +224,7 @@ workflow TopMedAligner {
 }
 
   task PreAlign {
-     File input_crai
+     File? input_crai
      File input_cram
 
      File ref_fasta
@@ -254,6 +254,10 @@ workflow TopMedAligner {
       #to turn off echo do 'set +o xtrace'
 
       echo "Running pre-alignment"
+
+      samtools index -b ${input_cram} ${input_cram}.crai
+
+      echo "File indexed, now running the rest of pre-alignment"
 
       samtools view -T ${ref_fasta} -uh -F 0x900 ${input_cram} \
         | bam-ext-mem-sort-manager squeeze --in -.ubam --keepDups --rmTags AS:i,BD:Z,BI:Z,XS:i,MC:Z,MD:Z,NM:i,MQ:i --out -.ubam \
