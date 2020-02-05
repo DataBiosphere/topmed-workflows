@@ -12,7 +12,7 @@
 
 workflow TopMedAligner {
 
-  File input_crai_file
+  File? input_crai_file
   File input_cram_file
 
   String docker_image
@@ -224,7 +224,7 @@ workflow TopMedAligner {
 }
 
   task PreAlign {
-     File input_crai
+     File? input_crai
      File input_cram
 
      File ref_fasta
