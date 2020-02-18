@@ -1,10 +1,10 @@
-import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.32.0/aligner/u_of_michigan_aligner/u_of_michigan_aligner.wdl" as TopMed_aligner
+import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/develop/aligner/u_of_michigan_aligner/u_of_michigan_aligner.wdl" as TopMed_aligner
 import "https://raw.githubusercontent.com/DataBiosphere/topmed-workflows/1.32.0/aligner/u_of_michigan_aligner-checker/u_of_michigan_aligner_checker_calculation.wdl" as checker
 
 workflow checkerWorkflow {
   String docker_image
 
-  File input_crai_file
+  File? input_crai_file
   File input_cram_file
 
   File inputTruthCRAMFile
