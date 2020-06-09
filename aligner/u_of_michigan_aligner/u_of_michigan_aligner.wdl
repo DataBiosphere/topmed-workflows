@@ -1,3 +1,4 @@
+version 1.0
 ## This is the TopMed alignment workflow WDL for the workflow code located here:
 ## https://github.com/statgen/docker-alignment
 ##
@@ -11,146 +12,147 @@
 ##
 
 workflow TopMedAligner {
+  input {
+    File? input_crai_file
+    File input_cram_file
 
-  File? input_crai_file
-  File input_cram_file
+    String docker_image
 
-  String docker_image
+    File ref_alt
+    File ref_bwt
+    File ref_pac
+    File ref_ann
+    File ref_amb
+    File ref_sa
 
-  File ref_alt
-  File ref_bwt
-  File ref_pac
-  File ref_ann
-  File ref_amb
-  File ref_sa
+    File ref_fasta
+    File ref_fasta_index
 
-  File ref_fasta
-  File ref_fasta_index
+    File dbSNP_vcf
+    File dbSNP_vcf_index
 
-  File dbSNP_vcf
-  File dbSNP_vcf_index
+    # The CRAM to be realigned may have been aligned with a different reference
+    # genome than what will be used in the alignment step. The pre align step
+    # must use the reference genome that the CRAM was originally aligned with
+    # to convert the CRAM to a SAM
+    File? PreAlign_reference_genome
+    File PreAlign_reference_genome_default = select_first([PreAlign_reference_genome,ref_fasta])
+    File? PreAlign_reference_genome_index
+    File PreAlign_reference_genome_index_default = select_first([PreAlign_reference_genome_index,ref_fasta_index])
 
-  # The CRAM to be realigned may have been aligned with a different reference
-  # genome than what will be used in the alignment step. The pre align step
-  # must use the reference genome that the CRAM was originally aligned with
-  # to convert the CRAM to a SAM
-  File? PreAlign_reference_genome
-  File PreAlign_reference_genome_default = select_first([PreAlign_reference_genome,ref_fasta])
-  File? PreAlign_reference_genome_index
-  File PreAlign_reference_genome_index_default = select_first([PreAlign_reference_genome_index,ref_fasta_index])
+    Int? PreAlign_preemptible_tries
+    Int PreAlign_preemptible_tries_default = select_first([PreAlign_preemptible_tries, 3])
+    Int? PreAlign_max_retries
+    Int PreAlign_max_retries_default = select_first([PreAlign_max_retries, 3])
+    Int? PreAlign_CPUs
+    Int PreAlign_CPUs_default = select_first([PreAlign_CPUs, 1])
+    Float? PreAlign_mem
+    Float PreAlign_mem_default = select_first([PreAlign_mem, 6.5])
 
-  Int? PreAlign_preemptible_tries
-  Int PreAlign_preemptible_tries_default = select_first([PreAlign_preemptible_tries, 3])
-  Int? PreAlign_max_retries
-  Int PreAlign_max_retries_default = select_first([PreAlign_max_retries, 3])
-  Int? PreAlign_CPUs
-  Int PreAlign_CPUs_default = select_first([PreAlign_CPUs, 1])
-  Float? PreAlign_mem
-  Float PreAlign_mem_default = select_first([PreAlign_mem, 6.5])
+    Int? Align_preemptible_tries
+    Int Align_preemptible_tries_default = select_first([Align_preemptible_tries, 3])
+    Int? Align_max_retries
+    Int Align_max_retries_default = select_first([Align_max_retries, 3])
+    Int? Align_CPUs
+    Int Align_CPUs_default = select_first([Align_CPUs, 32])
+    Float? Align_mem
+    Float Align_mem_default = select_first([Align_mem, 7])
 
-  Int? Align_preemptible_tries
-  Int Align_preemptible_tries_default = select_first([Align_preemptible_tries, 3])
-  Int? Align_max_retries
-  Int Align_max_retries_default = select_first([Align_max_retries, 3])
-  Int? Align_CPUs
-  Int Align_CPUs_default = select_first([Align_CPUs, 32])
-  Float? Align_mem
-  Float Align_mem_default = select_first([Align_mem, 7])
-
-  # Use one preemptible try for post alignment becuase it often takes more than 24 
-  # hours and GCP preemptible nodes are terminated after 24 hours by GCP
-  # https://cloud.google.com/compute/docs/instances/preemptible
-  # "Compute Engine always terminates preemptible instances after they run for 24 hours."
-  #  So by using 0 for preemptible tries the task is non preemtible
-  #  if preemptible is set to 0 -- then its set to false
-  #  if preemptible is set to a positive integer -- its automatically true
-  Int? PostAlign_preemptible_tries
-  Int PostAlign_preemptible_tries_default = select_first([PostAlign_preemptible_tries, 0])
-  #if preemptible is 0 and maxRetries is 3 -- then that task can be retried upto 3 times
-  #if preemptible is 3 and maxRetries is 3 for a task -- that can be retried upto 6 times
-  #https://cromwell.readthedocs.io/en/stable/RuntimeAttributes/#maxretries
-  Int? PostAlign_max_retries
-  Int PostAlign_max_retries_default = select_first([PostAlign_max_retries, 3])
-  Int? PostAlign_CPUs
-  Int PostAlign_CPUs_default = select_first([PostAlign_CPUs, 1])
-  Float? PostAlign_mem
-  Float PostAlign_mem_default = select_first([PostAlign_mem, 6.5])
-
-
-  Boolean? dynamically_calculate_file_size
-  Boolean dynamically_calculate_disk_requirement = select_first([dynamically_calculate_file_size, true])
-
-  Float? CRAMandCRAI_disk_size_override
-  Float CRAMandCRAI_disk_size_override_default = select_first([CRAMandCRAI_disk_size_override, 200])
-
-  Float? ReferenceGenome_disk_size_override
-  Float ReferenceGenome_disk_size_override_default = select_first([ReferenceGenome_disk_size_override, 6.0])
-
-  Float? BWT_disk_size_override
-  Float BWT_disk_size_override_default = select_first([BWT_disk_size_override, 2.0])
-
-  Float? dbSNP_disk_size_override
-  Float dbSNP_disk_size_override_default = select_first([dbSNP_disk_size_override, 2.0])
-
-  # Get the file name only with no path and no .cram suffix
-  String input_cram_name = basename("${input_cram_file}", ".cram")
-
-  # Optional input to increase all disk sizes in case of outlier sample with strange size behavior
-  Int? increase_disk_size
-
-  # Some tasks need wiggle room, and we also need to add a small amount of disk to prevent getting a
-  # Cromwell error from asking for 0 disk when the input is less than 1GB
-  Int additional_disk = select_first([increase_disk_size, 20])
-
-  # Sometimes the output is larger than the input, or a task can spill to disk. In these cases we need to account for the
-  # input (1) and the output (1.5) or the input(1), the output(1), and spillage (.5).
-  Float bwa_disk_multiplier = 2.5
-
-  # Converting CRAM to fastq.gz takes extra disk space to store the fastq.gz files
-  Float CRAM_to_fastqgz_multiplier = 2.5
-
-  # Creating CRAM files from fastq.gz files increases the disk space needed
-  Float fastq_gz_to_CRAM_multiplier = 1.5
-
-  # SortSam spills to disk a lot more because we are only store 300000 records in RAM now because its faster for our data
-  # so it needs more disk space.  Also it spills to disk in an uncompressed format so we need to account for that with a
-  # larger multiplier
-  Float sort_sam_disk_multiplier = 3.25
+    # Use one preemptible try for post alignment becuase it often takes more than 24 
+    # hours and GCP preemptible nodes are terminated after 24 hours by GCP
+    # https://cloud.google.com/compute/docs/instances/preemptible
+    # "Compute Engine always terminates preemptible instances after they run for 24 hours."
+    #  So by using 0 for preemptible tries the task is non preemtible
+    #  if preemptible is set to 0 -- then its set to false
+    #  if preemptible is set to a positive integer -- its automatically true
+    Int? PostAlign_preemptible_tries
+    Int PostAlign_preemptible_tries_default = select_first([PostAlign_preemptible_tries, 0])
+    #if preemptible is 0 and maxRetries is 3 -- then that task can be retried upto 3 times
+    #if preemptible is 3 and maxRetries is 3 for a task -- that can be retried upto 6 times
+    #https://cromwell.readthedocs.io/en/stable/RuntimeAttributes/#maxretries
+    Int? PostAlign_max_retries
+    Int PostAlign_max_retries_default = select_first([PostAlign_max_retries, 3])
+    Int? PostAlign_CPUs
+    Int PostAlign_CPUs_default = select_first([PostAlign_CPUs, 1])
+    Float? PostAlign_mem
+    Float PostAlign_mem_default = select_first([PostAlign_mem, 6.5])
 
 
-  Float PreAlign_ref_size = if (defined(dynamically_calculate_disk_requirement)) then size(PreAlign_reference_genome_default, "GB") + size(PreAlign_reference_genome_index_default, "GB") + 
-      additional_disk else ReferenceGenome_disk_size_override_default + additional_disk
+    Boolean? dynamically_calculate_file_size
+    Boolean dynamically_calculate_disk_requirement = select_first([dynamically_calculate_file_size, true])
 
-  Float ref_size = if (defined(dynamically_calculate_disk_requirement)) then size(ref_fasta, "GB") + size(ref_fasta_index, "GB") + 
-      additional_disk else ReferenceGenome_disk_size_override_default + additional_disk
+    Float? CRAMandCRAI_disk_size_override
+    Float CRAMandCRAI_disk_size_override_default = select_first([CRAMandCRAI_disk_size_override, 200])
 
-  Float ref_extra_size = if (defined(dynamically_calculate_disk_requirement)) then size(ref_alt, "GB") + size(ref_bwt, "GB") + size(ref_pac, "GB") + 
-      size(ref_ann, "GB") + size(ref_amb, "GB") + size(ref_sa, "GB") + 
-      additional_disk else BWT_disk_size_override_default + additional_disk
+    Float? ReferenceGenome_disk_size_override
+    Float ReferenceGenome_disk_size_override_default = select_first([ReferenceGenome_disk_size_override, 6.0])
 
-  Float dbsnp_size =if (defined(dynamically_calculate_disk_requirement)) then size(dbSNP_vcf, "GB") + size(dbSNP_vcf_index, "GB") + 
-     additional_disk else dbSNP_disk_size_override_default + additional_disk
+    Float? BWT_disk_size_override
+    Float BWT_disk_size_override_default = select_first([BWT_disk_size_override, 2.0])
 
-  Float cram_and_crai_size = if (defined(dynamically_calculate_disk_requirement)) then size(input_cram_file, "GB") + size(input_crai_file, "GB") + 
-     additional_disk else CRAMandCRAI_disk_size_override_default + additional_disk
+    Float? dbSNP_disk_size_override
+    Float dbSNP_disk_size_override_default = select_first([dbSNP_disk_size_override, 2.0])
 
-  Float fastq_gz_files_size = CRAM_to_fastqgz_multiplier * cram_and_crai_size
+    # Get the file name only with no path and no .cram suffix
+    String input_cram_name = basename("${input_cram_file}", ".cram")
+
+    # Optional input to increase all disk sizes in case of outlier sample with strange size behavior
+    Int? increase_disk_size
+
+    # Some tasks need wiggle room, and we also need to add a small amount of disk to prevent getting a
+    # Cromwell error from asking for 0 disk when the input is less than 1GB
+    Int additional_disk = select_first([increase_disk_size, 20])
+
+    # Sometimes the output is larger than the input, or a task can spill to disk. In these cases we need to account for the
+    # input (1) and the output (1.5) or the input(1), the output(1), and spillage (.5).
+    Float bwa_disk_multiplier = 2.5
+
+    # Converting CRAM to fastq.gz takes extra disk space to store the fastq.gz files
+    Float CRAM_to_fastqgz_multiplier = 2.5
+
+    # Creating CRAM files from fastq.gz files increases the disk space needed
+    Float fastq_gz_to_CRAM_multiplier = 1.5
+
+    # SortSam spills to disk a lot more because we are only store 300000 records in RAM now because its faster for our data
+    # so it needs more disk space.  Also it spills to disk in an uncompressed format so we need to account for that with a
+    # larger multiplier
+    Float sort_sam_disk_multiplier = 3.25
 
 
+    Float PreAlign_ref_size = if (defined(dynamically_calculate_disk_requirement)) then size(PreAlign_reference_genome_default, "GB") + size(PreAlign_reference_genome_index_default, "GB") + 
+        additional_disk else ReferenceGenome_disk_size_override_default + additional_disk
 
-  Float PreAlign_disk_size = PreAlign_ref_size + (bwa_disk_multiplier * cram_and_crai_size) + 
-     (sort_sam_disk_multiplier * cram_and_crai_size) + cram_and_crai_size + additional_disk + fastq_gz_files_size
+    Float ref_size = if (defined(dynamically_calculate_disk_requirement)) then size(ref_fasta, "GB") + size(ref_fasta_index, "GB") + 
+        additional_disk else ReferenceGenome_disk_size_override_default + additional_disk
 
-  Float Align_disk_size = ref_size + ref_extra_size + (bwa_disk_multiplier * fastq_gz_files_size) + additional_disk
+    Float ref_extra_size = if (defined(dynamically_calculate_disk_requirement)) then size(ref_alt, "GB") + size(ref_bwt, "GB") + size(ref_pac, "GB") + 
+        size(ref_ann, "GB") + size(ref_amb, "GB") + size(ref_sa, "GB") + 
+        additional_disk else BWT_disk_size_override_default + additional_disk
 
-  # The merged cram can be bigger than the summed sizes of the individual aligned crams,
-  # so account for the output size by multiplying the input size by bwa disk multiplier.
-  Float PostAlign_disk_size = ref_size + dbsnp_size + cram_and_crai_size + 
-     (sort_sam_disk_multiplier * cram_and_crai_size) + (bwa_disk_multiplier * cram_and_crai_size) + additional_disk
+    Float dbsnp_size =if (defined(dynamically_calculate_disk_requirement)) then size(dbSNP_vcf, "GB") + size(dbSNP_vcf_index, "GB") + 
+       additional_disk else dbSNP_disk_size_override_default + additional_disk
 
+    Float cram_and_crai_size = if (defined(dynamically_calculate_disk_requirement)) then size(input_cram_file, "GB") + size(input_crai_file, "GB") + 
+       additional_disk else CRAMandCRAI_disk_size_override_default + additional_disk
+
+    Float fastq_gz_files_size = CRAM_to_fastqgz_multiplier * cram_and_crai_size
+
+
+    Float PreAlign_disk_size = PreAlign_ref_size + (bwa_disk_multiplier * cram_and_crai_size) + 
+       (sort_sam_disk_multiplier * cram_and_crai_size) + cram_and_crai_size + additional_disk + fastq_gz_files_size
+
+    Float Align_disk_size = ref_size + ref_extra_size + (bwa_disk_multiplier * fastq_gz_files_size) + additional_disk
+
+    # The merged cram can be bigger than the summed sizes of the individual aligned crams,
+    # so account for the output size by multiplying the input size by bwa disk multiplier.
+    Float PostAlign_disk_size = ref_size + dbsnp_size + cram_and_crai_size + 
+       (sort_sam_disk_multiplier * cram_and_crai_size) + (bwa_disk_multiplier * cram_and_crai_size) + additional_disk
+  }
+
+  
 
   call PreAlign {
-     input:
+    input:
       input_crai = input_crai_file,
       input_cram = input_cram_file,
       ref_fasta = PreAlign_reference_genome_default,
@@ -165,7 +167,7 @@ workflow TopMedAligner {
   }
 
   call Align {
-     input:
+    input:
       input_list_file = PreAlign.output_list_file,
       input_fastq_gz_files = PreAlign.output_fastq_gz_files,
 
@@ -183,14 +185,12 @@ workflow TopMedAligner {
       ref_amb = ref_amb,
       ref_sa = ref_sa,
       ref_fasta = ref_fasta,
-      ref_fasta_index = ref_fasta_index,
-
-
+      ref_fasta_index = ref_fasta_index
   }
 
 
   call PostAlign {
-     input:
+    input:
       input_cram_files = Align.output_cram_files,
 
       # The merged cram can be bigger than the summed sizes of the individual aligned crams,
@@ -208,13 +208,12 @@ workflow TopMedAligner {
       dbSNP_vcf = dbSNP_vcf,
       dbSNP_vcf_index = dbSNP_vcf_index,
 
-      input_cram_name = input_cram_name,
-
+      input_cram_name = input_cram_name
   }
 
   output {
-      File aligner_output_cram = PostAlign.output_cram_file
-      File aligner_output_crai = PostAlign.output_crai_file
+    File aligner_output_cram = PostAlign.output_cram_file
+    File aligner_output_crai = PostAlign.output_crai_file
   }
   meta {
             author : "Walt Shands"
@@ -224,23 +223,25 @@ workflow TopMedAligner {
 }
 
   task PreAlign {
-     File? input_crai
-     File input_cram
+    input {
+      File? input_crai
+      File input_cram
 
-     File ref_fasta
-     File ref_fasta_index
+      File ref_fasta
+      File ref_fasta_index
 
-     Float memory
-     Float disk_size
-     Int CPUs
-     Int preemptible_tries
-     String docker_image
-     Int max_retries
+      Float memory
+      Float disk_size
+      Int CPUs
+      Int preemptible_tries
+      String docker_image
+      Int max_retries
 
-     # Assign a basename to the intermediate files
-     String pre_output_base = "pre_output_base"
+      # Assign a basename to the intermediate files
+      String pre_output_base = "pre_output_base"
+    }
 
-     command {
+    command {
 
       # Set the exit code of a pipeline to that of the rightmost command
       # to exit with a non-zero status, or zero if all commands of the pipeline exit 
@@ -269,47 +270,59 @@ workflow TopMedAligner {
       Array[File] output_fastq_gz_files = glob("${pre_output_base}.*")
     }
    runtime {
-      maxRetries: max_retries
-      preemptible: preemptible_tries
-      #memory: "6.5 GB"
-      memory: sub(memory, "\\..*", "") + " GB"
-      cpu: sub(CPUs, "\\..*", "")
-      disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
-      zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"
-      docker: docker_image
+    maxRetries: max_retries
+    preemptible: preemptible_tries
+    
+    
+    #memory: "6.5 GB"
+    #memory: memory --> valid WDL but throws runtime error
+    #memory: sub(memory, "\\..*", "") + " GB" --> invalid WDL
+    memory: memory + " GB"
+
+    cpu: CPUs
+    #cpu: sub(CPUs, "\\..*", "") --> invalid WDL
+
+    disks: "local-disk " + disk_size + " HDD" #Same as below but now we making disk_size an int
+    #disks: "local-disk " + disk_size + " HDD" --> : Disk strings should be of the format 'local-disk SIZE TYPE' or '/mount/point SIZE TYPE' but got: 'local-disk 228.04056749586016 HDD'  
+    #disks: disk_size --> untested
+    #disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD" --> invalid WDL
+
+    zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"
+    docker: docker_image
     }
   }
 
 
   task Align {
-     File input_list_file
-     Array[File] input_fastq_gz_files
+    input {
+      File input_list_file
+      Array[File] input_fastq_gz_files
 
-     File ref_alt
-     File ref_bwt
-     File ref_pac
-     File ref_ann
-     File ref_amb
-     File ref_sa
+      File ref_alt
+      File ref_bwt
+      File ref_pac
+      File ref_ann
+      File ref_amb
+      File ref_sa
 
-     File ref_fasta
-     File ref_fasta_index
+      File ref_fasta
+      File ref_fasta_index
 
-     Float memory
-     Float disk_size
-     Int CPUs
-     Int preemptible_tries
-     String docker_image
-     Int max_retries
+      Float memory
+      Float disk_size
+      Int CPUs
+      Int preemptible_tries
+      String docker_image
+      Int max_retries
 
-
-     # We have to use a trick to make Cromwell
-     # skip substitution when using the bash ${<variable} syntax
-     # This is necessary to get the <var>=$(<command>) sub shell
-     # syntax to work and assign the value to a variable when
-     # running in Cromwell
-     # See https://gatkforums.broadinstitute.org/wdl/discussion/comment/44570#Comment_44570
-     String dollar = "$"
+      # We have to use a trick to make Cromwell
+      # skip substitution when using the bash ${<variable} syntax
+      # This is necessary to get the <var>=$(<command>) sub shell
+      # syntax to work and assign the value to a variable when
+      # running in Cromwell
+      # See https://gatkforums.broadinstitute.org/wdl/discussion/comment/44570#Comment_44570
+      String dollar = "$"
+    }
      command <<<
 
       # Set the exit code of a pipeline to that of the rightmost command
@@ -357,42 +370,47 @@ workflow TopMedAligner {
    runtime {
       maxRetries: max_retries
       preemptible: preemptible_tries
-      memory: sub(memory, "\\..*", "") + " GB"
+      memory: memory
+      cpu: CPUs
+      disks: disk_size
+      #memory: sub(memory, "\\..*", "") + " GB"
       #memory: "10 GB"
-      cpu: sub(CPUs, "\\..*", "")
-      disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
+      #cpu: sub(CPUs, "\\..*", "")
+      #disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
       zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"
       docker: docker_image
     }
   }
 
 task PostAlign {
-     File ref_fasta
-     File ref_fasta_index
+  input {
+    File ref_fasta
+    File ref_fasta_index
 
-     File dbSNP_vcf
-     File dbSNP_vcf_index
+    File dbSNP_vcf
+    File dbSNP_vcf_index
 
-     Array[File] input_cram_files
+    Array[File] input_cram_files
 
-     Float memory
-     Float disk_size
-     Int CPUs
-     Int preemptible_tries
-     String docker_image
-     Int max_retries
+    Float memory
+    Float disk_size
+    Int CPUs
+    Int preemptible_tries
+    String docker_image
+    Int max_retries
 
-     String input_cram_name
-     String output_cram_file_name = "${input_cram_name}_realigned.cram"
-     String output_crai_file_name = "${input_cram_name}_realigned.cram.crai"
+    String input_cram_name
+    String output_cram_file_name = "${input_cram_name}_realigned.cram"
+    String output_crai_file_name = "${input_cram_name}_realigned.cram.crai"
 
-     # We have to use a trick to make Cromwell
-     # skip substitution when using the bash ${<variable} syntax
-     # This is necessary to get the <var>=$(<command>) sub shell 
-     # syntax to work and assign the value to a variable when 
-     # running in Cromwell
-     # See https://gatkforums.broadinstitute.org/wdl/discussion/comment/44570#Comment_44570 
-     String dollar = "$"
+    # We have to use a trick to make Cromwell
+    # skip substitution when using the bash ${<variable} syntax
+    # This is necessary to get the <var>=$(<command>) sub shell 
+    # syntax to work and assign the value to a variable when 
+    # running in Cromwell
+    # See https://gatkforums.broadinstitute.org/wdl/discussion/comment/44570#Comment_44570 
+    String dollar = "$"
+  }
 
      command <<<
       # Set the exit code of a pipeline to that of the rightmost command
@@ -437,17 +455,20 @@ task PostAlign {
         rc=$?
       fi
     >>>
-     output {
+    output {
       File output_cram_file = "${output_cram_file_name}"
       File output_crai_file = "${output_crai_file_name}"
     }
    runtime {
       maxRetries: max_retries
       preemptible: preemptible_tries
+      memory: memory
+      cpu: CPUs
+      disks: disk_size
       #memory: "6.5 GB"
-      memory: sub(memory, "\\..*", "") + " GB"
-      cpu: sub(CPUs, "\\..*", "")
-      disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
+      #memory: sub(memory, "\\..*", "") + " GB"
+      #cpu: sub(CPUs, "\\..*", "")
+      #disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
       zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"
       docker: docker_image
     }
