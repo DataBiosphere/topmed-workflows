@@ -13,6 +13,24 @@ version 1.0
 
 workflow TopMedAligner {
   input {
+    # Neccessary to convert a float to int
+    # https://gatkforums.broadinstitute.org/wdl/discussion/9541/convert-float-to-int
+    # The old version, disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
+    # being set as as in input for the task's inputs, previously worked but fails to 
+    # pass womtool in WDL 1.0 format; documentation on this change is absent
+
+    String PreAlign_disk_size_string = PreAlign_disk_size
+    String PreAlign_disk_size_before_decimal = sub(PreAlign_disk_size_string, "\\..*", "")
+    Int PreAlign_disk_size_int = PreAlign_disk_size_before_decimal
+
+    String Align_disk_size_string = Align_disk_size
+    String Align_disk_size_before_decimal = sub(Align_disk_size_string, "\\..*", "")
+    Int Align_disk_size_int = Align_disk_size_before_decimal
+
+    String PostAlign_disk_size_string = PostAlign_disk_size
+    String PostAlign_disk_size_before_decimal = sub(PostAlign_disk_size_string, "\\..*", "")
+    Int PostAlign_disk_size_int = PostAlign_disk_size_before_decimal
+
     File? input_crai_file
     File input_cram_file
 
@@ -77,7 +95,6 @@ workflow TopMedAligner {
     Float? PostAlign_mem
     Float PostAlign_mem_default = select_first([PostAlign_mem, 6.5])
 
-
     Boolean? dynamically_calculate_file_size
     Boolean dynamically_calculate_disk_requirement = select_first([dynamically_calculate_file_size, true])
 
@@ -118,7 +135,6 @@ workflow TopMedAligner {
     # larger multiplier
     Float sort_sam_disk_multiplier = 3.25
 
-
     Float PreAlign_ref_size = if (defined(dynamically_calculate_disk_requirement)) then size(PreAlign_reference_genome_default, "GB") + size(PreAlign_reference_genome_index_default, "GB") + 
         additional_disk else ReferenceGenome_disk_size_override_default + additional_disk
 
@@ -137,7 +153,6 @@ workflow TopMedAligner {
 
     Float fastq_gz_files_size = CRAM_to_fastqgz_multiplier * cram_and_crai_size
 
-
     Float PreAlign_disk_size = PreAlign_ref_size + (bwa_disk_multiplier * cram_and_crai_size) + 
        (sort_sam_disk_multiplier * cram_and_crai_size) + cram_and_crai_size + additional_disk + fastq_gz_files_size
 
@@ -149,8 +164,6 @@ workflow TopMedAligner {
        (sort_sam_disk_multiplier * cram_and_crai_size) + (bwa_disk_multiplier * cram_and_crai_size) + additional_disk
   }
 
-  
-
   call PreAlign {
     input:
       input_crai = input_crai_file,
@@ -158,7 +171,7 @@ workflow TopMedAligner {
       ref_fasta = PreAlign_reference_genome_default,
       ref_fasta_index = PreAlign_reference_genome_index_default,
 
-      disk_size = PreAlign_disk_size,
+      disk_size = PreAlign_disk_size_int,
       docker_image = docker_image,
       CPUs = PreAlign_CPUs_default,
       memory = PreAlign_mem_default,
@@ -171,7 +184,7 @@ workflow TopMedAligner {
       input_list_file = PreAlign.output_list_file,
       input_fastq_gz_files = PreAlign.output_fastq_gz_files,
 
-      disk_size = Align_disk_size,
+      disk_size = Align_disk_size_int,
       docker_image = docker_image,
       CPUs = Align_CPUs_default,
       memory = Align_mem_default,
@@ -188,14 +201,13 @@ workflow TopMedAligner {
       ref_fasta_index = ref_fasta_index
   }
 
-
   call PostAlign {
     input:
       input_cram_files = Align.output_cram_files,
 
       # The merged cram can be bigger than the summed sizes of the individual aligned crams,
       # so account for the output size by multiplying the input size by bwa disk multiplier.
-      disk_size = PostAlign_disk_size,
+      disk_size = PostAlign_disk_size_int,
       docker_image = docker_image,
       max_retries = PostAlign_max_retries_default,
       preemptible_tries = PostAlign_preemptible_tries_default,
@@ -215,6 +227,7 @@ workflow TopMedAligner {
     File aligner_output_cram = PostAlign.output_cram_file
     File aligner_output_crai = PostAlign.output_crai_file
   }
+
   meta {
             author : "Walt Shands"
             email : "jshands@ucsc.edu"
@@ -222,165 +235,173 @@ workflow TopMedAligner {
   }
 }
 
-  task PreAlign {
-    input {
-      File? input_crai
-      File input_cram
+task PreAlign {
+  input {
+    File? input_crai
+    File input_cram
 
-      File ref_fasta
-      File ref_fasta_index
+    File ref_fasta
+    File ref_fasta_index
 
-      Float memory
-      Float disk_size
-      Int CPUs
-      Int preemptible_tries
-      String docker_image
-      Int max_retries
+    Int CPUs
+    Int disk_size
+    Float memory
+    Int preemptible_tries
+    String docker_image
+    Int max_retries
 
-      # Assign a basename to the intermediate files
-      String pre_output_base = "pre_output_base"
-    }
+    # Assign a basename to the intermediate files
+    String pre_output_base = "pre_output_base"
+  }
 
-    command {
+  command {
+    # Set the exit code of a pipeline to that of the rightmost command
+    # to exit with a non-zero status, or zero if all commands of the pipeline exit 
+    set -o pipefail
+    # cause a bash script to exit immediately when a command fails
+    set -e
+    # cause the bash shell to treat unset variables as an error and exit immediately
+    set -u
+    # echo each line of the script to stdout so we can see what is happening
+    set -o xtrace
+    #to turn off echo do 'set +o xtrace'
 
-      # Set the exit code of a pipeline to that of the rightmost command
-      # to exit with a non-zero status, or zero if all commands of the pipeline exit 
-      set -o pipefail
-      # cause a bash script to exit immediately when a command fails
-      set -e
-      # cause the bash shell to treat unset variables as an error and exit immediately
-      set -u
-      # echo each line of the script to stdout so we can see what is happening
-      set -o xtrace
-      #to turn off echo do 'set +o xtrace'
+    echo "Running pre-alignment"
 
-      echo "Running pre-alignment"
+    samtools view -T ${ref_fasta} -uh -F 0x900 ${input_cram} \
+      | bam-ext-mem-sort-manager squeeze --in -.ubam --keepDups --rmTags AS:i,BD:Z,BI:Z,XS:i,MC:Z,MD:Z,NM:i,MQ:i --out -.ubam \
+      | samtools sort -l 1 -@ 1 -n -T ${pre_output_base}.samtools_sort_tmp - \
+      | samtools fixmate - - \
+      | bam-ext-mem-sort-manager bam2fastq --in -.bam --outBase ${pre_output_base} --maxRecordLimitPerFq 20000000 --sortByReadNameOnTheFly --readname --gzip
+  }
 
-      samtools view -T ${ref_fasta} -uh -F 0x900 ${input_cram} \
-        | bam-ext-mem-sort-manager squeeze --in -.ubam --keepDups --rmTags AS:i,BD:Z,BI:Z,XS:i,MC:Z,MD:Z,NM:i,MQ:i --out -.ubam \
-        | samtools sort -l 1 -@ 1 -n -T ${pre_output_base}.samtools_sort_tmp - \
-        | samtools fixmate - - \
-        | bam-ext-mem-sort-manager bam2fastq --in -.bam --outBase ${pre_output_base} --maxRecordLimitPerFq 20000000 --sortByReadNameOnTheFly --readname --gzip
+  output {
+    File output_list_file = "${pre_output_base}.list"
+    # Capture all the files mentioned in the pre_output_base.list file
+    # So they will be present for the Align task
+    Array[File] output_fastq_gz_files = glob("${pre_output_base}.*")
+  }
 
-    }
-     output {
-      File output_list_file = "${pre_output_base}.list"
-      # Capture all the files mentioned in the pre_output_base.list file
-      # So they will be present for the Align task
-      Array[File] output_fastq_gz_files = glob("${pre_output_base}.*")
-    }
-   runtime {
+  runtime {
     maxRetries: max_retries
     preemptible: preemptible_tries
-    
-    
-    #memory: "6.5 GB"
-    #memory: memory --> valid WDL but throws runtime error
-    #memory: sub(memory, "\\..*", "") + " GB" --> invalid WDL
-    memory: memory + " GB"
 
-    cpu: CPUs
+    cpu: CPUs 
     #cpu: sub(CPUs, "\\..*", "") --> invalid WDL
 
-    disks: "local-disk " + disk_size + " HDD" #Same as below but now we making disk_size an int
+    disks: "local-disk " + disk_size + " HDD" 
+    #disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD" #--> invalid even after mkaing disk_size an int
+    #disks: "local-disk " + disk_size + " HDD" #Same as below but now we making disk_size an int
     #disks: "local-disk " + disk_size + " HDD" --> : Disk strings should be of the format 'local-disk SIZE TYPE' or '/mount/point SIZE TYPE' but got: 'local-disk 228.04056749586016 HDD'  
     #disks: disk_size --> untested
     #disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD" --> invalid WDL
 
+    memory: memory + " GB" 
+    #memory: "6.5 GB" --> hack to get past womtool but obviously not acceptable
+    #memory: memory --> valid WDL but throws runtime error
+    #memory: sub(memory, "\\..*", "") + " GB" --> invalid WDL
+
     zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"
     docker: docker_image
-    }
+  }
+}
+
+
+task Align {
+  input {
+    File input_list_file
+    Array[File] input_fastq_gz_files
+
+    File ref_alt
+    File ref_bwt
+    File ref_pac
+    File ref_ann
+    File ref_amb
+    File ref_sa
+
+    File ref_fasta
+    File ref_fasta_index
+
+    Int CPUs
+    Int disk_size
+    Float memory
+    Int preemptible_tries
+    String docker_image 
+    Int max_retries
+
+    # We have to use a trick to make Cromwell
+    # skip substitution when using the bash ${<variable} syntax
+    # This is necessary to get the <var>=$(<command>) sub shell
+    # syntax to work and assign the value to a variable when
+    # running in Cromwell
+    # See https://gatkforums.broadinstitute.org/wdl/discussion/comment/44570#Comment_44570
+    String dollar = "$"
   }
 
+   command <<<
 
-  task Align {
-    input {
-      File input_list_file
-      Array[File] input_fastq_gz_files
+    # Set the exit code of a pipeline to that of the rightmost command
+    # to exit with a non-zero status, or zero if all commands of the pipeline exit
+    # NOTE: Setting this will cause the pipeline to fail on Mac OS and Travis CI
+    #       in some cases. It is commented out mainly so Travis CI will work.
+    #       The failure was in samblaster
+    #set -o pipefail
+    # cause a bash script to exit immediately when a command fails
+    set -e
+    # cause the bash shell to treat unset variables as an error and exit immediately
+    set -u
+    # echo each line of the script to stdout so we can see what is happening
+    set -o xtrace
+    #to turn off echo do 'set +o xtrace'
 
-      File ref_alt
-      File ref_bwt
-      File ref_pac
-      File ref_ann
-      File ref_amb
-      File ref_sa
+    echo "Running alignment"
 
-      File ref_fasta
-      File ref_fasta_index
+    # Get the Cromwell directory that is the input file location
+    input_file_location=$(dirname ${input_fastq_gz_files[0]})
 
-      Float memory
-      Float disk_size
-      Int CPUs
-      Int preemptible_tries
-      String docker_image
-      Int max_retries
+    while read line
+    do
+      line_rg=$(echo ${dollar}{line} | cut -d ' ' -f 4- | sed -e "s/ /\\\t/g")
+      input_path=$(echo ${dollar}{line} | cut -f 2 -d ' ')
+      input_filename=$(basename ${dollar}{input_path})
+      output_filename=$(basename ${dollar}{input_filename} ".fastq.gz").cram
 
-      # We have to use a trick to make Cromwell
-      # skip substitution when using the bash ${<variable} syntax
-      # This is necessary to get the <var>=$(<command>) sub shell
-      # syntax to work and assign the value to a variable when
-      # running in Cromwell
-      # See https://gatkforums.broadinstitute.org/wdl/discussion/comment/44570#Comment_44570
-      String dollar = "$"
-    }
-     command <<<
+      # Prepend the path to the input file with the Cromwell input directory
+      input_path=${dollar}{input_file_location}"/"${dollar}{input_filename}
 
-      # Set the exit code of a pipeline to that of the rightmost command
-      # to exit with a non-zero status, or zero if all commands of the pipeline exit
-      # NOTE: Setting this will cause the pipeline to fail on Mac OS and Travis CI
-      #       in some cases. It is commented out mainly so Travis CI will work.
-      #       The failure was in samblaster
-      #set -o pipefail
-      # cause a bash script to exit immediately when a command fails
-      set -e
-      # cause the bash shell to treat unset variables as an error and exit immediately
-      set -u
-      # echo each line of the script to stdout so we can see what is happening
-      set -o xtrace
-      #to turn off echo do 'set +o xtrace'
+      paired_flag=""
+      if [[ ${dollar}{input_filename} =~ interleaved\.fastq\.gz$ ]]
+      then
+        paired_flag="-p"
+      fi
 
-      echo "Running alignment"
+      bwa mem -t 32 -K 100000000 -Y ${dollar}{paired_flag} -R ${dollar}{line_rg} ${ref_fasta} ${dollar}{input_path} | samblaster -a --addMateTags | samtools view -@ 32 -T ${ref_fasta} -C -o ${dollar}{output_filename} -
+    done <<< "$(tail -n +2 ${input_list_file})"
+  >>>
 
-      # Get the Cromwell directory that is the input file location
-      input_file_location=$(dirname ${input_fastq_gz_files[0]})
-
-      while read line
-      do
-        line_rg=$(echo ${dollar}{line} | cut -d ' ' -f 4- | sed -e "s/ /\\\t/g")
-        input_path=$(echo ${dollar}{line} | cut -f 2 -d ' ')
-        input_filename=$(basename ${dollar}{input_path})
-        output_filename=$(basename ${dollar}{input_filename} ".fastq.gz").cram
-
-        # Prepend the path to the input file with the Cromwell input directory
-        input_path=${dollar}{input_file_location}"/"${dollar}{input_filename}
-
-        paired_flag=""
-        if [[ ${dollar}{input_filename} =~ interleaved\.fastq\.gz$ ]]
-        then
-          paired_flag="-p"
-        fi
-
-        bwa mem -t 32 -K 100000000 -Y ${dollar}{paired_flag} -R ${dollar}{line_rg} ${ref_fasta} ${dollar}{input_path} | samblaster -a --addMateTags | samtools view -@ 32 -T ${ref_fasta} -C -o ${dollar}{output_filename} -
-      done <<< "$(tail -n +2 ${input_list_file})"
-
-    >>>
-     output {
-      Array[File] output_cram_files = glob("*.cram")
-    }
-   runtime {
-      maxRetries: max_retries
-      preemptible: preemptible_tries
-      memory: memory
-      cpu: CPUs
-      disks: disk_size
-      #memory: sub(memory, "\\..*", "") + " GB"
-      #memory: "10 GB"
-      #cpu: sub(CPUs, "\\..*", "")
-      #disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
-      zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"
-      docker: docker_image
-    }
+   output {
+    Array[File] output_cram_files = glob("*.cram")
   }
+
+ runtime {
+    maxRetries: max_retries
+    preemptible: preemptible_tries
+
+    cpu: CPUs
+    #cpu: sub(CPUs, "\\..*", "") --> invalid WDL
+
+    memory: memory + " GB"
+    #memory: memory --> runs endlessly?
+    #memory: sub(memory, "\\..*", "") + " GB"
+    
+    disk: disk_size
+    #disks: disk_size --> runs endlessly?
+    #disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
+
+    zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"
+    docker: docker_image
+  }
+}
 
 task PostAlign {
   input {
@@ -392,9 +413,9 @@ task PostAlign {
 
     Array[File] input_cram_files
 
-    Float memory
-    Float disk_size
     Int CPUs
+    Int disk_size
+    Float memory
     Int preemptible_tries
     String docker_image
     Int max_retries
@@ -412,65 +433,71 @@ task PostAlign {
     String dollar = "$"
   }
 
-     command <<<
-      # Set the exit code of a pipeline to that of the rightmost command
-      # to exit with a non-zero status, or zero if all commands of the pipeline exit
-      set -o pipefail
-      # cause a bash script to exit immediately when a command fails
-      set -e
-      # cause the bash shell to treat unset variables as an error and exit immediately
-      set -u
-      # echo each line of the script to stdout so we can see what is happening
-      set -o xtrace
-      #to turn off echo do 'set +o xtrace'
+  command <<<
+    # Set the exit code of a pipeline to that of the rightmost command
+    # to exit with a non-zero status, or zero if all commands of the pipeline exit
+    set -o pipefail
+    # cause a bash script to exit immediately when a command fails
+    set -e
+    # cause the bash shell to treat unset variables as an error and exit immediately
+    set -u
+    # echo each line of the script to stdout so we can see what is happening
+    set -o xtrace
+    #to turn off echo do 'set +o xtrace'
 
-      echo "Running post alignment"
+    echo "Running post alignment"
 
-      # Get the Cromwell directory that is the input file location
-      input_file_location=$(dirname ${input_cram_files[0]})
+    # Get the Cromwell directory that is the input file location
+    input_file_location=$(dirname ${input_cram_files[0]})
 
-      rc=0
-      for input_file in ${dollar}{input_file_location}"/"*.cram 
-      do 
-        # Put the output file in the local Cromwell working dir
-        input_base_file_name=$(basename ${dollar}{input_file} ".cram")
-        tmp_prefix=${dollar}{input_base_file_name}.tmp
-        samtools sort --reference ${ref_fasta} --threads 1 -T $tmp_prefix -o ${dollar}{input_base_file_name}.sorted.bam ${dollar}{input_file}
+    rc=0
+    for input_file in ${dollar}{input_file_location}"/"*.cram 
+    do 
+      # Put the output file in the local Cromwell working dir
+      input_base_file_name=$(basename ${dollar}{input_file} ".cram")
+      tmp_prefix=${dollar}{input_base_file_name}.tmp
+      samtools sort --reference ${ref_fasta} --threads 1 -T $tmp_prefix -o ${dollar}{input_base_file_name}.sorted.bam ${dollar}{input_file}
 
-#        tmp_prefix=${dollar}{input_file%.cram}.tmp
-#        samtools sort --reference ${ref_fasta} --threads 1 -T $tmp_prefix -o ${dollar}{input_file%.cram}.sorted.bam ${dollar}{input_file}
+    #        tmp_prefix=${dollar}{input_file%.cram}.tmp
+    #        samtools sort --reference ${ref_fasta} --threads 1 -T $tmp_prefix -o ${dollar}{input_file%.cram}.sorted.bam ${dollar}{input_file}
 
-        rc=$?
-        [[ $rc != 0 ]] && break
-        rm -f ${dollar}{input_file} ${dollar}{tmp_prefix}*
-      done
+      rc=$?
+      [[ $rc != 0 ]] && break
+      rm -f ${dollar}{input_file} ${dollar}{tmp_prefix}*
+    done
 
-      if [[ $rc == 0 ]]
-      then 
-        samtools merge --threads 1 -c merged.bam *.sorted.bam \
-          && rm ./*.sorted.bam \
-          && bam-non-primary-dedup dedup_LowMem --allReadNames --binCustom --binQualS 0:2,3:3,4:4,5:5,6:6,7:10,13:20,23:30 --log dedup_lowmem.metrics --recab --in merged.bam --out -.ubam --refFile ${ref_fasta} --dbsnp ${dbSNP_vcf} \
-          | samtools view -h -C -T ${ref_fasta} -o ${output_cram_file_name} --threads 1 \
-          && samtools index ${output_cram_file_name}
-        rc=$?
-      fi
-    >>>
-    output {
-      File output_cram_file = "${output_cram_file_name}"
-      File output_crai_file = "${output_crai_file_name}"
-    }
-   runtime {
-      maxRetries: max_retries
-      preemptible: preemptible_tries
-      memory: memory
-      cpu: CPUs
-      disks: disk_size
-      #memory: "6.5 GB"
-      #memory: sub(memory, "\\..*", "") + " GB"
-      #cpu: sub(CPUs, "\\..*", "")
-      #disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
-      zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"
-      docker: docker_image
-    }
+    if [[ $rc == 0 ]]
+    then 
+      samtools merge --threads 1 -c merged.bam *.sorted.bam \
+        && rm ./*.sorted.bam \
+        && bam-non-primary-dedup dedup_LowMem --allReadNames --binCustom --binQualS 0:2,3:3,4:4,5:5,6:6,7:10,13:20,23:30 --log dedup_lowmem.metrics --recab --in merged.bam --out -.ubam --refFile ${ref_fasta} --dbsnp ${dbSNP_vcf} \
+        | samtools view -h -C -T ${ref_fasta} -o ${output_cram_file_name} --threads 1 \
+        && samtools index ${output_cram_file_name}
+      rc=$?
+    fi
+  >>>
+
+  output {
+    File output_cram_file = "${output_cram_file_name}"
+    File output_crai_file = "${output_crai_file_name}"
   }
 
+  runtime {
+    maxRetries: max_retries
+    preemptible: preemptible_tries
+
+    cpu: CPUs
+    #cpu: sub(CPUs, "\\..*", "")
+
+    disks: "local-disk " + disk_size + " HDD"
+    #disks: disk_size
+    #disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
+    
+    memory: memory + " GB"
+    #memory: memory
+    #memory: sub(memory, "\\..*", "") + " GB"
+    
+    zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"
+    docker: docker_image
+  }
+}
