@@ -286,20 +286,9 @@ task PreAlign {
     maxRetries: max_retries
     preemptible: preemptible_tries
 
-    cpu: CPUs 
-    #cpu: sub(CPUs, "\\..*", "") --> invalid WDL
-
-    disks: "local-disk " + disk_size + " HDD" 
-    #disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD" #--> invalid even after mkaing disk_size an int
-    #disks: "local-disk " + disk_size + " HDD" #Same as below but now we making disk_size an int
-    #disks: "local-disk " + disk_size + " HDD" --> : Disk strings should be of the format 'local-disk SIZE TYPE' or '/mount/point SIZE TYPE' but got: 'local-disk 228.04056749586016 HDD'  
-    #disks: disk_size --> untested
-    #disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD" --> invalid WDL
-
+    cpu: CPUs
+    disks: "local-disk " + disk_size + " HDD"
     memory: memory + " GB" 
-    #memory: "6.5 GB" --> hack to get past womtool but obviously not acceptable
-    #memory: memory --> valid WDL but throws runtime error
-    #memory: sub(memory, "\\..*", "") + " GB" --> invalid WDL
 
     zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"
     docker: docker_image
@@ -354,29 +343,54 @@ task Align {
     set -o xtrace
     #to turn off echo do 'set +o xtrace'
 
+    echo "debug -- working directory"
+    pwd
+    echo "----"
+    ls /cromwell_root/
+    echo "----"
+    ls cromwell_root/
+    echo "----"
+    ls ${dollar}{input_file_location}"/"
+    echo "----"
+    echo ${dollar}{input_file_location}"/"
+    echo "----"
+    echo ${pre_output_base}
+    echo "----"
+    echo pre_output_base
+    echo "----"
+    echo ~{input_fastq_gz_files}
+    echo "----"
+    echo ${input_fastq_gz_files}
+    echo "----"
+    echo input_fastq_gz_files
+    for debugprint in ${dollar}{input_file_location}"/"*.cram 
+    do
+      echo debugprint
+
+
     echo "Running alignment"
 
     # Get the Cromwell directory that is the input file location
-    input_file_location=$(dirname ${input_fastq_gz_files[0]})
+    input_file_location=$(dirname ~{input_fastq_gz_files[0]})
 
-    while read line
-    do
-      line_rg=$(echo ${dollar}{line} | cut -d ' ' -f 4- | sed -e "s/ /\\\t/g")
-      input_path=$(echo ${dollar}{line} | cut -f 2 -d ' ')
-      input_filename=$(basename ${dollar}{input_path})
-      output_filename=$(basename ${dollar}{input_filename} ".fastq.gz").cram
+      while read line
+      do
+        line_rg=$(echo ${dollar}{line} | cut -d ' ' -f 4- | sed -e "s/ /\\\t/g")
+        input_path=$(echo ${dollar}{line} | cut -f 2 -d ' ')
+        input_filename=$(basename ${dollar}{input_path})
+        output_filename=$(basename ${dollar}{input_filename} ".fastq.gz").cram
 
-      # Prepend the path to the input file with the Cromwell input directory
-      input_path=${dollar}{input_file_location}"/"${dollar}{input_filename}
+        # Prepend the path to the input file with the Cromwell input directory
+        input_path=${dollar}{input_file_location}"/"${dollar}{input_filename}
 
-      paired_flag=""
-      if [[ ${dollar}{input_filename} =~ interleaved\.fastq\.gz$ ]]
-      then
-        paired_flag="-p"
-      fi
+        paired_flag=""
+        if [[ ${dollar}{input_filename} =~ interleaved\.fastq\.gz$ ]]
+        then
+          paired_flag="-p"
+        fi
 
-      bwa mem -t 32 -K 100000000 -Y ${dollar}{paired_flag} -R ${dollar}{line_rg} ${ref_fasta} ${dollar}{input_path} | samblaster -a --addMateTags | samtools view -@ 32 -T ${ref_fasta} -C -o ${dollar}{output_filename} -
-    done <<< "$(tail -n +2 ${input_list_file})"
+        bwa mem -t 32 -K 100000000 -Y ${dollar}{paired_flag} -R ${dollar}{line_rg} ${ref_fasta} ${dollar}{input_path} | samblaster -a --addMateTags | samtools view -@ 32 -T ${ref_fasta} -C -o ${dollar}{output_filename} -
+      done <<< "$(tail -n +2 ${input_list_file})"
   >>>
 
    output {
@@ -388,15 +402,8 @@ task Align {
     preemptible: preemptible_tries
 
     cpu: CPUs
-    #cpu: sub(CPUs, "\\..*", "") --> invalid WDL
-
+    disks: "local-disk " + disk_size + " HDD"
     memory: memory + " GB"
-    #memory: memory --> runs endlessly?
-    #memory: sub(memory, "\\..*", "") + " GB"
-    
-    disk: disk_size
-    #disks: disk_size --> runs endlessly?
-    #disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
 
     zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"
     docker: docker_image
@@ -487,15 +494,8 @@ task PostAlign {
     preemptible: preemptible_tries
 
     cpu: CPUs
-    #cpu: sub(CPUs, "\\..*", "")
-
     disks: "local-disk " + disk_size + " HDD"
-    #disks: disk_size
-    #disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
-    
     memory: memory + " GB"
-    #memory: memory
-    #memory: sub(memory, "\\..*", "") + " GB"
     
     zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"
     docker: docker_image
