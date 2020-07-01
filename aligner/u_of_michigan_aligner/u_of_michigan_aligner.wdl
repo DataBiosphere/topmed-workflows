@@ -273,6 +273,7 @@ task PreAlign {
       | samtools sort -l 1 -@ 1 -n -T ${pre_output_base}.samtools_sort_tmp - \
       | samtools fixmate - - \
       | bam-ext-mem-sort-manager bam2fastq --in -.bam --outBase ${pre_output_base} --maxRecordLimitPerFq 20000000 --sortByReadNameOnTheFly --readname --gzip
+    ls -l
   }
 
   output {
@@ -327,7 +328,8 @@ task Align {
     String dollar = "$"
   }
 
-   command <<<
+  command <<<
+    ls -l
 
     # Set the exit code of a pipeline to that of the rightmost command
     # to exit with a non-zero status, or zero if all commands of the pipeline exit
@@ -343,54 +345,35 @@ task Align {
     set -o xtrace
     #to turn off echo do 'set +o xtrace'
 
-    echo "debug -- working directory"
-    pwd
-    echo "----"
-    ls /cromwell_root/
-    echo "----"
-    ls cromwell_root/
-    echo "----"
-    ls ${dollar}{input_file_location}"/"
-    echo "----"
-    echo ${dollar}{input_file_location}"/"
-    echo "----"
-    echo ${pre_output_base}
-    echo "----"
-    echo pre_output_base
-    echo "----"
-    echo ~{input_fastq_gz_files}
-    echo "----"
-    echo ${input_fastq_gz_files}
-    echo "----"
-    echo input_fastq_gz_files
-    for debugprint in ${dollar}{input_file_location}"/"*.cram 
-    do
-      echo debugprint
-
-
     echo "Running alignment"
 
     # Get the Cromwell directory that is the input file location
     input_file_location=$(dirname ~{input_fastq_gz_files[0]})
+    input_list_file=$(dirname ~{input_list_file}"/pre_output_base.list")
+    
 
-      while read line
-      do
-        line_rg=$(echo ${dollar}{line} | cut -d ' ' -f 4- | sed -e "s/ /\\\t/g")
-        input_path=$(echo ${dollar}{line} | cut -f 2 -d ' ')
-        input_filename=$(basename ${dollar}{input_path})
-        output_filename=$(basename ${dollar}{input_filename} ".fastq.gz").cram
+    while read line
+    do
+      echo "$line" # if you delete everything else in this loop this executes correctly
+      # something is wrong with the stuff below
+      # already tried dollar workaround but it thinks dollar is an unbound variable
+      # also tried ~ workaround but then it complains line is an unbound variable
+      line_rg=$(echo $line | cut -d ' ' -f 4- | sed -e "s/ /\\\t/g")
+      input_path=$(echo $line | cut -f 2 -d ' ')
+      input_filename=$(basename ~{input_path})
+      output_filename=$(basename ${dollar}{input_filename} ".fastq.gz").cram
 
-        # Prepend the path to the input file with the Cromwell input directory
-        input_path=${dollar}{input_file_location}"/"${dollar}{input_filename}
+      # Prepend the path to the input file with the Cromwell input directory
+      input_path=${dollar}{input_file_location}"/"${dollar}{input_filename}
 
-        paired_flag=""
-        if [[ ${dollar}{input_filename} =~ interleaved\.fastq\.gz$ ]]
-        then
-          paired_flag="-p"
-        fi
+      paired_flag=""
+      if [[ ${dollar}{input_filename} =~ interleaved\.fastq\.gz$ ]]
+      then
+        paired_flag="-p"
+      fi
 
-        bwa mem -t 32 -K 100000000 -Y ${dollar}{paired_flag} -R ${dollar}{line_rg} ${ref_fasta} ${dollar}{input_path} | samblaster -a --addMateTags | samtools view -@ 32 -T ${ref_fasta} -C -o ${dollar}{output_filename} -
-      done <<< "$(tail -n +2 ${input_list_file})"
+      bwa mem -t 32 -K 100000000 -Y ${dollar}{paired_flag} -R ${dollar}{line_rg} ${ref_fasta} ${dollar}{input_path} | samblaster -a --addMateTags | samtools view -@ 32 -T ${ref_fasta} -C -o ${dollar}{output_filename} -
+    done <<< "$(tail -n +2 ${input_list_file})"
   >>>
 
    output {
