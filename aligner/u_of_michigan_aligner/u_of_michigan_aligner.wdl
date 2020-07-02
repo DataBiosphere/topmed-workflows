@@ -329,7 +329,6 @@ task Align {
   }
 
   command <<<
-    ls -l
 
     # Set the exit code of a pipeline to that of the rightmost command
     # to exit with a non-zero status, or zero if all commands of the pipeline exit
@@ -358,21 +357,21 @@ task Align {
       # something is wrong with the stuff below
       # already tried dollar workaround but it thinks dollar is an unbound variable
       # also tried ~ workaround but then it complains line is an unbound variable
-      line_rg=$(echo $line | cut -d ' ' -f 4- | sed -e "s/ /\\\t/g")
-      input_path=$(echo $line | cut -f 2 -d ' ')
-      input_filename=$(basename ~{input_path})
-      output_filename=$(basename ${dollar}{input_filename} ".fastq.gz").cram
+      line_rg=$(echo ~{dollar}{line} | cut -d ' ' -f 4- | sed -e "s/ /\\\t/g")
+      input_path=$(echo ~{dollar}{line} | cut -f 2 -d ' ')
+      input_filename=$(basename ~{dollar}{input_path})
+      output_filename=$(basename ~{dollar}{input_filename} ".fastq.gz").cram
 
       # Prepend the path to the input file with the Cromwell input directory
-      input_path=${dollar}{input_file_location}"/"${dollar}{input_filename}
+      input_path=~{dollar}{input_file_location}"/"~{dollar}{input_filename}
 
       paired_flag=""
-      if [[ ${dollar}{input_filename} =~ interleaved\.fastq\.gz$ ]]
+      if [[ ~{dollar}{input_filename} =~ interleaved\.fastq\.gz$ ]]
       then
         paired_flag="-p"
       fi
 
-      bwa mem -t 32 -K 100000000 -Y ${dollar}{paired_flag} -R ${dollar}{line_rg} ${ref_fasta} ${dollar}{input_path} | samblaster -a --addMateTags | samtools view -@ 32 -T ${ref_fasta} -C -o ${dollar}{output_filename} -
+      bwa mem -t 32 -K 100000000 -Y ~{dollar}{paired_flag} -R ~{dollar}{line_rg} ~{ref_fasta} ~{dollar}{input_path} | samblaster -a --addMateTags | samtools view -@ 32 -T ~{ref_fasta} -C -o ~{dollar}{output_filename} -
     done <<< "$(tail -n +2 ${input_list_file})"
   >>>
 
@@ -438,31 +437,31 @@ task PostAlign {
     echo "Running post alignment"
 
     # Get the Cromwell directory that is the input file location
-    input_file_location=$(dirname ${input_cram_files[0]})
+    input_file_location=$(dirname ~{input_cram_files[0]})
 
     rc=0
-    for input_file in ${dollar}{input_file_location}"/"*.cram 
+    for input_file in ~{dollar}{input_file_location}"/"*.cram 
     do 
       # Put the output file in the local Cromwell working dir
-      input_base_file_name=$(basename ${dollar}{input_file} ".cram")
-      tmp_prefix=${dollar}{input_base_file_name}.tmp
-      samtools sort --reference ${ref_fasta} --threads 1 -T $tmp_prefix -o ${dollar}{input_base_file_name}.sorted.bam ${dollar}{input_file}
+      input_base_file_name=$(basename ~{dollar}{input_file} ".cram")
+      tmp_prefix=~{dollar}{input_base_file_name}.tmp
+      samtools sort --reference ~{ref_fasta} --threads 1 -T $tmp_prefix -o ~{dollar}{input_base_file_name}.sorted.bam ~{dollar}{input_file}
 
     #        tmp_prefix=${dollar}{input_file%.cram}.tmp
     #        samtools sort --reference ${ref_fasta} --threads 1 -T $tmp_prefix -o ${dollar}{input_file%.cram}.sorted.bam ${dollar}{input_file}
 
       rc=$?
       [[ $rc != 0 ]] && break
-      rm -f ${dollar}{input_file} ${dollar}{tmp_prefix}*
+      rm -f ~{dollar}{input_file} ~{dollar}{tmp_prefix}*
     done
 
     if [[ $rc == 0 ]]
     then 
       samtools merge --threads 1 -c merged.bam *.sorted.bam \
         && rm ./*.sorted.bam \
-        && bam-non-primary-dedup dedup_LowMem --allReadNames --binCustom --binQualS 0:2,3:3,4:4,5:5,6:6,7:10,13:20,23:30 --log dedup_lowmem.metrics --recab --in merged.bam --out -.ubam --refFile ${ref_fasta} --dbsnp ${dbSNP_vcf} \
-        | samtools view -h -C -T ${ref_fasta} -o ${output_cram_file_name} --threads 1 \
-        && samtools index ${output_cram_file_name}
+        && bam-non-primary-dedup dedup_LowMem --allReadNames --binCustom --binQualS 0:2,3:3,4:4,5:5,6:6,7:10,13:20,23:30 --log dedup_lowmem.metrics --recab --in merged.bam --out -.ubam --refFile ~{ref_fasta} --dbsnp ~{dbSNP_vcf} \
+        | samtools view -h -C -T ~{ref_fasta} -o ~{output_cram_file_name} --threads 1 \
+        && samtools index ~{output_cram_file_name}
       rc=$?
     fi
   >>>
