@@ -13,7 +13,8 @@ version 1.0
 
 workflow TopMedAligner {
   input {
-    # Neccessary to convert a float to int
+
+    # The first nine variables are neccessary to convert a float to int
     # https://gatkforums.broadinstitute.org/wdl/discussion/9541/convert-float-to-int
     # The old version, disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
     # being set as as in input for the task's inputs, previously worked but fails to 
@@ -349,14 +350,15 @@ task Align {
     # Get the Cromwell directory that is the input file location
     input_file_location=$(dirname ~{input_fastq_gz_files[0]})
     input_list_file=$(dirname ~{input_list_file}"/pre_output_base.list")
+
+    # In WDL 1.0, the only expression placeholder that is valid if you are
+    # using <<<this syntax>>> for your command section is ~{expression}
+    # instead of ${expression}. But as you can see in this code, this isn't
+    # just a matter of replacing every $ with a ~. 
     
 
     while read line
     do
-      echo "$line" # if you delete everything else in this loop this executes correctly
-      # something is wrong with the stuff below
-      # already tried dollar workaround but it thinks dollar is an unbound variable
-      # also tried ~ workaround but then it complains line is an unbound variable
       line_rg=$(echo ~{dollar}{line} | cut -d ' ' -f 4- | sed -e "s/ /\\\t/g")
       input_path=$(echo ~{dollar}{line} | cut -f 2 -d ' ')
       input_filename=$(basename ~{dollar}{input_path})
@@ -375,11 +377,11 @@ task Align {
     done <<< "$(tail -n +2 ${input_list_file})"
   >>>
 
-   output {
+  output {
     Array[File] output_cram_files = glob("*.cram")
   }
 
- runtime {
+  runtime {
     maxRetries: max_retries
     preemptible: preemptible_tries
 
@@ -446,10 +448,8 @@ task PostAlign {
       input_base_file_name=$(basename ~{dollar}{input_file} ".cram")
       tmp_prefix=~{dollar}{input_base_file_name}.tmp
       samtools sort --reference ~{ref_fasta} --threads 1 -T $tmp_prefix -o ~{dollar}{input_base_file_name}.sorted.bam ~{dollar}{input_file}
-
-    #        tmp_prefix=${dollar}{input_file%.cram}.tmp
-    #        samtools sort --reference ${ref_fasta} --threads 1 -T $tmp_prefix -o ${dollar}{input_file%.cram}.sorted.bam ${dollar}{input_file}
-
+      #tmp_prefix=${dollar}{input_file%.cram}.tmp
+      #samtools sort --reference ${ref_fasta} --threads 1 -T $tmp_prefix -o ${dollar}{input_file%.cram}.sorted.bam ${dollar}{input_file}
       rc=$?
       [[ $rc != 0 ]] && break
       rm -f ~{dollar}{input_file} ~{dollar}{tmp_prefix}*
