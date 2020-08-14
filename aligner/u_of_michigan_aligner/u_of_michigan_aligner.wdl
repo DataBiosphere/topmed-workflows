@@ -352,10 +352,9 @@ task Align {
     input_list_file=$(dirname ~{input_list_file}"/pre_output_base.list")
 
     # In WDL 1.0, the only expression placeholder that is valid if you are
-    # using <<<this syntax>>> for your command section is ~{expression}
-    # instead of ${expression}. But as you can see in this code, this isn't
-    # just a matter of replacing every $ with a ~. 
-    
+    # using triple bracket syntax for your command section is tilde curly brace
+    # instead of dollar curly brace. But as you can see in this code, this isn't
+    # just a matter of replacing every dollar with a tilde. 
 
     while read line
     do
