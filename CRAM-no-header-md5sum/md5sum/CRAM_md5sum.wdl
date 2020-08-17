@@ -5,25 +5,21 @@ task md5 {
   String inputFileName
   File referenceFile
   File referenceIndexFile
-  Float disk_size
+  Int disk_size
  }
-
-String s = disk_size
-String string_before_decimal = sub(s, "\\..*", "")
-Int new_disk_size = string_before_decimal
 
   command {
     samtools view ${inputCRAMFile} -T ${referenceFile} -t ${referenceIndexFile} | md5sum > ${inputFileName}.md5sum.txt
   }
   output {
     File value = "${inputFileName}.md5sum.txt"
- }
+  }
 
  runtime {
     docker: "quay.io/nivasquez/final-dockstore-tool-md5sum:latest"
     cpu: 1
     memory: "10 GB"
-    disks: "local-disk " + new_disk_size + " HDD"
+    disks: "local-disk " + disk_size + " HDD"
     continueOnReturnCode: true
   }
 }
@@ -43,8 +39,8 @@ workflow CRAM_to_md5sum {
   Int additional_disk = select_first([increase_disk_size, 20])
 
   # Get the size of the standard reference file
-  Float ref_size = size(referenceFile, "GB") + size(referenceIndexFile, "GB")
-  Float cram_size = size(inputCRAMFile, "GB") + size(inputCRAMIndexFile, "GB")
+  Int ref_size = ceil(size(referenceFile, "GB") + size(referenceIndexFile, "GB"))
+  Int cram_size = ceil(size(inputCRAMFile, "GB") + size(inputCRAMIndexFile, "GB"))
 
   String inputFileName = basename("${inputCRAMFile}")
   call md5 { input: inputCRAMFile = inputCRAMFile,
