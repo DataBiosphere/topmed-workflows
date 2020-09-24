@@ -30,3 +30,8 @@ workflows:
      testParameterFiles:
          - /variant-caller/sbg-variant-caller-cwl/topmed_freeze3_calling.json
      name: UM_variant_caller_cwl
+   - subclass: CWL
+     primaryDescriptorPath: /vcf-comparator/ConcordanceTestWorkflow.cwl
+     testParameterFiles:
+         - /test.json
+     name: gatk-vcf-comparator
