@@ -14,24 +14,6 @@ version 1.0
 workflow TopMedAligner {
   input {
 
-    # The first nine variables are neccessary to convert a float to int
-    # https://gatkforums.broadinstitute.org/wdl/discussion/9541/convert-float-to-int
-    # The old version, disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
-    # being set as as in input for the task's inputs, previously worked but fails to 
-    # pass womtool in WDL 1.0 format; documentation on this change is absent
-
-    String PreAlign_disk_size_string = PreAlign_disk_size
-    String PreAlign_disk_size_before_decimal = sub(PreAlign_disk_size_string, "\\..*", "")
-    Int PreAlign_disk_size_int = PreAlign_disk_size_before_decimal
-
-    String Align_disk_size_string = Align_disk_size
-    String Align_disk_size_before_decimal = sub(Align_disk_size_string, "\\..*", "")
-    Int Align_disk_size_int = Align_disk_size_before_decimal
-
-    String PostAlign_disk_size_string = PostAlign_disk_size
-    String PostAlign_disk_size_before_decimal = sub(PostAlign_disk_size_string, "\\..*", "")
-    Int PostAlign_disk_size_int = PostAlign_disk_size_before_decimal
-
     File? input_crai_file
     File input_cram_file
 
@@ -154,15 +136,15 @@ workflow TopMedAligner {
 
     Float fastq_gz_files_size = CRAM_to_fastqgz_multiplier * cram_and_crai_size
 
-    Float PreAlign_disk_size = PreAlign_ref_size + (bwa_disk_multiplier * cram_and_crai_size) + 
-       (sort_sam_disk_multiplier * cram_and_crai_size) + cram_and_crai_size + additional_disk + fastq_gz_files_size
+    Int PreAlign_disk_size = ceil(PreAlign_ref_size + (bwa_disk_multiplier * cram_and_crai_size) + 
+       (sort_sam_disk_multiplier * cram_and_crai_size) + cram_and_crai_size + additional_disk + fastq_gz_files_size)
 
-    Float Align_disk_size = ref_size + ref_extra_size + (bwa_disk_multiplier * fastq_gz_files_size) + additional_disk
+    Int Align_disk_size = ceil(ref_size + ref_extra_size + (bwa_disk_multiplier * fastq_gz_files_size) + additional_disk)
 
     # The merged cram can be bigger than the summed sizes of the individual aligned crams,
     # so account for the output size by multiplying the input size by bwa disk multiplier.
-    Float PostAlign_disk_size = ref_size + dbsnp_size + cram_and_crai_size + 
-       (sort_sam_disk_multiplier * cram_and_crai_size) + (bwa_disk_multiplier * cram_and_crai_size) + additional_disk
+    Int PostAlign_disk_size = ceil(ref_size + dbsnp_size + cram_and_crai_size + 
+       (sort_sam_disk_multiplier * cram_and_crai_size) + (bwa_disk_multiplier * cram_and_crai_size) + additional_disk)
   }
 
   call PreAlign {
@@ -172,7 +154,7 @@ workflow TopMedAligner {
       ref_fasta = PreAlign_reference_genome_default,
       ref_fasta_index = PreAlign_reference_genome_index_default,
 
-      disk_size = PreAlign_disk_size_int,
+      disk_size = PreAlign_disk_size,
       docker_image = docker_image,
       CPUs = PreAlign_CPUs_default,
       memory = PreAlign_mem_default,
@@ -185,7 +167,7 @@ workflow TopMedAligner {
       input_list_file = PreAlign.output_list_file,
       input_fastq_gz_files = PreAlign.output_fastq_gz_files,
 
-      disk_size = Align_disk_size_int,
+      disk_size = Align_disk_size,
       docker_image = docker_image,
       CPUs = Align_CPUs_default,
       memory = Align_mem_default,
@@ -208,7 +190,7 @@ workflow TopMedAligner {
 
       # The merged cram can be bigger than the summed sizes of the individual aligned crams,
       # so account for the output size by multiplying the input size by bwa disk multiplier.
-      disk_size = PostAlign_disk_size_int,
+      disk_size = PostAlign_disk_size,
       docker_image = docker_image,
       max_retries = PostAlign_max_retries_default,
       preemptible_tries = PostAlign_preemptible_tries_default,
