@@ -7,19 +7,20 @@ task checkerTask {
     File referenceFile
 
     String docker_image
-  }
 
-  # Optional input to increase all disk sizes in case of outlier sample with strange size behavior
-  Int? increase_disk_size
+    # Optional input to increase all disk sizes in case of outlier sample
+    # with strange size behavior
+    Int? increase_disk_size
 
-  # Some tasks need wiggle room, and we also need to add a small amount of disk to prevent getting a
-  # Cromwell error from asking for 0 disk when the input is less than 1GB
-  Int additional_disk = select_first([increase_disk_size, 200])
+    # Some tasks need wiggle room, and we also need to add a small amount of disk to prevent getting a
+    # Cromwell error from asking for 0 disk when the input is less than 1GB
+    Int additional_disk = select_first([increase_disk_size, 200])
 
-   Float disk_size = additional_disk
+    Float disk_size = additional_disk
    # The size function causes an error when a relative path is provided as input in the JSON
    # input file. Somehow Cromwell confuses where the file is for the size function in this case.
-#  Float disk_size = size(inputTruthCRAMFile, "GB") + size(inputCRAMFile, "GB") + size(referenceFile, "GB") + additional_disk
+   #  Float disk_size = size(inputTruthCRAMFile, "GB") + size(inputCRAMFile, "GB") + size(referenceFile, "GB") + additional_disk
+  }
 
   command {
      # The md5sums for the SAM files without headers created from the CRAM files should match
