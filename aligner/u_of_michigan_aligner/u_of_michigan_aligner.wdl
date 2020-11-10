@@ -277,6 +277,11 @@ task PreAlign {
     zones: "us-central1-a us-central1-b us-east1-d us-central1-c us-central1-f us-east1-c"
     docker: docker_image
   }
+  meta {
+            author : "Walt Shands"
+            email : "jshands@ucsc.edu"
+            description: "This is the workflow WDL for the [TOPMed/University of Michigan alignment pipeline](https://github.com/statgen/docker-alignment)"
+  }
 }
 
 
