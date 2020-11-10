@@ -16,10 +16,16 @@ task checkerTask {
     # Cromwell error from asking for 0 disk when the input is less than 1GB
     Int additional_disk = select_first([increase_disk_size, 200])
 
-    #Float disk_size = additional_disk
     # The size function causes an error when a relative path is provided as input in the JSON
     # input file. Somehow Cromwell confuses where the file is for the size function in this case.
-    #Float disk_size = size(inputTruthCRAMFile, "GB") + size(inputCRAMFile, "GB") + size(referenceFile, "GB") + additional_disk
+    # Float disk_size = size(inputTruthCRAMFile, "GB") + size(inputCRAMFile, "GB") + size(referenceFile, "GB") + additional_disk
+    
+    # Additionally, the older version below does not work in WDL 1.0 for reasons I cannot fathom
+    # Float disk_size = additional_disk
+
+    # For these reasons additional_disk is now used for the disks runtime attribute rather than disk_size
+    # Since the input and the truth file are both small this is probably an acceptable compromise, but
+    # if the inputs ever get changed to something larger this may require revision.
   }
 
   command {
