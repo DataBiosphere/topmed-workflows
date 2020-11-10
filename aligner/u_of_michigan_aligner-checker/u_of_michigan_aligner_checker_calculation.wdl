@@ -19,7 +19,7 @@ task checkerTask {
     #Float disk_size = additional_disk
     # The size function causes an error when a relative path is provided as input in the JSON
     # input file. Somehow Cromwell confuses where the file is for the size function in this case.
-    Float disk_size = size(inputTruthCRAMFile, "GB") + size(inputCRAMFile, "GB") + size(referenceFile, "GB") + additional_disk
+    #Float disk_size = size(inputTruthCRAMFile, "GB") + size(inputCRAMFile, "GB") + size(referenceFile, "GB") + additional_disk
   }
 
   command {
@@ -34,6 +34,6 @@ task checkerTask {
 
   runtime {
     docker: docker_image
-    disks: "local-disk " + ceil(disk_size) + " HDD"
+    disks: "local-disk " + ceil(additional_disk) + " HDD"
   }
 }
