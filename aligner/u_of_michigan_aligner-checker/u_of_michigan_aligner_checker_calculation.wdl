@@ -1,9 +1,13 @@
-task checkerTask {
-  File inputCRAMFile
-  File inputTruthCRAMFile
-  File referenceFile
+version 1.0
 
-  String docker_image
+task checkerTask {
+  input {
+    File inputCRAMFile
+    File inputTruthCRAMFile
+    File referenceFile
+
+    String docker_image
+  }
 
   # Optional input to increase all disk sizes in case of outlier sample with strange size behavior
   Int? increase_disk_size
