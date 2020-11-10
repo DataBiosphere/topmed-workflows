@@ -34,6 +34,6 @@ task checkerTask {
 
   runtime {
     docker: docker_image
-    disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
+    disks: "local-disk " + ceil(disk_size) + " HDD"
   }
 }
