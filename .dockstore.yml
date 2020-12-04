@@ -1,0 +1,37 @@
+version: 1.2
+workflows:
+   - subclass: WDL
+     primaryDescriptorPath: /variant-caller/variant-caller-wdl/topmed_freeze3_calling.wdl
+     testParameterFiles:
+         - /variant-caller/variant-caller-wdl/topmed_freeze3_calling.json
+     name: UM_variant_caller_wdl
+   - subclass: WDL
+     primaryDescriptorPath: /aligner/u_of_michigan_aligner/u_of_michigan_aligner.wdl
+     testParameterFiles:
+         - /aligner/u_of_michigan_aligner/u_of_michigan_aligner.json
+     name: UM_aligner_wdl
+   - subclass: WDL
+     primaryDescriptorPath: /aligner/functional-equivalence-wdl/FunctionalEquivalence.wdl
+     testParameterFiles:
+         - /aligner/functional-equivalence-wdl/FunctionalEquivalence.json
+     name: CCDG_aligner_functional_equivalent_wdl
+   - subclass: CWL
+     primaryDescriptorPath: /aligner/sbg-alignment-cwl/topmed-alignment.cwl
+     testParameterFiles:
+         - /aligner/sbg-alignment-cwl/topmed-alignment.sample.json
+     name: UM_aligner_cwl
+   - subclass: CWL
+     primaryDescriptorPath: /aligner/topmed-cwl/workflow/alignment_workflow.cwl
+     testParameterFiles:
+         - /test.json
+     name: CCDG_aligner_functional_equivalent_cwl
+   - subclass: CWL
+     primaryDescriptorPath: /variant-caller/sbg-variant-caller-cwl/topmed_freeze3_calling.json
+     testParameterFiles:
+         - /variant-caller/sbg-variant-caller-cwl/topmed_freeze3_calling.json
+     name: UM_variant_caller_cwl
+   - subclass: CWL
+     primaryDescriptorPath: /vcf-comparator/ConcordanceTestWorkflow.cwl
+     testParameterFiles:
+         - /test.json
+     name: gatk-vcf-comparator
