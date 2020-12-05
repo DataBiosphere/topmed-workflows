@@ -61,5 +61,14 @@ A WDL and a JSON file to test checker workflows are in the `test_data` directory
 java -Dconfig.file=<location_to_file> -jar ~/bin/<cromwell_version>.jar run <checker-workflow>.wdl -i  <checker-workflow>.json
 ```
 
+## Cost estimates for Terra
+Please keep in mind that your costs may vary depending on how your data is formatted and what parameters you use. In addition, if you are using preemptibles, there is some element of randomness here -- a preemptible may or may not be stopped by Google at any given time, causing an in-progress task to need to restart.
+
+### Aligner (WDL)
+When running the aligner workflow on 10 full-size CRAMs from the PharmaHD study imported from Gen3, running on the aligner's default settings, the cost was $80.38 as reported by Terra. The most expensive of those ten files cost $10.82 and the least expensive cost $5.74.
+
+### Aligner Checker (WDL)
+As the aligner checker runs the aligner and then simply preforms an md5sum, the cost for the aligner checker will be about the same as that of the aligner.
+
 
 
