@@ -1,7 +1,7 @@
 class: CommandLineTool
 cwlVersion: v1.0
 $namespaces:
-  sbg: 'https://sevenbridges.com'
+  sbg: 'https://sevenbridges.com/'
 id: marko_zecevic_topmed_alignment_topmed_post_align_3
 baseCommand:
   - samtools

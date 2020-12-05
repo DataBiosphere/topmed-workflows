@@ -174,3 +174,7 @@ steps:
       reference: indexed_reference_fasta
       input_bam: SortBam/output_sorted_bam
     out: [output]
+
+$namespaces:
+  dct: http://purl.org/dc/terms/
+  foaf: http://xmlns.com/foaf/0.1/

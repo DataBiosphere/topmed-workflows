@@ -8,7 +8,9 @@ doc: >-
   Wrapper Author: Marko Zecevic (marko.zecevic@sbgenomics.com)
 label: TOPMed Alignment
 $namespaces:
-  sbg: 'https://sevenbridges.com'
+  sbg: 'https://sevenbridges.com/'
+  dct: http://purl.org/dc/terms/
+  foaf: http://xmlns.com/foaf/0.1/
 inputs:
   - id: input_file
     'sbg:fileTypes': CRAM

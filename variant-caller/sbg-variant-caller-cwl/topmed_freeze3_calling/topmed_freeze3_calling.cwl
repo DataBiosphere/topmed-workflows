@@ -541,7 +541,9 @@ hints:
 'sbg:appVersion':
   - v1.0
 $namespaces:
-  sbg: 'https://sevenbridges.com'
+  sbg: 'https://sevenbridges.com/'
+  foaf: http://xmlns.com/foaf/0.1/
+  dct: http://purl.org/dc/terms/
 'sbg:revision': 25
 'sbg:latestRevision': 25
 'sbg:projectName': TOPMed Freeze 3a Variant Calling Pipeline

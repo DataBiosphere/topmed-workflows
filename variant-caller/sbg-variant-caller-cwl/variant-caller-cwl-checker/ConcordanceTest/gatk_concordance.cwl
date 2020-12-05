@@ -61,7 +61,7 @@ requirements:
 'sbg:appVersion':
   - v1.0
 $namespaces:
-  sbg: 'https://sevenbridges.com'
+  sbg: 'https://sevenbridges.com/'
 'sbg:revision': 1
 'sbg:revisionsInfo':
   - 'sbg:revision': 0

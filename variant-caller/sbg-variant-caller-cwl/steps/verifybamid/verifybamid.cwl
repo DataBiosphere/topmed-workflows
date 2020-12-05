@@ -194,4 +194,4 @@ requirements:
                 return files.reverse();
         };
 $namespaces:
-  sbg: 'https://sevenbridges.com'
+  sbg: 'https://sevenbridges.com/'

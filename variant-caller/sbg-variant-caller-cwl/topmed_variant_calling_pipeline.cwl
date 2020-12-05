@@ -151,8 +151,5 @@ steps:
 requirements: 
     - class: InlineJavascriptRequirement
 $namespaces:
-  sbg: 'https://sevenbridges.com'
-'dct:creator':
-  'foaf:mbox': 'mailto:vladimir.obucina@sbgenomics.com'
-  'foaf:name': Vladimir Obucina
+  sbg: 'https://sevenbridges.com/'
 

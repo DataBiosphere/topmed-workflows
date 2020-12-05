@@ -120,7 +120,7 @@ steps:
         https://igor.sbgenomics.com/ns/brood/images/vladimir_obucina/topmed-freeze-3a-variant-calling-pipeline/gatkconcordance/1.png
       'sbg:sbgMaintained': false
       $namespaces:
-        sbg: 'https://sevenbridges.com'
+        sbg: 'https://sevenbridges.com/'
       'sbg:modifiedBy': vladimir_obucina
       'sbg:appVersion':
         - v1.0
@@ -210,7 +210,7 @@ steps:
         https://igor.sbgenomics.com/ns/brood/images/vladimir_obucina/topmed-freeze-3a-variant-calling-pipeline/gatkconcordancechecker/2.png
       'sbg:sbgMaintained': false
       $namespaces:
-        sbg: 'https://sevenbridges.com'
+        sbg: 'https://sevenbridges.com/'
       'sbg:modifiedBy': vladimir_obucina
       'sbg:appVersion':
         - v1.0
@@ -253,7 +253,7 @@ requirements: []
 'sbg:appVersion':
   - v1.0
 $namespaces:
-  sbg: 'https://sevenbridges.com'
+  sbg: 'https://sevenbridges.com/'
 'sbg:revision': 4
 'sbg:revisionsInfo':
   - 'sbg:revision': 0
