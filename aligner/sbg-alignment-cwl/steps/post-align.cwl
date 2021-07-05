@@ -18,23 +18,25 @@ inputs:
   - id: alignment_files
     type: 'File[]'
     'sbg:fileTypes': BAM
-  - id: threads
+  - default: 1
+    id: threads
     type: int?
     label: Number of threads
-    default: 1
   - id: input_cram
     type: File
     label: Input CRAM
     doc: Input CRAM is passed to Post-align for output naming.
     'sbg:fileTypes': CRAM
-  - id: ram_min
+  - default: 7500
+    'sbg:toolDefaultValue': '7500'
+    id: ram_min
     type: int?
     label: Minimum amount of RAM
-    default: 7500
-  - id: cores_min
+  - default: 8
+    'sbg:toolDefaultValue': '2'
+    id: cores_min
     type: int?
     label: Minimum number of cores
-    default: 8
 outputs:
   - id: output
     type: File?
@@ -113,7 +115,8 @@ requirements:
   - class: DockerRequirement
     dockerPull: 'statgen/alignment:1.0.0'
   - class: InitialWorkDirRequirement
-    listing: |-
+    listing:
+      - |-
         ${ 
             var out = []
             out.push(inputs.reference)
@@ -125,6 +128,3 @@ requirements:
             
         }
   - class: InlineJavascriptRequirement
-hints:
-  - class: 'sbg:AWSInstanceType'
-    value: m5.large;ebs-gp2;700

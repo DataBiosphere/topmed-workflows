@@ -3,9 +3,9 @@ cwlVersion: v1.0
 id: topmed_alignment
 doc: >-
   A CWL wrapper of the TopMed alignment workflow described here:
-  https://github.com/statgen/docker-alignment
-  Tool Author: Hyun Min Kang (hmkang@umich.edu) and Adrian Tan (atks@umich.edu)
-  Wrapper Author: Marko Zecevic (marko.zecevic@sbgenomics.com)
+  https://github.com/statgen/docker-alignment Tool Author: Hyun Min Kang
+  (hmkang@umich.edu) and Adrian Tan (atks@umich.edu) Wrapper Author: Marko
+  Zecevic (marko.zecevic@sbgenomics.com)
 label: TOPMed Alignment
 $namespaces:
   sbg: 'https://sevenbridges.com'
@@ -45,13 +45,28 @@ inputs:
     label: Number of threads
   - id: ram_min
     type: int?
-    label: Minimum amount of RAM
+    label: Minimum amount of RAM - pre-align/sort/post-align
+    'sbg:x': -90.64398956298828
+    'sbg:y': 270.19915771484375
   - id: cores_min
     type: int?
-    label: Minimum number of cores
+    label: Minimum number of cores - pre-align/sort/post-align
+    'sbg:x': -47.17603302001953
+    'sbg:y': -313.5997314453125
+  - id: cores_min_1
+    type: int?
+    label: Minimum number of cores - alignment
+    'sbg:x': 10.978857040405273
+    'sbg:y': -417.4698791503906
+  - id: ram_min_1
+    type: int?
+    label: Minimum amount of RAM - alignment
+    'sbg:x': -40.91050720214844
+    'sbg:y': 391.3500061035156
 outputs:
   - id: output
-    outputSource: topmed_post_align/output
+    outputSource:
+      - topmed_post_align/output
     'sbg:fileTypes': CRAM
     type: File?
     label: Output CRAM file
@@ -67,21 +82,21 @@ steps:
       - id: comp_ref
         source: reference_genome
       - id: threads
-        source: threads
         default: 1
+        source: threads
       - id: ram_min
-        source: ram_min
         default: 7500
+        source: ram_min
       - id: cores_min
+        default: 2
         source: cores_min
-        default: 8
     out:
       - id: fastq
       - id: list
     run: steps/pre-align.cwl
     label: Pre-align 1.0
-    'sbg:x': 130.828125
-    'sbg:y': 0
+    'sbg:x': 150.79986572265625
+    'sbg:y': -54.310768127441406
   - id: topmed_align
     in:
       - id: reference
@@ -91,11 +106,11 @@ steps:
       - id: list
         source: topmed_pre_align/list
       - id: ram_min
-        source: ram_min
         default: 14000
+        source: ram_min_1
       - id: cores_min
-        source: cores_min
         default: 8
+        source: cores_min_1
     out:
       - id: cram
     run: steps/align.cwl
@@ -112,14 +127,14 @@ steps:
       - id: input_file
         source: topmed_align/cram
       - id: threads
-        source: threads
         default: 1
+        source: threads
       - id: ram_min
+        default: 7500
         source: ram_min
-        default: 7000
       - id: cores_min
-        source: cores_min
         default: 2
+        source: cores_min
     out:
       - id: output
     run: steps/samtools-sort.cwl
@@ -136,18 +151,19 @@ steps:
       - id: dbsnp
         source: dbsnp
       - id: alignment_files
-        source: samtools_sort/output
+        source:
+          - samtools_sort/output
+      - id: threads
+        default: 1
+        source: threads
       - id: input_cram
         source: input_file
-      - id: threads
-        source: threads
-        default: 1
       - id: ram_min
-        source: ram_min
         default: 7500
+        source: ram_min
       - id: cores_min
+        default: 2
         source: cores_min
-        default: 8
     out:
       - id: output
     run: steps/post-align.cwl
@@ -159,7 +175,6 @@ hints:
     value: '8'
 requirements:
   - class: ScatterFeatureRequirement
-  - class: MultipleInputFeatureRequirement
 'dct:creator':
   'foaf:mbox': 'mailto:support@sbgenomics.com'
   'foaf:name': Seven Bridges

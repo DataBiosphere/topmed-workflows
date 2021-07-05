@@ -18,18 +18,20 @@ inputs:
     inputBinding:
       position: 4
       shellQuote: false
-  - id: threads
+  - default: 1
+    id: threads
     type: int?
     label: Number of threads
-    default: 1
-  - id: ram_min
+  - default: 7000
+    'sbg:toolDefaultValue': '7500'
+    id: ram_min
     type: int?
     label: Minimum amount of RAM
-    default: 7000
-  - id: cores_min
+  - default: 2
+    'sbg:toolDefaultValue': '2'
+    id: cores_min
     type: int?
     label: Minimum number of cores
-    default: 2
 outputs:
   - id: output
     type: File?
@@ -101,6 +103,3 @@ requirements:
             }
             return o1;
         };
-hints:
-  - class: 'sbg:AWSInstanceType'
-    value: c5.4xlarge;ebs-gp2;512

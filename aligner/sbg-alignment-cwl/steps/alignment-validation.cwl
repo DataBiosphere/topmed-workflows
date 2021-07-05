@@ -34,16 +34,16 @@ inputs:
     label: Reference
     doc: Reference genome sequence.
     'sbg:fileTypes': 'FASTA, FA'
-  - 'sbg:toolDefaultValue': '7500'
+  - default: 2000
+    'sbg:toolDefaultValue': '7500'
     id: ram_min
     type: int?
     label: Minimum amount of RAM
-    default: 2000
-  - 'sbg:toolDefaultValue': '8'
+  - default: 1
+    'sbg:toolDefaultValue': '2'
     id: cores_min
     type: int?
     label: Minimum number of cores
-    default: 1
 outputs:
   - id: stdout
     label: stdout
@@ -92,9 +92,8 @@ requirements:
     coresMin: $(inputs.cores_min)
   - class: DockerRequirement
     dockerPull: 'statgen/alignment:1.0.0'
-  - class: InlineJavascriptRequirement
   - class: InitialWorkDirRequirement
     listing:
       - $(inputs.cram)
       - $(inputs.reference)
-
+  - class: InlineJavascriptRequirement
