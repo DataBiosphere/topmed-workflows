@@ -35,3 +35,13 @@ RUN cp /root/bamUtil/bin/bam /usr/bin/bam-non-primary-dedup
 RUN git --git-dir=/root/bamUtil/.git --work-tree=/root/bamUtil checkout b6e4a7de6b7ce08d488f539ada4f1717cd4d12e4 #ExternalMemorySortManager
 RUN make -C /root/bamUtil
 RUN cp /root/bamUtil/bin/bam /usr/bin/bam-ext-mem-sort-manager
+
+RUN groupadd datacommons; groupadd docker \
+    && useradd -m dockeruser -g docker -s /bin/bash \
+    && echo "dockeruser ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/docker
+
+RUN chmod 777 -R /root
+RUN chmod 777 -R /usr
+RUN chown dockeruser:docker /tmp; chown dockeruser:docker /usr
+USER dockeruser
+WORKDIR /home/dockeruser
