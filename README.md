@@ -4,7 +4,7 @@
 The original pipelines were assembled and written by Hyun Min Kang (hmkang@umich.edu) and Adrian Tan (atks@umich.edu) 
 at the [Abecasis Lab at the University of Michigan](https://genome.sph.umich.edu/wiki/Abecasis_Lab)
 
-See the [variant calling pipeline](https://github.com/statgen/topmed_freeze3_calling) and [alignment pipeline](https://github.com/statgen/docker-alignment) repositories
+See also the [variant calling pipeline](https://github.com/statgen/topmed_freeze3_calling) and [alignment pipeline](https://github.com/statgen/docker-alignment) repositories
 
 ## Installing dependencies on your local system
 
