@@ -9,6 +9,7 @@ workflows:
      primaryDescriptorPath: /aligner/u_of_michigan_aligner/u_of_michigan_aligner.wdl
      testParameterFiles:
          - /aligner/u_of_michigan_aligner/u_of_michigan_aligner.json
+         - /aligner/u_of_michigan_aligner/u_of_michigan_aligner_gs_urls.json
      name: UM_aligner_wdl
    - subclass: WDL
      primaryDescriptorPath: /aligner/functional-equivalence-wdl/FunctionalEquivalence.wdl
@@ -22,8 +23,6 @@ workflows:
      name: UM_aligner_cwl
    - subclass: CWL
      primaryDescriptorPath: /aligner/topmed-cwl/workflow/alignment_workflow.cwl
-     testParameterFiles:
-         - /test.json
      name: CCDG_aligner_functional_equivalent_cwl
    - subclass: CWL
      primaryDescriptorPath: /variant-caller/sbg-variant-caller-cwl/topmed_freeze3_calling.json
@@ -32,6 +31,4 @@ workflows:
      name: UM_variant_caller_cwl
    - subclass: CWL
      primaryDescriptorPath: /vcf-comparator/ConcordanceTestWorkflow.cwl
-     testParameterFiles:
-         - /test.json
      name: gatk-vcf-comparator
