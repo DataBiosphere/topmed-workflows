@@ -6,6 +6,11 @@ language: java
 jdk:
 - oraclejdk8
 
+# Cromwell requires oraclejdk8
+# Xenial, the new default for travis, does not support open/Oraclejdk8
+# https://travis-ci.community/t/expected-feature-release-number-in-range-of-9-to-12-but-got-8-installing-oraclejdk8/1345/16
+# Thus our hands have been forced
+dist: trusty
 
 # found at https://github.com/GoogleCloudPlatform/Template/blob/master/.travis.yml
 cache:

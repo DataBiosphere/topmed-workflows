@@ -4,7 +4,7 @@
 The original pipelines were assembled and written by Hyun Min Kang (hmkang@umich.edu) and Adrian Tan (atks@umich.edu) 
 at the [Abecasis Lab at the University of Michigan](https://genome.sph.umich.edu/wiki/Abecasis_Lab)
 
-See the [variant calling pipeline](https://github.com/statgen/topmed_freeze3_calling) and [alignment pipeline](https://github.com/statgen/docker-alignment) repositories
+See also the [variant calling pipeline](https://github.com/statgen/topmed_freeze3_calling) and [alignment pipeline](https://github.com/statgen/docker-alignment) repositories
 
 ## Installing dependencies on your local system
 
@@ -43,7 +43,7 @@ To run workflows of data stored on `gcloud` you need to set an environment varia
 `cromwell` is a Java executable and requires a Java Runtime Engine. Follow the instruction [here](http://cromwell.readthedocs.io/en/develop/tutorials/FiveMinuteIntro/) for a complete installation.
 
 ### 3. Dockstore
-For Dockstore to run you need to install the [Java Runtime Engine](https://www.digitalocean.com/community/tutorials/how-to-install-java-with-apt-get-on-ubuntu-16-04). Find installation instructions for Dockstore [here](https://dockstore.org/onboarding) (you need to be logged in to Dockstore).
+For Dockstore to run you need to install the [Java Runtime Engine](https://www.digitalocean.com/community/tutorials/how-to-install-java-with-apt-get-on-ubuntu-16-04). Find installation instructions for Dockstore [here](https://dockstore.org/quick-start).
 
 ## Running workflows
 
